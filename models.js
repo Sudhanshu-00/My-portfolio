@@ -81,6 +81,7 @@ const MessageSchema = new mongoose.Schema(
 const AdminUserSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true, trim: true },
   passwordHash: { type: String, required: true },
+  role: { type: String, enum: ['admin', 'user'], default: 'user' }, // 'admin' → panel access, 'user' → normal login only
   email: { type: String, default: '', trim: true, lowercase: true }, // forgot-password OTP
   otpHash: { type: String, default: '' }, // bcrypt(otp) — plain OTP is never stored
   otpExpiry: { type: Date },

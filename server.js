@@ -127,6 +127,15 @@ async function main() {
     })
   );
 
+  // Logged-in identity available in every view (normal user &/or admin)
+  app.use((req, res, next) => {
+    if (req.session) {
+      if (req.session.user) res.locals.sessionUser = req.session.user;
+      if (req.session.admin) res.locals.sessionAdmin = req.session.admin;
+    }
+    next();
+  });
+
   // Settings + query available in every view
   app.use((req, res, next) => {
     res.locals.query = req.query;
@@ -145,7 +154,7 @@ async function main() {
   // Panel: only the secret path (ADMIN_PATH) — /admin/* is always a public 404.
   // /login, /forgot, /reset are public aliases — so the site can offer login +
   // email-OTP recovery without ever leaking the secret path in public HTML.
-  const AUTH_PATHS = ['/login', '/login/adminlogin', '/forgot', '/forgot/verify', '/reset'];
+  const AUTH_PATHS = ['/login', '/login/adminlogin', '/forgot', '/forgot/verify', '/reset', '/logout'];
   app.use((req, res, next) => {
     res.locals.adminBase = SECRET_MOUNT; // all admin links in views are built from this
     if (req.url === SECRET_MOUNT || req.url.startsWith(SECRET_MOUNT + '/')) {

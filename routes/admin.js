@@ -102,10 +102,17 @@ router.post('/login', async (req, res) => {
   if (user && (await bcrypt.compare(password, user.passwordHash))) {
     loginAttempts.delete(key);
     ipFails.delete(req.ip);
-    // session fixation fix — fresh session id on login
+    // ---- two-tier login ----
+    // 'admin' role ONLY for username 'sudhanshu' — nobody else ever gets panel access.
+    const isAdmin = user.role === 'admin' && user.username === 'sudhanshu';
+    // session fixation fix — fresh session id on login (both tiers)
     return req.session.regenerate(() => {
-      req.session.admin = user.username;
-      res.redirect(go('/'));
+      if (isAdmin) {
+        req.session.admin = user.username; // → secret panel dashboard
+        return res.redirect(go('/'));
+      }
+      req.session.user = user.username; // → normal portfolio, naam site pe dikhta hai
+      res.redirect('/');
     });
   }
   rec.fails++;
@@ -124,7 +131,10 @@ router.post('/login', async (req, res) => {
   res.status(401).render('admin/login', { error: 'Invalid username or password' });
 });
 
-router.post('/logout', (req, res) => req.session.destroy(() => res.redirect(go('/login'))));
+router.post('/logout', (req, res) => {
+  const wasAdmin = !!(req.session && req.session.admin);
+  req.session.destroy(() => res.redirect(wasAdmin ? go('/login') : '/'));
+});
 
 // ---------- forgot password (email OTP) — self-service recovery ----------
 const GENERIC_MSG = 'If these details match an admin account, an OTP has been sent to the email (valid for 3 minutes).';
