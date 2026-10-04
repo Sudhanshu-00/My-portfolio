@@ -2,6 +2,11 @@
 <footer class="footer">
   <div class="container footer-inner">
     <p class="mono">[ SYSTEM: <span class="ok">SECURE</span> ] · [ UPLINK: <span class="ok">ENCRYPTED</span> ] · [ © <%= new Date().getFullYear() %> <%= settings.siteName %> ]</p>
+    <% if (typeof visits !== 'undefined' && visits) { %>
+      <p class="visitor-counter" title="Live visitor counter">
+        <span class="pulse-dot">●</span> [ VISITORS: <span class="ok"><%= visits.total.toLocaleString('en-IN') %></span> ] · [ TODAY: <span class="ok"><%= visits.today %></span> ]
+      </p>
+    <% } %>
     <p><a href="/admin" class="link">./admin_access</a></p>
   </div>
 </footer>

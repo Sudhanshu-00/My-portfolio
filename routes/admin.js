@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
-const { AdminUser, Project, Skill, Message, SiteSetting, Tool, PageView } = require('../models');
+const { AdminUser, Project, Skill, Message, SiteSetting, Tool, PageView, Service, Testimonial } = require('../models');
 
 // ---------- photo upload helper ----------
 const upload = multer({
@@ -10,6 +10,13 @@ const upload = multer({
   fileFilter: (req, file, cb) => cb(null, /^image\//.test(file.mimetype)),
 });
 const toDataUrl = (f) => (f ? `data:${f.mimetype};base64,${f.buffer.toString('base64')}` : '');
+
+// ---------- resume (PDF) upload helper ----------
+const resumeUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  fileFilter: (req, file, cb) => cb(null, file.mimetype === 'application/pdf'),
+});
 
 // ---------- auth ----------
 const requireAuth = async (req, res, next) => {
@@ -41,11 +48,13 @@ router.use(requireAuth);
 
 // ---------- dashboard ----------
 router.get('/', async (req, res) => {
-  const [projects, skills, unread, tools, totalMsgs, totalViews, viewsToday] = await Promise.all([
+  const [projects, skills, unread, tools, services, testimonials, totalMsgs, totalViews, viewsToday] = await Promise.all([
     Project.countDocuments(),
     Skill.countDocuments(),
     Message.countDocuments({ read: false }),
     Tool.countDocuments(),
+    Service.countDocuments(),
+    Testimonial.countDocuments(),
     Message.countDocuments(),
     PageView.countDocuments(),
     PageView.countDocuments({ createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) } }),
@@ -72,7 +81,7 @@ router.get('/', async (req, res) => {
   const maxCount = Math.max(1, ...chart.map((c) => c.count));
 
   res.render('admin/dashboard', {
-    counts: { projects, skills, unread, tools },
+    counts: { projects, skills, unread, tools, services, testimonials },
     stats: { totalMsgs, totalViews, viewsToday },
     chart,
     maxCount,
@@ -102,6 +111,63 @@ router.post('/settings', upload.single('photo'), async (req, res) => {
 
   await s.save();
   res.redirect('/admin/settings?saved=1');
+});
+
+// ---------- resume / CV upload ----------
+router.post('/resume', resumeUpload.single('resume'), async (req, res) => {
+  if (!req.file) return res.redirect('/admin/settings?resume_error=1');
+  const s = await SiteSetting.get();
+  s.resumeFile = `data:application/pdf;base64,${req.file.buffer.toString('base64')}`;
+  s.resumeName = req.file.originalname.endsWith('.pdf') ? req.file.originalname : req.file.originalname + '.pdf';
+  await s.save();
+  res.redirect('/admin/settings?resume=1');
+});
+
+router.post('/resume/delete', async (req, res) => {
+  const s = await SiteSetting.get();
+  s.resumeFile = '';
+  s.resumeName = 'resume.pdf';
+  await s.save();
+  res.redirect('/admin/settings?resume_deleted=1');
+});
+
+// ---------- services (hire me) ----------
+router.get('/services', async (req, res) => {
+  res.render('admin/services', { services: await Service.find().sort({ createdAt: 1 }) });
+});
+
+router.post('/services', async (req, res) => {
+  const { title, description, price } = req.body;
+  if (title && title.trim()) await Service.create({ title: title.trim(), description, price });
+  res.redirect('/admin/services');
+});
+
+router.post('/services/:id/delete', async (req, res) => {
+  await Service.findByIdAndDelete(req.params.id).catch(() => {});
+  res.redirect('/admin/services');
+});
+
+// ---------- testimonials ----------
+router.get('/testimonials', async (req, res) => {
+  res.render('admin/testimonials', { testimonials: await Testimonial.find().sort({ createdAt: -1 }) });
+});
+
+router.post('/testimonials', async (req, res) => {
+  const { name, company, text, rating } = req.body;
+  if (name && name.trim() && text && text.trim()) {
+    await Testimonial.create({
+      name: name.trim(),
+      company: company || '',
+      text: text.trim(),
+      rating: Math.min(5, Math.max(1, parseInt(rating, 10) || 5)),
+    });
+  }
+  res.redirect('/admin/testimonials');
+});
+
+router.post('/testimonials/:id/delete', async (req, res) => {
+  await Testimonial.findByIdAndDelete(req.params.id).catch(() => {});
+  res.redirect('/admin/testimonials');
 });
 
 // ---------- skills ----------

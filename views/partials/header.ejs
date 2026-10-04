@@ -3,7 +3,26 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><%= typeof title !== 'undefined' ? title + ' | ' : '' %><%= settings.siteName %></title>
+  <title><%= typeof title !== 'undefined' && title ? title + ' | ' : '' %><%= settings.siteName %></title>
+
+  <!-- SEO -->
+  <meta name="description" content="<%= settings.heroSubtitle %>">
+  <meta name="author" content="<%= settings.siteName %>">
+  <meta name="keywords" content="pentesting, cybersecurity, web security, android security, ethical hacking, <%= settings.siteName %>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%23052012'/><text x='50' y='68' font-size='55' text-anchor='middle' fill='%2300ff41' font-family='monospace' font-weight='bold'>&gt;_</text></svg>">
+
+  <!-- Open Graph (WhatsApp / Facebook / Discord preview) -->
+  <meta property="og:title" content="<%= typeof title !== 'undefined' && title ? title + ' | ' : '' %><%= settings.siteName %>">
+  <meta property="og:description" content="<%= settings.heroSubtitle %>">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="<%= settings.siteName %>">
+  <% if (settings.profilePhoto) { %><meta property="og:image" content="<%= settings.profilePhoto %>"><% } %>
+
+  <!-- Twitter / X card -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="<%= typeof title !== 'undefined' && title ? title + ' | ' : '' %><%= settings.siteName %>">
+  <meta name="twitter:description" content="<%= settings.heroSubtitle %>">
+
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>

@@ -23,7 +23,7 @@ const svg = (t, c1, c2) =>
   ).toString('base64');
 
 async function seed() {
-  const { AdminUser, SiteSetting, Skill, Project, Tool } = require('./models');
+  const { AdminUser, SiteSetting, Skill, Project, Tool, Service, Testimonial } = require('./models');
 
   // Default admin user
   if ((await AdminUser.countDocuments()) === 0) {
@@ -89,6 +89,49 @@ async function seed() {
         price: '₹999',
         description: 'Fast network reconnaissance toolkit — host discovery, port scanning & service fingerprinting in seconds.',
         image: svg('NetSweep', '#450a0a', '#ffd60a'),
+      },
+    ]);
+  }
+
+  if ((await Service.countDocuments()) === 0) {
+    await Service.create([
+      {
+        title: 'Web App Penetration Test',
+        price: '₹4,999+',
+        description: 'Full OWASP Top 10 black-box testing of your website — SQLi, XSS, IDOR, auth bypass — with detailed PDF report + free retest.',
+      },
+      {
+        title: 'Android App Security Audit',
+        price: '₹5,999+',
+        description: 'APK reverse engineering, static + dynamic analysis, hardcoded secrets, insecure storage & SSL pinning checks with clean report.',
+      },
+      {
+        title: 'Security Tool Development',
+        price: 'Custom',
+        description: 'Custom Python/Bash automation tools, scrapers, recon & offensive-security scripts built exactly to your requirements.',
+      },
+    ]);
+  }
+
+  if ((await Testimonial.countDocuments()) === 0) {
+    await Testimonial.create([
+      {
+        name: 'Rahul Sharma',
+        company: 'ShopKart India',
+        text: 'Found a critical SQLi in our checkout flow within 2 days. Report was clean and fix guidance was spot on. Highly recommended!',
+        rating: 5,
+      },
+      {
+        name: 'Priya Verma',
+        company: 'FinTech Startup',
+        text: 'Got our Android app audited before launch. Honest pricing, fast turnaround and a very detailed report. Will hire again.',
+        rating: 5,
+      },
+      {
+        name: 'Aman Gupta',
+        company: 'Freelance Client',
+        text: 'Built a custom recon tool for my team that saves hours every week. Great communication throughout the project.',
+        rating: 4,
       },
     ]);
   }

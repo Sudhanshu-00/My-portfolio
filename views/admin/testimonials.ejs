@@ -1,0 +1,51 @@
+<%- include('../partials/admin_head') %>
+
+<h1>🗣 Testimonials</h1>
+<p class="muted">Clients ka feedback — Home page ke <strong>CLIENT_FEEDBACK</strong> section me ⭐ ratings ke saath dikhenge.</p>
+
+<div class="panel">
+  <h2>➕ Add New Testimonial</h2>
+  <form method="POST" action="/admin/testimonials" class="form">
+    <div class="row-form">
+      <label>Client Name
+        <input type="text" name="name" placeholder="e.g. Rahul Sharma" required>
+      </label>
+      <label>Company (optional)
+        <input type="text" name="company" placeholder="e.g. ShopKart India">
+      </label>
+      <label>Rating
+        <select name="rating">
+          <option value="5">⭐⭐⭐⭐⭐ (5)</option>
+          <option value="4">⭐⭐⭐⭐ (4)</option>
+          <option value="3">⭐⭐⭐ (3)</option>
+          <option value="2">⭐⭐ (2)</option>
+          <option value="1">⭐ (1)</option>
+        </select>
+      </label>
+    </div>
+    <label>Feedback
+      <textarea name="text" rows="3" placeholder="What did the client say?" required></textarea>
+    </label>
+    <button type="submit" class="btn">➕ Add Testimonial</button>
+  </form>
+</div>
+
+<h2>Current Testimonials (<%= testimonials.length %>)</h2>
+<% if (!testimonials.length) { %><p class="muted">No testimonials yet — upar se add karo.</p><% } %>
+<table class="table">
+  <tr><th>Client</th><th>Rating</th><th>Feedback</th><th style="text-align:right">Actions</th></tr>
+  <% testimonials.forEach(t => { %>
+    <tr>
+      <td><strong><%= t.name %></strong><% if (t.company) { %><br><small class="muted"><%= t.company %></small><% } %></td>
+      <td class="stars-sm"><%= '★'.repeat(t.rating) %><span class="muted"><%= '☆'.repeat(5 - t.rating) %></span></td>
+      <td class="muted"><%= t.text.slice(0, 80) %><%= t.text.length > 80 ? '…' : '' %></td>
+      <td>
+        <form method="POST" action="/admin/testimonials/<%= t._id %>/delete" class="inline" onsubmit="return confirm('Delete this testimonial?')">
+          <button type="submit" class="btn small danger">🗑 Delete</button>
+        </form>
+      </td>
+    </tr>
+  <% }) %>
+</table>
+
+<%- include('../partials/admin_foot') %>

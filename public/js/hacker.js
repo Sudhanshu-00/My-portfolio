@@ -78,6 +78,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 50);
   }
 
+  // ---- Auto-fit grids: cards shrink/expand with item count ----
+  // 3 items → 3 bade columns; 5+ items → 4 chhote columns, baaki niche rows me
+  function autoGrids() {
+    const w = window.innerWidth;
+    const maxByWidth = w < 640 ? 1 : w < 1000 ? 2 : 4;
+    document.querySelectorAll('[data-autogrid]').forEach((g) => {
+      const cap = parseInt(g.dataset.autogrid, 10) || 4;
+      const n = Math.min(g.children.length, cap, maxByWidth) || 1;
+      g.style.setProperty('--cols', n);
+    });
+  }
+  autoGrids();
+  window.addEventListener('resize', autoGrids);
+
   // ---- Tool category filter ----
   const filters = document.getElementById('filters');
   if (filters) {

@@ -20,6 +20,8 @@ const SiteSettingSchema = new mongoose.Schema({
   whatsapp: { type: String, default: '' }, // e.g. 919876543210 (tool sales)
   telegram: { type: String, default: '' }, // e.g. username
   customLinks: { type: [{ label: String, url: String }], default: [] }, // extra social/public URLs
+  resumeFile: { type: String, default: '' }, // base64 PDF
+  resumeName: { type: String, default: 'resume.pdf' },
 });
 
 // Always returns the single settings document (creates it if missing)
@@ -85,6 +87,25 @@ const PageViewSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+const ServiceSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true, trim: true },
+    description: { type: String, default: '' },
+    price: { type: String, default: '' },
+  },
+  { timestamps: true }
+);
+
+const TestimonialSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true, trim: true },
+    company: { type: String, default: '' },
+    text: { type: String, required: true },
+    rating: { type: Number, default: 5, min: 1, max: 5 },
+  },
+  { timestamps: true }
+);
+
 module.exports = {
   SiteSetting: mongoose.model('SiteSetting', SiteSettingSchema),
   Project: mongoose.model('Project', ProjectSchema),
@@ -93,4 +114,6 @@ module.exports = {
   Message: mongoose.model('Message', MessageSchema),
   AdminUser: mongoose.model('AdminUser', AdminUserSchema),
   PageView: mongoose.model('PageView', PageViewSchema),
+  Service: mongoose.model('Service', ServiceSchema),
+  Testimonial: mongoose.model('Testimonial', TestimonialSchema),
 };

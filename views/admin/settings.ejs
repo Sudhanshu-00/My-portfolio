@@ -4,6 +4,9 @@
 <p class="muted">Yahan se puri website ka content change kar sakte ho.</p>
 
 <% if (query.saved) { %><div class="alert success">✅ Settings saved!</div><% } %>
+<% if (query.resume) { %><div class="alert success">📄 Resume uploaded! Public site pe "DOWNLOAD_CV" button active ho gaya.</div><% } %>
+<% if (query.resume_deleted) { %><div class="alert success">🗑 Resume deleted.</div><% } %>
+<% if (query.resume_error) { %><div class="alert error">❌ Upload failed — sirf PDF (max 5 MB) upload karo.</div><% } %>
 
 <form method="POST" action="/admin/settings" enctype="multipart/form-data" class="form">
   <h2>General</h2>
@@ -30,6 +33,27 @@
   <label>About Text
     <textarea name="aboutText" rows="6"><%= settings.aboutText %></textarea>
   </label>
+
+  <h2 id="resume">📄 Resume / CV</h2>
+  <p class="muted">PDF upload karo — Home page hero me <strong>[ ⬇ DOWNLOAD_CV ]</strong> button automatically show hoga (<code>/resume</code>).</p>
+  <% if (settings.resumeFile) { %>
+    <div class="resume-row">
+      <span>📎 <a class="link" href="/resume" target="_blank"><%= settings.resumeName %></a> <small class="muted">(current, ~<%= Math.round((settings.resumeFile.length * 0.75) / 1024) %> KB)</small></span>
+      <form method="POST" action="/admin/resume/delete" class="inline" onsubmit="return confirm('Delete resume?')">
+        <button type="submit" class="btn small danger">🗑 Delete</button>
+      </form>
+    </div>
+  <% } else { %>
+    <p class="muted">⚠️ No resume uploaded yet.</p>
+  <% } %>
+  <form method="POST" action="/admin/resume" enctype="multipart/form-data" class="form">
+    <div class="row-form">
+      <label>Upload PDF (max 5 MB)
+        <input type="file" name="resume" accept="application/pdf" required>
+      </label>
+      <button type="submit" class="btn">⬆ Upload Resume</button>
+    </div>
+  </form>
 
   <h2>Contact Info</h2>
   <label>Email

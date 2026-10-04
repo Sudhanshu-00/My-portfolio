@@ -1,0 +1,42 @@
+<%- include('../partials/admin_head') %>
+
+<h1>💼 Services (Hire Me)</h1>
+<p class="muted">Jo services bechta ho (pentest packages etc.) — ye Home page ke <strong>HIRE_ME</strong> section me price ke saath dikhengi.</p>
+
+<div class="panel">
+  <h2>➕ Add New Service</h2>
+  <form method="POST" action="/admin/services" class="form">
+    <div class="row-form">
+      <label>Service Title
+        <input type="text" name="title" placeholder="e.g. Web App Penetration Test" required>
+      </label>
+      <label>Price
+        <input type="text" name="price" placeholder="e.g. ₹4,999 or Custom">
+      </label>
+    </div>
+    <label>Description
+      <textarea name="description" rows="3" placeholder="Kya milega is service me?"></textarea>
+    </label>
+    <button type="submit" class="btn">➕ Add Service</button>
+  </form>
+</div>
+
+<h2>Current Services (<%= services.length %>)</h2>
+<% if (!services.length) { %><p class="muted">No services yet — upar se add karo.</p><% } %>
+<table class="table">
+  <tr><th>Title</th><th>Price</th><th>Description</th><th style="text-align:right">Actions</th></tr>
+  <% services.forEach(s => { %>
+    <tr>
+      <td><strong><%= s.title %></strong></td>
+      <td class="mono"><%= s.price || '—' %></td>
+      <td class="muted"><%= (s.description || '').slice(0, 80) %><%= (s.description || '').length > 80 ? '…' : '' %></td>
+      <td>
+        <form method="POST" action="/admin/services/<%= s._id %>/delete" class="inline" onsubmit="return confirm('Delete this service?')">
+          <button type="submit" class="btn small danger">🗑 Delete</button>
+        </form>
+      </td>
+    </tr>
+  <% }) %>
+</table>
+
+<%- include('../partials/admin_foot') %>

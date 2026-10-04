@@ -18,6 +18,7 @@
         <div class="btn-row">
           <a class="btn" href="/tools">[ VIEW TOOLS ]</a>
           <a class="btn ghost" href="/projects">[ PROJECTS ]</a>
+          <% if (settings.resumeFile) { %><a class="btn ghost" href="/resume" download>[ ⬇ DOWNLOAD_CV ]</a><% } %>
         </div>
       </div>
     </div>
@@ -42,7 +43,7 @@
 <% if (tools.length) { %>
 <section class="section">
   <h2><span class="sec-tag">&gt;_</span> ARSENAL <span class="muted" style="font-size:0.9rem">[ tools for sale ]</span></h2>
-  <div class="card-grid">
+  <div class="card-grid" data-autogrid="4">
     <% tools.forEach(t => { const buy = t.buyUrl || (settings.whatsapp ? 'https://wa.me/' + settings.whatsapp.replace(/\D/g, '') + '?text=' + encodeURIComponent('Hi! I want to buy: ' + t.name) : ''); %>
       <div class="card">
         <% if (t.image) { %><img class="card-img" src="<%= t.image %>" alt="<%= t.name %>"><% } %>
@@ -70,7 +71,7 @@
 <% if (skills.length) { %>
 <section class="section">
   <h2><span class="sec-tag">&gt;_</span> SKILL_SET</h2>
-  <div class="skill-grid">
+  <div class="skill-grid" data-autogrid="4">
     <% skills.forEach(s => { %>
       <div class="skill-card">
         <strong><%= s.name %></strong>
@@ -82,10 +83,34 @@
 </section>
 <% } %>
 
+<% if (services.length) { %>
+<section class="section" id="services">
+  <h2><span class="sec-tag">&gt;_</span> HIRE_ME <span class="muted" style="font-size:0.9rem">[ services &amp; pricing ]</span></h2>
+  <div class="card-grid" data-autogrid="3">
+    <% services.forEach(sv => {
+      const wa = settings.whatsapp ? 'https://wa.me/' + settings.whatsapp.replace(/\D/g, '') + '?text=' + encodeURIComponent('Hi! I am interested in your service: ' + sv.title) : '';
+      const mail = settings.email ? 'mailto:' + settings.email + '?subject=' + encodeURIComponent('Enquiry: ' + sv.title) : '';
+      const cta = wa || mail;
+    %>
+      <div class="card service-card">
+        <div class="card-body">
+          <div class="row-between">
+            <h3>[ <%= sv.title %> ]</h3>
+            <% if (sv.price) { %><span class="price"><%= sv.price %></span><% } %>
+          </div>
+          <p class="muted"><%= sv.description %></p>
+          <% if (cta) { %><a class="btn small buy" href="<%= cta %>" target="_blank" rel="noopener">BOOK NOW →</a><% } %>
+        </div>
+      </div>
+    <% }) %>
+  </div>
+</section>
+<% } %>
+
 <% if (projects.length) { %>
 <section class="section">
   <h2><span class="sec-tag">&gt;_</span> OPERATIONS <span class="muted" style="font-size:0.9rem">[ case files ]</span></h2>
-  <div class="card-grid">
+  <div class="card-grid" data-autogrid="4">
     <% projects.forEach(p => { %>
       <a class="card" href="/projects/<%= p._id %>">
         <% if (p.image) { %><img class="card-img" src="<%= p.image %>" alt="<%= p.title %>"><% } %>
@@ -97,6 +122,29 @@
     <% }) %>
   </div>
   <a href="/projects" class="link">&gt; all operations →</a>
+</section>
+<% } %>
+
+<% if (testimonials.length) { %>
+<section class="section">
+  <h2><span class="sec-tag">&gt;_</span> CLIENT_FEEDBACK <span class="muted" style="font-size:0.9rem">[ testimonials ]</span></h2>
+  <div class="card-grid" data-autogrid="3">
+    <% testimonials.forEach(t => { %>
+      <div class="card testimonial-card">
+        <div class="card-body">
+          <div class="stars" title="<%= t.rating %>/5"><%= '★'.repeat(t.rating) + '☆'.repeat(5 - t.rating) %></div>
+          <p class="t-text">“<%= t.text %>”</p>
+          <div class="t-author">
+            <span class="t-avatar"><%= t.name.charAt(0).toUpperCase() %></span>
+            <div>
+              <strong><%= t.name %></strong>
+              <% if (t.company) { %><small class="muted"> · <%= t.company %></small><% } %>
+            </div>
+          </div>
+        </div>
+      </div>
+    <% }) %>
+  </div>
 </section>
 <% } %>
 

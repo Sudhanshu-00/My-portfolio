@@ -57,6 +57,24 @@ async function main() {
     next();
   });
 
+  // Visitor counter for footer (total + today)
+  app.use(async (req, res, next) => {
+    if (req.method === 'GET' && !req.path.startsWith('/admin')) {
+      try {
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const [total, today] = await Promise.all([
+          PageView.countDocuments(),
+          PageView.countDocuments({ createdAt: { $gte: todayStart } }),
+        ]);
+        res.locals.visits = { total, today };
+      } catch {
+        res.locals.visits = { total: 0, today: 0 };
+      }
+    }
+    next();
+  });
+
   app.use('/', publicRoutes);
   app.use('/admin', adminRoutes);
 

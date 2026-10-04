@@ -1,13 +1,31 @@
 const router = require('express').Router();
-const { Project, Skill, Message, Tool } = require('../models');
+const { Project, Skill, Message, Tool, Service, Testimonial, SiteSetting } = require('../models');
 
 router.get('/', async (req, res) => {
-  const [projects, skills, tools] = await Promise.all([
-    Project.find().sort({ featured: -1, createdAt: -1 }).limit(3),
-    Skill.find().sort({ level: -1 }).limit(8),
-    Tool.find({ featured: true }).limit(3),
+  const [projects, skills, tools, services, testimonials] = await Promise.all([
+    Project.find().sort({ featured: -1, createdAt: -1 }),
+    Skill.find().sort({ category: 1, level: -1 }),
+    Tool.find().sort({ featured: -1, createdAt: -1 }),
+    Service.find().sort({ createdAt: 1 }),
+    Testimonial.find().sort({ createdAt: -1 }),
   ]);
-  res.render('home', { projects, skills, tools });
+  res.render('home', { projects, skills, tools, services, testimonials });
+});
+
+// Resume / CV download
+router.get('/resume', async (req, res) => {
+  try {
+    const s = await SiteSetting.get();
+    if (!s.resumeFile) return res.status(404).render('404');
+    const [meta, b64] = String(s.resumeFile).split(',');
+    const mime = (String(meta).match(/data:([^;]+);/) || [])[1] || 'application/pdf';
+    const name = (s.resumeName || 'resume.pdf').replace(/[^\w.\- ]/g, '') || 'resume.pdf';
+    res.setHeader('Content-Type', mime);
+    res.setHeader('Content-Disposition', `attachment; filename="${name}"`);
+    res.send(Buffer.from(b64, 'base64'));
+  } catch {
+    res.status(404).render('404');
+  }
 });
 
 router.get('/about', (req, res) => res.render('about'));

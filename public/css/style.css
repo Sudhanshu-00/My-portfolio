@@ -456,3 +456,51 @@ body.admin {
   .admin-content { padding: 1.2rem; }
   .two-col { grid-template-columns: 1fr; }
 }
+
+/* ---------- Services & Testimonials (home) ---------- */
+.service-card .card-body { display: flex; flex-direction: column; gap: 0.6rem; align-items: flex-start; }
+.service-card .card-body p { flex: 1; }
+.testimonial-card .card-body { display: flex; flex-direction: column; gap: 0.5rem; }
+.stars {
+  color: #ffd60a;
+  font-size: 1.05rem;
+  letter-spacing: 3px;
+  text-shadow: 0 0 10px rgba(255, 214, 10, 0.45);
+}
+.t-text { font-style: italic; color: var(--text); font-size: 0.92rem; margin: 0; }
+.t-author { display: flex; align-items: center; gap: 0.6rem; margin-top: auto; }
+.t-author strong { color: var(--accent); font-family: 'Share Tech Mono', monospace; }
+.t-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: linear-gradient(135deg, #052e12, var(--accent-dim));
+  border: 1px solid var(--accent);
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--accent); font-weight: 800; font-family: 'Share Tech Mono', monospace;
+  flex-shrink: 0;
+}
+
+/* ---------- Visitor counter (footer) ---------- */
+.visitor-counter {
+  font-family: 'Share Tech Mono', monospace;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.pulse-dot { color: var(--accent); animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse {
+  0%, 100% { opacity: 1; text-shadow: 0 0 6px rgba(0, 255, 65, 0.6); }
+  50% { opacity: 0.35; text-shadow: none; }
+}
+
+/* ---------- Admin extras ---------- */
+.resume-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.8rem;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+  padding: 0.7rem 1rem; margin: 0.6rem 0; flex-wrap: wrap;
+}
+.stars-sm { color: #ffd60a; letter-spacing: 2px; white-space: nowrap; }
+
+/* ---------- Auto-fit grids (cards resize with item count) ---------- */
+[data-autogrid] { grid-template-columns: repeat(var(--cols, 3), 1fr); }
+@media (max-width: 900px) {
+  [data-autogrid] { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
+}
