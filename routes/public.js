@@ -83,7 +83,6 @@ router.get('/feedback', async (req, res) => {
 router.post('/feedback', async (req, res) => {
   // honeypot: bots fill the 'website' field → show quiet success
   if (req.body.website) return res.redirect('/feedback?sent=1');
-  if (req.body.website) return res.redirect('/feedback?sent=1');
 
   const { name, email, rating, message } = req.body;
   const cleanName = String(name || '').trim().slice(0, 60);
