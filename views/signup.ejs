@@ -55,20 +55,6 @@
       <form method="POST" action="/signup/resend" style="margin-top:0.7rem">
         <button type="submit" class="btn full" id="resendBtn" style="background:transparent;border:1px solid rgba(255,255,255,0.2);font-size:0.82rem">Resend OTP</button>
       </form>
-      <script>
-        // resend 45s tak disable — server bhi enforce karta hai
-        (function () {
-          var btn = document.getElementById('resendBtn');
-          if (!btn) return;
-          var left = 45;
-          btn.disabled = true;
-          var t = setInterval(function () {
-            left -= 1;
-            if (left <= 0) { clearInterval(t); btn.disabled = false; btn.textContent = 'Resend OTP'; }
-            else btn.textContent = 'Resend OTP (' + left + 's)';
-          }, 1000);
-        })();
-      </script>
     <% } else { %>
       <p class="muted" style="margin:0.3rem 0 0.8rem;font-size:0.85rem">Step 3/3 — <b><%= values.username || '' %></b>, email verified ✓. Ab strong password set karo.</p>
       <form method="POST" action="/signup/complete" class="form" autocomplete="off">
@@ -87,11 +73,6 @@
         </label>
         <button type="submit" class="btn full">Create account →</button>
       </form>
-      <script>
-        document.getElementById('captchaImg').addEventListener('click', function () {
-          this.src = '/signup/captcha.svg?t=' + Date.now();
-        });
-      </script>
     <% } %>
 
     <div class="row-between" style="margin-top:0.8rem">
@@ -99,5 +80,6 @@
       <a href="/" class="link" style="font-size:0.82rem">← Website</a>
     </div>
   </div>
+  <script src="/js/signup.js" defer></script>
 </body>
 </html>
