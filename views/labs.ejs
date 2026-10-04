@@ -1,0 +1,64 @@
+<%- include('partials/header', { title: 'Labs' }) %>
+
+<section class="section">
+  <h1><span class="sec-tag">&gt;_</span> TRAINING_GROUNDS <span class="muted" style="font-size:0.9rem">[ labs solved ]</span></h1>
+  <p class="muted">Hands-on practice — labs & rooms I've solved on TryHackMe and the PortSwigger Web Security Academy.</p>
+
+  <% const thm = labs.filter(l => l.platform === 'TryHackMe'); %>
+  <% const psw = labs.filter(l => l.platform === 'PortSwigger'); %>
+  <% const other = labs.filter(l => l.platform === 'Other'); %>
+  <% const total = labs.length; %>
+
+  <div class="gh-stats">
+    <div class="gh-stat"><span class="stat-num"><%= total %></span><span class="stat-label">Labs Solved</span></div>
+    <div class="gh-stat"><span class="stat-num" style="color:#9acc14"><%= thm.length %></span><span class="stat-label">TryHackMe</span></div>
+    <div class="gh-stat"><span class="stat-num" style="color:#ff6633"><%= psw.length %></span><span class="stat-label">PortSwigger</span></div>
+    <div class="gh-stat"><span class="stat-num"><%= new Set(labs.map(l => l.category)).size %></span><span class="stat-label">Categories</span></div>
+  </div>
+
+  <% if (settings.thmUsername) { %>
+  <div class="panel thm-panel">
+    <div class="thm-info">
+      <h2>🟢 TryHackMe <small class="muted">@<%= settings.thmUsername %></small></h2>
+      <p class="muted">Live badge from my TryHackMe profile — click to view full profile, rank & rooms.</p>
+      <a class="btn ghost" href="https://tryhackme.com/p/<%= settings.thmUsername %>" target="_blank" rel="noopener">[ VIEW THM PROFILE ]</a>
+    </div>
+    <a href="https://tryhackme.com/p/<%= settings.thmUsername %>" target="_blank" rel="noopener">
+      <img class="thm-badge" src="https://tryhackme-badges.s3.amazonaws.com/<%= settings.thmUsername %>.png" alt="TryHackMe badge — <%= settings.thmUsername %>">
+    </a>
+  </div>
+  <% } %>
+
+  <% if (!total) { %>
+    <div class="panel">
+      <p class="muted">No labs added yet — Admin Panel → 🎯 Labs se apne solved TryHackMe / PortSwigger labs add karo.</p>
+    </div>
+  <% } %>
+
+  <% [[ 'TryHackMe', thm, '#9acc14' ], [ 'PortSwigger', psw, '#ff6633' ], [ 'Other', other, '#00e5ff' ]].forEach(([ name, list, color ]) => { %>
+    <% if (list.length) { %>
+    <section class="section">
+      <h2><span class="sec-tag">&gt;_</span> <span style="color:<%= color %>"><%= name.toUpperCase() %></span> <span class="muted" style="font-size:0.9rem">[ <%= list.length %> labs ]</span></h2>
+      <div class="lab-grid" data-autogrid="4">
+        <% list.forEach(l => { %>
+          <div class="card lab-card">
+            <div class="card-body">
+              <div class="row-between">
+                <h3><%= l.title %></h3>
+                <span class="diff diff-<%= (l.difficulty || 'Easy').toLowerCase() %>"><%= l.difficulty %></span>
+              </div>
+              <div class="chips">
+                <span class="chip"><%= l.category %></span>
+                <% if (l.solvedAt) { %><span class="chip">📅 <%= new Date(l.solvedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) %></span><% } %>
+              </div>
+              <% if (l.url) { %><a class="btn small ghost" href="<%= l.url %>" target="_blank" rel="noopener">VIEW ROOM →</a><% } %>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    </section>
+    <% } %>
+  <% }) %>
+</section>
+
+<%- include('partials/footer') %>

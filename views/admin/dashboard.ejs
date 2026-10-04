@@ -32,6 +32,10 @@
     <span class="stat-num"><%= counts.testimonials %></span>
     <span class="stat-label">Testimonials</span>
   </a>
+  <a class="stat-card" href="/admin/labs">
+    <span class="stat-num"><%= counts.labs %></span>
+    <span class="stat-label">Labs Solved</span>
+  </a>
   <a class="stat-card" href="/admin/messages">
     <span class="stat-num"><%= counts.unread %></span>
     <span class="stat-label">Unread Messages</span>
@@ -39,8 +43,16 @@
 </div>
 
 <div class="panel">
-  <h2>📈 Traffic — Last 7 Days</h2>
-  <div class="chart">
+  <div class="row-between">
+    <h2>📈 Traffic — <%= range === '1y' ? 'Last 12 Months' : 'Last ' + (range === '7d' ? '7' : '30') + ' Days' %></h2>
+    <div class="range-tabs">
+      <a class="btn small <%= range === '7d' ? '' : 'ghost' %>" href="/admin?range=7d">7D</a>
+      <a class="btn small <%= range === '30d' ? '' : 'ghost' %>" href="/admin?range=30d">30D</a>
+      <a class="btn small <%= range === '1y' ? '' : 'ghost' %>" href="/admin?range=1y">1 YEAR</a>
+    </div>
+  </div>
+  <p class="muted" style="margin-bottom:0.5rem">👁 <%= stats.rangeViews %> views in this range</p>
+  <div class="chart <%= range === '30d' ? 'chart-wide' : '' %>">
     <% chart.forEach(c => { %>
       <div class="chart-col">
         <span class="chart-num"><%= c.count %></span>
@@ -90,6 +102,7 @@
     <a class="qa-card" href="/admin/services"><span>💼</span><strong>Services</strong><small>hire me / pricing</small></a>
     <a class="qa-card" href="/admin/testimonials"><span>🗣</span><strong>Testimonials</strong><small>client feedback</small></a>
     <a class="qa-card" href="/admin/experience"><span>🏢</span><strong>Work Experience</strong><small>company / role</small></a>
+    <a class="qa-card" href="/admin/labs"><span>🎯</span><strong>Labs</strong><small>THM / PortSwigger</small></a>
     <a class="qa-card" href="/admin/settings#resume"><span>📄</span><strong>Upload Resume</strong><small>CV / PDF</small></a>
     <a class="qa-card" href="/admin/messages"><span>📩</span><strong>Messages</strong><small>inbox</small></a>
     <a class="qa-card" href="/admin/password"><span>🔑</span><strong>Password</strong><small>security</small></a>

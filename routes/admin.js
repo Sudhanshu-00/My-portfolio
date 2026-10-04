@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
-const { AdminUser, Project, Skill, Message, SiteSetting, Tool, PageView, Service, Testimonial, Experience } = require('../models');
+const { AdminUser, Project, Skill, Message, SiteSetting, Tool, PageView, Service, Testimonial, Experience, Lab } = require('../models');
 
 // ---------- photo upload helper ----------
 const upload = multer({
@@ -48,7 +48,10 @@ router.use(requireAuth);
 
 // ---------- dashboard ----------
 router.get('/', async (req, res) => {
-  const [projects, skills, unread, tools, services, testimonials, totalMsgs, totalViews, viewsToday] = await Promise.all([
+  const range = ['7d', '30d', '1y'].includes(req.query.range) ? req.query.range : '7d';
+  const days = range === '7d' ? 7 : range === '30d' ? 30 : 365;
+
+  const [projects, skills, unread, tools, services, testimonials, totalMsgs, totalViews, viewsToday, labs] = await Promise.all([
     Project.countDocuments(),
     Skill.countDocuments(),
     Message.countDocuments({ read: false }),
@@ -58,35 +61,57 @@ router.get('/', async (req, res) => {
     Message.countDocuments(),
     PageView.countDocuments(),
     PageView.countDocuments({ createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) } }),
+    Lab.countDocuments(),
   ]);
 
-  // 7-day view chart
-  const since7 = new Date(Date.now() - 6 * 864e5);
-  since7.setHours(0, 0, 0, 0);
-  const [dailyRaw, topPages, recent] = await Promise.all([
+  // chart: daily bars for 7d/30d, monthly for 1y
+  const since = new Date(Date.now() - (days - 1) * 864e5);
+  since.setHours(0, 0, 0, 0);
+  const fmt = range === '1y' ? '%Y-%m' : '%Y-%m-%d';
+  const [raw, topPages, recent] = await Promise.all([
     PageView.aggregate([
-      { $match: { createdAt: { $gte: since7 } } },
-      { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, count: { $sum: 1 } } },
+      { $match: { createdAt: { $gte: since } } },
+      { $group: { _id: { $dateToString: { format: fmt, date: '$createdAt' } }, count: { $sum: 1 } } },
     ]),
     PageView.aggregate([{ $group: { _id: '$path', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 5 }]),
     Message.find().sort({ createdAt: -1 }).limit(4),
   ]);
-  const dayMap = Object.fromEntries(dailyRaw.map((d) => [d._id, d.count]));
+  const keyMap = Object.fromEntries(raw.map((d) => [d._id, d.count]));
   const chart = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(Date.now() - i * 864e5);
-    const key = d.toISOString().slice(0, 10);
-    chart.push({ label: d.toLocaleDateString('en-IN', { weekday: 'short' }), count: dayMap[key] || 0 });
+  let rangeViews = 0;
+  if (range === '1y') {
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      const key = d.toISOString().slice(0, 7);
+      const count = keyMap[key] || 0;
+      rangeViews += count;
+      chart.push({ label: d.toLocaleDateString('en-IN', { month: 'short' }), count });
+    }
+  } else {
+    const step = range === '30d' ? 3 : 1; // 30d me har 3rd day ka label (crowding avoid)
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 864e5);
+      const key = d.toISOString().slice(0, 10);
+      const count = keyMap[key] || 0;
+      rangeViews += count;
+      const showLabel = range === '7d' || (days - 1 - i) % step === 0;
+      chart.push({
+        label: showLabel ? d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '',
+        count,
+      });
+    }
   }
   const maxCount = Math.max(1, ...chart.map((c) => c.count));
 
   res.render('admin/dashboard', {
-    counts: { projects, skills, unread, tools, services, testimonials },
-    stats: { totalMsgs, totalViews, viewsToday },
+    counts: { projects, skills, unread, tools, services, testimonials, labs },
+    stats: { totalMsgs, totalViews, viewsToday, rangeViews },
     chart,
     maxCount,
     topPages,
     recent,
+    range,
   });
 });
 
@@ -95,7 +120,7 @@ router.get('/settings', (req, res) => res.render('admin/settings'));
 
 router.post('/settings', upload.single('photo'), async (req, res) => {
   const s = await SiteSetting.get();
-  ['siteName', 'heroTitle', 'heroSubtitle', 'aboutText', 'email', 'phone', 'location', 'github', 'linkedin', 'twitter', 'instagram', 'whatsapp', 'telegram', 'githubUsername'].forEach(
+  ['siteName', 'heroTitle', 'heroSubtitle', 'aboutText', 'email', 'phone', 'location', 'github', 'linkedin', 'twitter', 'instagram', 'whatsapp', 'telegram', 'githubUsername', 'thmUsername'].forEach(
     (f) => {
       if (req.body[f] !== undefined) s[f] = req.body[f];
     }
@@ -232,6 +257,47 @@ router.post('/experience/:id/update', async (req, res) => {
 router.post('/experience/:id/delete', async (req, res) => {
   await Experience.findByIdAndDelete(req.params.id).catch(() => {});
   res.redirect('/admin/experience');
+});
+
+// ---------- labs (TryHackMe / PortSwigger) ----------
+router.get('/labs', async (req, res) => {
+  const editLab = req.query.edit ? await Lab.findById(req.query.edit).catch(() => null) : null;
+  res.render('admin/labs', { labs: await Lab.find().sort({ createdAt: -1 }), editLab });
+});
+
+router.post('/labs', async (req, res) => {
+  const { platform, title, category, difficulty, url, solvedAt } = req.body;
+  if (title && title.trim()) {
+    await Lab.create({
+      platform: platform || 'TryHackMe',
+      title: title.trim(),
+      category: (category || 'General').trim(),
+      difficulty: difficulty || 'Easy',
+      url: url || '',
+      solvedAt: solvedAt ? new Date(solvedAt) : undefined,
+    });
+  }
+  res.redirect('/admin/labs');
+});
+
+router.post('/labs/:id/update', async (req, res) => {
+  const { platform, title, category, difficulty, url, solvedAt } = req.body;
+  if (title && title.trim()) {
+    await Lab.findByIdAndUpdate(req.params.id, {
+      platform: platform || 'TryHackMe',
+      title: title.trim(),
+      category: (category || 'General').trim(),
+      difficulty: difficulty || 'Easy',
+      url: url || '',
+      solvedAt: solvedAt ? new Date(solvedAt) : undefined,
+    }).catch(() => {});
+  }
+  res.redirect('/admin/labs');
+});
+
+router.post('/labs/:id/delete', async (req, res) => {
+  await Lab.findByIdAndDelete(req.params.id).catch(() => {});
+  res.redirect('/admin/labs');
 });
 
 // ---------- skills ----------

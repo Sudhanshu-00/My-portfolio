@@ -18,6 +18,7 @@
       <a href="/admin/services" class="<%= String(path).startsWith('/admin/services') ? 'active' : '' %>"><span>💼</span> Services</a>
       <a href="/admin/testimonials" class="<%= String(path).startsWith('/admin/testimonials') ? 'active' : '' %>"><span>🗣</span> Testimonials</a>
       <a href="/admin/experience" class="<%= String(path).startsWith('/admin/experience') ? 'active' : '' %>"><span>🏢</span> Experience</a>
+      <a href="/admin/labs" class="<%= String(path).startsWith('/admin/labs') ? 'active' : '' %>"><span>🎯</span> Labs</a>
       <a href="/admin/messages" class="<%= String(path).startsWith('/admin/messages') ? 'active' : '' %>"><span>📩</span> Messages
         <% if (typeof unread !== 'undefined' && unread > 0) { %><b class="side-badge"><%= unread %></b><% } %>
       </a>

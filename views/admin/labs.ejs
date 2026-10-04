@@ -1,0 +1,67 @@
+<%- include('../partials/admin_head') %>
+
+<h1>🎯 Labs (TryHackMe / PortSwigger)</h1>
+<p class="muted">Jo labs/rooms solve kiye hain — ye public site ke <strong>/labs (TRAINING_GROUNDS)</strong> page pe platform-wise dikhenge. TryHackMe badge ke liye neeche username Settings me daalo.</p>
+
+<div class="panel">
+  <h2><%= editLab ? '✏️ Edit Lab: ' + editLab.title : '➕ Add Solved Lab' %></h2>
+  <form method="POST" action="<%= editLab ? '/admin/labs/' + editLab._id + '/update' : '/admin/labs' %>" class="form">
+    <div class="row-form">
+      <label>Platform
+        <select name="platform">
+          <% ['TryHackMe', 'PortSwigger', 'Other'].forEach(p => { %>
+            <option value="<%= p %>" <%= (editLab ? editLab.platform : 'TryHackMe') === p ? 'selected' : '' %>><%= p %></option>
+          <% }) %>
+        </select>
+      </label>
+      <label>Lab / Room Title
+        <input type="text" name="title" placeholder="e.g. SQL Injection UNION attack" required value="<%= editLab ? editLab.title : '' %>">
+      </label>
+      <label>Difficulty
+        <select name="difficulty">
+          <% ['Easy', 'Medium', 'Hard', 'Insane'].forEach(d => { %>
+            <option value="<%= d %>" <%= (editLab ? editLab.difficulty : 'Easy') === d ? 'selected' : '' %>><%= d %></option>
+          <% }) %>
+        </select>
+      </label>
+    </div>
+    <div class="row-form">
+      <label>Category (SQLi, XSS, Auth Bypass, Recon...)
+        <input type="text" name="category" placeholder="e.g. SQLi" value="<%= editLab ? editLab.category : '' %>">
+      </label>
+      <label>Solved On (date — optional)
+        <input type="date" name="solvedAt" value="<%= editLab && editLab.solvedAt ? editLab.solvedAt.toISOString().slice(0,10) : '' %>">
+      </label>
+    </div>
+    <label>Lab / Room URL (optional)
+      <input type="text" name="url" placeholder="https://tryhackme.com/room/... or https://portswigger.net/web-security/..." value="<%= editLab ? editLab.url : '' %>">
+    </label>
+    <button type="submit" class="btn"><%= editLab ? '💾 Update Lab' : '➕ Add Lab' %></button>
+    <% if (editLab) { %><a class="btn ghost" href="/admin/labs">Cancel</a><% } %>
+  </form>
+</div>
+
+<h2>Solved Labs (<%= labs.length %>)</h2>
+<% if (!labs.length) { %><p class="muted">No labs yet — upar se add karo.</p><% } %>
+<table class="table">
+  <tr><th>Platform</th><th>Lab</th><th>Category</th><th>Difficulty</th><th>Solved</th><th style="text-align:right">Actions</th></tr>
+  <% labs.forEach(l => { %>
+    <tr>
+      <td class="mono"><%= l.platform %></td>
+      <td><strong><%= l.title %></strong></td>
+      <td><%= l.category %></td>
+      <td><span class="diff diff-<%= (l.difficulty || 'Easy').toLowerCase() %>"><%= l.difficulty %></span></td>
+      <td class="muted"><%= l.solvedAt ? new Date(l.solvedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—' %></td>
+      <td>
+        <div class="actions" style="justify-content:flex-end">
+          <a class="btn small ghost" href="/admin/labs?edit=<%= l._id %>">✏️ Edit</a>
+          <form method="POST" action="/admin/labs/<%= l._id %>/delete" class="inline" onsubmit="return confirm('Delete this lab?')">
+            <button type="submit" class="btn small danger">🗑 Delete</button>
+          </form>
+        </div>
+      </td>
+    </tr>
+  <% }) %>
+</table>
+
+<%- include('../partials/admin_foot') %>

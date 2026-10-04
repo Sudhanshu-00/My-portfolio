@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { Project, Skill, Message, Tool, Service, Testimonial, Experience, SiteSetting } = require('../models');
+const { Project, Skill, Message, Tool, Service, Testimonial, Experience, Lab, SiteSetting } = require('../models');
 const { getRepoDetails, getProfile, mdToHtml } = require('../services/github');
 
 router.get('/', async (req, res) => {
@@ -66,6 +66,12 @@ router.get('/projects/:id', async (req, res) => {
   } catch {
     res.status(404).render('404');
   }
+});
+
+// Labs & practice grounds (TryHackMe / PortSwigger)
+router.get('/labs', async (req, res) => {
+  const labs = await Lab.find().sort({ solvedAt: -1, createdAt: -1 });
+  res.render('labs', { labs });
 });
 
 router.get('/contact', (req, res) => res.render('contact', { query: req.query }));

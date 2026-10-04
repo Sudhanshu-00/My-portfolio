@@ -15,6 +15,7 @@ const SiteSettingSchema = new mongoose.Schema({
   profilePhoto: { type: String, default: '' }, // stored as data URL
   github: { type: String, default: '' },
   githubUsername: { type: String, default: 'Sudhanshu-00' }, // for live GitHub intel
+  thmUsername: { type: String, default: '' }, // TryHackMe username → badge on /labs
   linkedin: { type: String, default: '' },
   twitter: { type: String, default: '' },
   instagram: { type: String, default: '' },
@@ -119,6 +120,18 @@ const ExperienceSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+const LabSchema = new mongoose.Schema(
+  {
+    platform: { type: String, enum: ['TryHackMe', 'PortSwigger', 'Other'], default: 'TryHackMe' },
+    title: { type: String, required: true, trim: true },
+    category: { type: String, default: 'General', trim: true }, // SQLi, XSS, Auth Bypass, Recon...
+    difficulty: { type: String, default: 'Easy' }, // Easy / Medium / Hard / Insane
+    url: { type: String, default: '' }, // room/lab link
+    solvedAt: { type: Date },
+  },
+  { timestamps: true }
+);
+
 module.exports = {
   SiteSetting: mongoose.model('SiteSetting', SiteSettingSchema),
   Project: mongoose.model('Project', ProjectSchema),
@@ -130,4 +143,5 @@ module.exports = {
   Service: mongoose.model('Service', ServiceSchema),
   Testimonial: mongoose.model('Testimonial', TestimonialSchema),
   Experience: mongoose.model('Experience', ExperienceSchema),
+  Lab: mongoose.model('Lab', LabSchema),
 };
