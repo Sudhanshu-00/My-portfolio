@@ -31,6 +31,7 @@ function buildHtml(env) {
       <tr><td style="padding:4px 12px 4px 0">Normal Login</td><td><b>${PROD}/login</b></td></tr>
       <tr><td style="padding:4px 12px 4px 0">Local Panel</td><td>${LOCAL}/${P}</td></tr>
       <tr><td style="padding:4px 12px 4px 0">Username</td><td><b>${process.env.ADMIN_USER || 'admin'}</b></td></tr>
+      <tr><td style="padding:4px 12px 4px 0">Password</td><td><b>${process.env.ADMIN_PASS || '(see .env)'}</b></td></tr>
     </table>
     <p style="color:#ffb703">Password: .env backup me hai (neeche ADMIN_PASS) — strong password laga zaroor!</p>
     <h3 style="color:#00ff41">💾 .env Backup (${new Date().toLocaleString('en-IN')})</h3>
