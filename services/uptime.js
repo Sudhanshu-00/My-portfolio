@@ -1,10 +1,10 @@
 /**
- * Uptime monitor — "site down hone wali ho / ho gayi ho to mail aa jaye".
+ * Uptime monitor — "email me before / when the site goes down".
  *
  *  1. Health check every 5 min → GET <PROD_URL|localhost>/healthz
  *     - 2 consecutive failures → 🔴 "SITE DOWN" email (once)
  *     - recovery → 🟢 "SITE BACK UP" email (with downtime duration)
- *  2. Predictive warnings (site down hone se pehle):
+ *  2. Predictive warnings (before the site goes down):
  *     - Render free plan spins the service down after ~15 min idle.
  *       KEEP_ALIVE=true (default) self-pings every 10 min so it never sleeps.
  *       If keep-alive is disabled, an email warns before the expected spin-down.
@@ -109,15 +109,15 @@ async function idleWatch() {
   const idleFor = Date.now() - lastRequestAt;
   if (idleFor > IDLE_LIMIT && Date.now() - state.lastIdleEmailAt > 60 * 60 * 1000) {
     state.lastIdleEmailAt = Date.now();
-    await alert('🟠 SITE SLEEP HONE WALA HAI — Portfolio', [
-      '<b>Site ~15 min me sleep (spin-down) ho jayega — koi traffic nahi aa raha.</b>',
-      'Agla visitor first request par 30-60 sec wait karega (cold start).',
-      'Isse bachne ke liye env me KEEP_ALIVE=true rakho (recommended).',
+    await alert('🟠 SITE ABOUT TO SLEEP — Portfolio', [
+      '<b>The site will sleep (spin down) in ~15 minutes — no incoming traffic.</b>',
+      'The next visitor will wait 30-60 seconds on the first request (cold start).',
+      'To prevent this, set KEEP_ALIVE=true in the environment (recommended).',
     ]);
   }
 }
 
-// predictive: memory pressure → crash/down hone se pehle warning
+// predictive: memory pressure → warning before a crash/down event
 async function memoryWatch() {
   if (!state.enabled) return;
   const limitMb = parseInt(process.env.MEM_ALERT_MB, 10) || 450;
@@ -125,8 +125,8 @@ async function memoryWatch() {
   if (rssMb > limitMb && Date.now() - state.lastMemEmailAt > 60 * 60 * 1000) {
     state.lastMemEmailAt = Date.now();
     await alert('🟠 MEMORY HIGH — Portfolio', [
-      `<b>Memory ${rssMb}MB — limit ${limitMb}MB se upar. Process crash/down hone ka risk.</b>`,
-      'Heavy traffic ya leak check karo; Render plan upgrade bhi option hai.',
+      `<b>Memory ${rssMb}MB — above the ${limitMb}MB limit. Risk of process crash/downtime.</b>`,
+      'Check for heavy traffic or a leak; a Render plan upgrade is also an option.',
     ]);
   }
 }

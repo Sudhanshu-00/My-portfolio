@@ -1,5 +1,5 @@
 /**
- * Signup wizard — CSP-safe (script-src 'self', koi inline JS nahi).
+ * Signup wizard — CSP-safe (script-src 'self', no inline JS).
  * 1. Step 2: resend button 45s countdown (server bhi enforce karta hai)
  * 2. Step 3: captcha image click → fresh captcha (cache-bust)
  */

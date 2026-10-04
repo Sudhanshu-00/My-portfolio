@@ -390,6 +390,10 @@ body.admin {
   transition: background 0.15s, color 0.15s;
 }
 .side-nav a:hover, .side-nav button:hover { background: #111; color: var(--text); }
+/* logout — always visible: pinned to the right edge of the (scrollable) sidebar on mobile */
+.side-logout { position: sticky; right: 0; }
+.side-logout button { color: #b5b5b5; }
+.side-logout button:hover { background: rgba(255, 60, 60, 0.12); color: #ff6b6b; }
 .side-nav a.active {
   background: linear-gradient(90deg, rgba(0, 255, 65, 0.12), transparent 70%);
   color: var(--accent); border-left: 2px solid var(--accent); border-radius: 0 8px 8px 0;
@@ -452,6 +456,8 @@ body.admin {
   .side-brand { border-bottom: none; padding: 0.8rem 1rem; white-space: nowrap; }
   .side-nav { flex-direction: row; overflow-x: auto; padding: 0.5rem; }
   .side-nav a, .side-nav button { white-space: nowrap; width: auto; }
+  /* keep Logout visible at the right edge even when the nav is scrolled */
+  .side-logout { position: sticky; right: 0.5rem; margin-left: auto; background: #030805; padding-left: 0.6rem; box-shadow: -14px 0 12px -8px #030805; }
   .side-foot { display: none; }
   .admin-content { padding: 1.2rem; }
   .two-col { grid-template-columns: 1fr; }

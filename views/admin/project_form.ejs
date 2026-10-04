@@ -6,19 +6,19 @@
       action="<%= project ? '/admin/projects/' + project._id : '/admin/projects' %>">
   <input type="hidden" name="_csrf" value="<%= csrf %>">
   <label>Title
-    <input type="text" name="title" required value="<%= project ? project.title : '' %>">
+    <input type="text" name="title" maxlength="120" required value="<%= project ? project.title : '' %>">
   </label>
   <label>Description
-    <textarea name="description" rows="5"><%= project ? project.description : '' %></textarea>
+    <textarea name="description" rows="5" maxlength="5000"><%= project ? project.description : '' %></textarea>
   </label>
   <label>Tech Stack (comma separated)
-    <input type="text" name="techStack" value="<%= project ? project.techStack : '' %>" placeholder="HTML, CSS, JavaScript">
+    <input type="text" name="techStack" maxlength="300" value="<%= project ? project.techStack : '' %>" placeholder="HTML, CSS, JavaScript">
   </label>
   <label>Live Demo URL
-    <input type="text" name="liveUrl" value="<%= project ? project.liveUrl : '' %>" placeholder="https://...">
+    <input type="text" name="liveUrl" maxlength="500" value="<%= project ? project.liveUrl : '' %>" placeholder="https://...">
   </label>
   <label>GitHub URL
-    <input type="text" name="githubUrl" value="<%= project ? project.githubUrl : '' %>" placeholder="https://github.com/...">
+    <input type="text" name="githubUrl" maxlength="500" value="<%= project ? project.githubUrl : '' %>" placeholder="https://github.com/...">
   </label>
   <label>Photo
     <input type="file" name="image" accept="image/*">

@@ -6,7 +6,7 @@
       action="<%= tool ? '/admin/tools/' + tool._id : '/admin/tools' %>">
   <input type="hidden" name="_csrf" value="<%= csrf %>">
   <label>Tool Name
-    <input type="text" name="name" required value="<%= tool ? tool.name : '' %>">
+    <input type="text" name="name" maxlength="120" required value="<%= tool ? tool.name : '' %>">
   </label>
   <label>Category
     <select name="category">
@@ -16,16 +16,16 @@
     </select>
   </label>
   <label>Price (e.g. ₹1,999 or $29)
-    <input type="text" name="price" value="<%= tool ? tool.price : '' %>">
+    <input type="text" name="price" maxlength="40" value="<%= tool ? tool.price : '' %>">
   </label>
   <label>Description (what the tool does, features etc.)
-    <textarea name="description" rows="5"><%= tool ? tool.description : '' %></textarea>
+    <textarea name="description" rows="5" maxlength="5000"><%= tool ? tool.description : '' %></textarea>
   </label>
   <label>Demo / Video URL (optional)
-    <input type="text" name="demoUrl" value="<%= tool ? tool.demoUrl : '' %>" placeholder="https://youtube.com/...">
+    <input type="text" name="demoUrl" maxlength="500" value="<%= tool ? tool.demoUrl : '' %>" placeholder="https://youtube.com/...">
   </label>
   <label>Buy URL (optional — leave empty to auto-generate a WhatsApp link)
-    <input type="text" name="buyUrl" value="<%= tool ? tool.buyUrl : '' %>" placeholder="https://razorpay.me/... or leave empty">
+    <input type="text" name="buyUrl" maxlength="500" value="<%= tool ? tool.buyUrl : '' %>" placeholder="https://razorpay.me/... or leave empty">
   </label>
   <label>Screenshot / Photo
     <input type="file" name="image" accept="image/*">

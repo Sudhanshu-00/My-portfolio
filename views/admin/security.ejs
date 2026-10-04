@@ -1,7 +1,7 @@
 <%- include('../partials/admin_head', { title: 'Security & Visitors' }) %>
 
 <h1>🛡 Security &amp; Visitors</h1>
-<p class="muted">Har visitor/tester ki details — IP, device, location, kya access kar raha hai. Attack signals par IP khud block hota hai; yahin se unblock bhi kar sakte ho. Logs <strong>30 din baad auto-delete</strong> ho jate hain (TTL).</p>
+<p class="muted">Details for every visitor/tester — IP, device, location and what they accessed. Attack signals auto-block the IP; you can unblock from here too. Logs <strong>auto-delete after 30 days</strong> (TTL).</p>
 
 <% if (filter.ip) { %><p><span class="badge warn">FILTER: <%= filter.ip %></span> <a class="link" href="<%= adminBase %>/security">clear ×</a></p><% } %>
 
@@ -27,7 +27,7 @@
 <div class="two-col">
   <div class="panel" id="blocked">
     <h2>⛔ Blocked IPs <span class="badge <%= blockedActive.length ? 'warn' : 'dim' %>"><%= blockedActive.length %> active</span></h2>
-    <% if (!blockedActive.length) { %><p class="muted">Koi IP blocked nahi hai.</p><% } %>
+    <% if (!blockedActive.length) { %><p class="muted">No IPs are currently blocked.</p><% } %>
     <table class="table tight">
       <% blockedActive.forEach(b => { %>
         <tr>
@@ -82,11 +82,11 @@
       <tr><td>Checking</td><td class="mono" style="word-break:break-all"><%= uptime.target %>/healthz</td></tr>
       <tr><td>Last check</td><td><%= uptime.lastCheckedAt ? new Date(uptime.lastCheckedAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : '—' %> <%= uptime.lastLatencyMs !== null ? '(' + uptime.lastLatencyMs + 'ms)' : '' %></td></tr>
       <% if (uptime.lastError) { %><tr><td>Last error</td><td class="mono"><%= uptime.lastError %></td></tr><% } %>
-      <tr><td>Keep-alive (anti-sleep)</td><td><%- uptime.keepAlive ? '<span class="badge">ON — 10 min ping, Render free plan sleep nahi karega</span>' : '<span class="badge warn">OFF — 15 min idle par site spin-down hogi</span>' %></td></tr>
+      <tr><td>Keep-alive (anti-sleep)</td><td><%- uptime.keepAlive ? '<span class="badge">ON — 10 min ping, prevents Render free plan sleep</span>' : '<span class="badge warn">OFF — the site will spin down after 15 min idle</span>' %></td></tr>
       <tr><td>Downtime email →</td><td><%= uptime.alertsTo || '<span class="muted">not set (ADMIN_EMAIL/ALERT_EMAIL env)</span>' %> <%= uptime.mailReady ? '' : '<span class="badge warn">SMTP off</span>' %></td></tr>
     </table>
     <p class="muted" style="margin-bottom:0">
-      Site DOWN hone par (2 failed checks) turant email aata hai, aur wapas UP hone par recovery email.
+      Site DOWN alert email is sent immediately (after 2 failed checks), plus a recovery email when it is back UP.
       Memory high hone par bhi pehle warning aati hai — <em>down hone se pehle</em>.
     </p>
   </div>
@@ -159,7 +159,7 @@
       </form>
     </div>
   <% } %>
-  <p class="muted" style="margin:0.6rem 0 0">Auto-delete: har entry 30 din baad khud remove (MongoDB TTL). Manual clear upar se.</p>
+  <p class="muted" style="margin:0.6rem 0 0">Auto-delete: every entry is removed after 30 days (MongoDB TTL). Manual clear available above.</p>
 </div>
 
 <%- include('../partials/admin_foot') %>

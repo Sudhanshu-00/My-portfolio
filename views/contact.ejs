@@ -23,13 +23,13 @@
 
       <form method="POST" action="/contact" class="form">
         <label>Name
-          <input type="text" name="name" required>
+          <input type="text" name="name" maxlength="60" required>
         </label>
         <label>Email
-          <input type="email" name="email" required>
+          <input type="email" name="email" maxlength="100" required>
         </label>
         <label>Message
-          <textarea name="message" rows="5" required></textarea>
+          <textarea name="message" rows="5" maxlength="2000" required></textarea>
         </label>
         <button type="submit" class="btn">[ TRANSMIT → ]</button>
       </form>

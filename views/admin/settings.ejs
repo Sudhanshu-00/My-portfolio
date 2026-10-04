@@ -11,15 +11,15 @@
 <form method="POST" action="<%= adminBase %>/settings" enctype="multipart/form-data" class="form"><input type="hidden" name="_csrf" value="<%= csrf %>">
   <h2>General</h2>
   <label>Website Name
-    <input type="text" name="siteName" value="<%= settings.siteName %>" required>
+    <input type="text" name="siteName" value="<%= settings.siteName %>" maxlength="100" required>
   </label>
 
   <h2>Home Page (Hero)</h2>
   <label>Main Title
-    <input type="text" name="heroTitle" value="<%= settings.heroTitle %>">
+    <input type="text" name="heroTitle" value="<%= settings.heroTitle %>" maxlength="150">
   </label>
   <label>Subtitle
-    <input type="text" name="heroSubtitle" value="<%= settings.heroSubtitle %>">
+    <input type="text" name="heroSubtitle" value="<%= settings.heroSubtitle %>" maxlength="300">
   </label>
   <label>Profile Photo
     <input type="file" name="photo" accept="image/*">
@@ -31,7 +31,7 @@
 
   <h2>About</h2>
   <label>About Text
-    <textarea name="aboutText" rows="6"><%= settings.aboutText %></textarea>
+    <textarea name="aboutText" rows="6" maxlength="5000"><%= settings.aboutText %></textarea>
   </label>
 
   <h2 id="resume">📄 Resume / CV</h2>
@@ -57,39 +57,39 @@
 
   <h2>Contact Info</h2>
   <label>Email
-    <input type="text" name="email" value="<%= settings.email %>">
+    <input type="text" name="email" value="<%= settings.email %>" maxlength="100">
   </label>
   <label>Phone
-    <input type="text" name="phone" value="<%= settings.phone %>">
+    <input type="text" name="phone" value="<%= settings.phone %>" maxlength="20">
   </label>
   <label>Location
-    <input type="text" name="location" value="<%= settings.location %>">
+    <input type="text" name="location" value="<%= settings.location %>" maxlength="120">
   </label>
 
   <h2>Social Links</h2>
   <label>GitHub Username (for live repo data, e.g. Sudhanshu-00)
-    <input type="text" name="githubUsername" value="<%= settings.githubUsername || '' %>">
+    <input type="text" name="githubUsername" value="<%= settings.githubUsername || '' %>" maxlength="60">
   </label>
   <label>TryHackMe Username (for the badge on the labs page, e.g. sudhanshu)
-    <input type="text" name="thmUsername" value="<%= settings.thmUsername || '' %>">
+    <input type="text" name="thmUsername" value="<%= settings.thmUsername || '' %>" maxlength="60">
   </label>
   <label>GitHub URL
-    <input type="text" name="github" value="<%= settings.github %>" placeholder="https://github.com/username">
+    <input type="text" name="github" value="<%= settings.github %>" maxlength="500" placeholder="https://github.com/username">
   </label>
   <label>LinkedIn URL
-    <input type="text" name="linkedin" value="<%= settings.linkedin %>" placeholder="https://linkedin.com/in/username">
+    <input type="text" name="linkedin" value="<%= settings.linkedin %>" maxlength="500" placeholder="https://linkedin.com/in/username">
   </label>
   <label>Twitter / X URL
-    <input type="text" name="twitter" value="<%= settings.twitter %>">
+    <input type="text" name="twitter" value="<%= settings.twitter %>" maxlength="500">
   </label>
   <label>Instagram URL
-    <input type="text" name="instagram" value="<%= settings.instagram %>">
+    <input type="text" name="instagram" value="<%= settings.instagram %>" maxlength="500">
   </label>
   <label>WhatsApp Number (for tool sales — without +, e.g. 919876543210)
-    <input type="text" name="whatsapp" value="<%= settings.whatsapp || '' %>">
+    <input type="text" name="whatsapp" value="<%= settings.whatsapp || '' %>" maxlength="20">
   </label>
   <label>Telegram Username (e.g. sudhanshu_h4x)
-    <input type="text" name="telegram" value="<%= settings.telegram || '' %>">
+    <input type="text" name="telegram" value="<%= settings.telegram || '' %>" maxlength="60">
   </label>
 
   <h2>➕ More Social Links (custom)</h2>
@@ -97,8 +97,8 @@
   <div id="custom-links">
     <% (settings.customLinks || []).forEach(l => { %>
       <div class="cl-row">
-        <input type="text" name="custom_label" placeholder="Label (e.g. YouTube)" value="<%= l.label %>">
-        <input type="text" name="custom_url" placeholder="https://..." value="<%= l.url %>">
+        <input type="text" name="custom_label" maxlength="40" placeholder="Label (e.g. YouTube)" value="<%= l.label %>">
+        <input type="text" name="custom_url" maxlength="500" placeholder="https://..." value="<%= l.url %>">
         <button type="button" class="btn small danger cl-del">✕</button>
       </div>
     <% }) %>

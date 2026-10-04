@@ -15,7 +15,7 @@
         </select>
       </label>
       <label>Lab / Room Title
-        <input type="text" name="title" placeholder="e.g. SQL Injection UNION attack" required value="<%= editLab ? editLab.title : '' %>">
+        <input type="text" name="title" maxlength="120" placeholder="e.g. SQL Injection UNION attack" required value="<%= editLab ? editLab.title : '' %>">
       </label>
       <label>Difficulty
         <select name="difficulty">
@@ -27,14 +27,14 @@
     </div>
     <div class="row-form">
       <label>Category (SQLi, XSS, Auth Bypass, Recon...)
-        <input type="text" name="category" placeholder="e.g. SQLi" value="<%= editLab ? editLab.category : '' %>">
+        <input type="text" name="category" maxlength="40" placeholder="e.g. SQLi" value="<%= editLab ? editLab.category : '' %>">
       </label>
       <label>Solved On (date — optional)
         <input type="date" name="solvedAt" value="<%= editLab && editLab.solvedAt ? editLab.solvedAt.toISOString().slice(0,10) : '' %>">
       </label>
     </div>
     <label>Lab / Room URL (optional)
-      <input type="text" name="url" placeholder="https://tryhackme.com/room/... or https://portswigger.net/web-security/..." value="<%= editLab ? editLab.url : '' %>">
+      <input type="text" name="url" maxlength="500" placeholder="https://tryhackme.com/room/... or https://portswigger.net/web-security/..." value="<%= editLab ? editLab.url : '' %>">
     </label>
     <button type="submit" class="btn"><%= editLab ? '💾 Update Lab' : '➕ Add Lab' %></button>
     <% if (editLab) { %><a class="btn ghost" href="<%= adminBase %>/labs">Cancel</a><% } %>

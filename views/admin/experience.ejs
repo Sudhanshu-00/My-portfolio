@@ -8,22 +8,22 @@
   <form method="POST" action="<%= editExp ? '/admin/experience/' + editExp._id + '/update' : '/admin/experience' %>" class="form"><input type="hidden" name="_csrf" value="<%= csrf %>">
     <div class="row-form">
       <label>Company Name
-        <input type="text" name="company" placeholder="e.g. CyberShield Solutions" required value="<%= editExp ? editExp.company : '' %>">
+        <input type="text" name="company" maxlength="80" placeholder="e.g. CyberShield Solutions" required value="<%= editExp ? editExp.company : '' %>">
       </label>
       <label>Your Role
-        <input type="text" name="role" placeholder="e.g. Security Analyst" required value="<%= editExp ? editExp.role : '' %>">
+        <input type="text" name="role" maxlength="80" placeholder="e.g. Security Analyst" required value="<%= editExp ? editExp.role : '' %>">
       </label>
     </div>
     <div class="row-form">
       <label>Duration
-        <input type="text" name="duration" placeholder="e.g. Jan 2024 – Present" value="<%= editExp ? editExp.duration : '' %>">
+        <input type="text" name="duration" maxlength="60" placeholder="e.g. Jan 2024 – Present" value="<%= editExp ? editExp.duration : '' %>">
       </label>
       <label>Order (lower = shown higher)
         <input type="number" name="order" value="<%= editExp ? editExp.order : 0 %>">
       </label>
     </div>
     <label>Description (what you do there — responsibilities, achievements)
-      <textarea name="description" rows="4" placeholder="e.g. Performing VAPT on client web & Android apps, preparing reports, working with dev teams on fixes..."><%= editExp ? editExp.description : '' %></textarea>
+      <textarea name="description" rows="4" maxlength="1000" placeholder="e.g. Performing VAPT on client web & Android apps, preparing reports, working with dev teams on fixes..."><%= editExp ? editExp.description : '' %></textarea>
     </label>
     <label style="display:flex; align-items:center; gap:0.5rem; font-weight:normal">
       <input type="checkbox" name="current" <%= editExp && editExp.current ? 'checked' : '' %> style="width:auto">

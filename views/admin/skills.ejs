@@ -6,13 +6,13 @@
   <h2><%= editSkill ? '✏️ Edit Skill: ' + editSkill.name : '＋ Add Skill' %></h2>
   <form method="POST" action="<%= editSkill ? '/admin/skills/' + editSkill._id + '/update' : '/admin/skills' %>" class="form row-form"><input type="hidden" name="_csrf" value="<%= csrf %>">
     <label>Name
-      <input type="text" name="name" required placeholder="e.g. React" value="<%= editSkill ? editSkill.name : '' %>">
+      <input type="text" name="name" maxlength="60" required placeholder="e.g. React" value="<%= editSkill ? editSkill.name : '' %>">
     </label>
     <label>Level (0-100)
       <input type="number" name="level" min="0" max="100" value="<%= editSkill ? editSkill.level : 80 %>">
     </label>
     <label>Category
-      <input type="text" name="category" placeholder="e.g. Frontend" value="<%= editSkill ? editSkill.category : '' %>">
+      <input type="text" name="category" maxlength="40" placeholder="e.g. Frontend" value="<%= editSkill ? editSkill.category : '' %>">
     </label>
     <button type="submit" class="btn"><%= editSkill ? '💾 Update' : 'Add' %></button>
     <% if (editSkill) { %><a class="btn ghost" href="<%= adminBase %>/skills">Cancel</a><% } %>

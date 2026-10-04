@@ -31,7 +31,7 @@
     <% if (info) { %><div class="alert success"><%= info %></div><% } %>
 
     <% if (step === 1) { %>
-      <p class="muted" style="margin:0.3rem 0 0.8rem;font-size:0.85rem">Step 1/3 — apna username aur email daalo. Email par verification OTP aayega.</p>
+      <p class="muted" style="margin:0.3rem 0 0.8rem;font-size:0.85rem">Step 1/3 — enter your username and email. A verification OTP will be sent to the email.</p>
       <form method="POST" action="/signup/start" class="form" autocomplete="on">
         <label>Name (optional)
           <input type="text" name="name" maxlength="60" value="<%= values.name || '' %>" autocomplete="name">
@@ -39,13 +39,13 @@
         <label>Username (3-20 chars — a-z, 0-9, _)
           <input type="text" name="username" required autofocus minlength="3" maxlength="20" pattern="[a-z0-9_]{3,20}" value="<%= values.username || '' %>" autocomplete="off">
         </label>
-        <label>Email (required — OTP verification ke liye)
+        <label>Email (required — for OTP verification)
           <input type="email" name="email" required maxlength="100" value="<%= values.email || '' %>" autocomplete="email">
         </label>
         <button type="submit" class="btn full">Send OTP →</button>
       </form>
     <% } else if (step === 2) { %>
-      <p class="muted" style="margin:0.3rem 0 0.8rem;font-size:0.85rem">Step 2/3 — <b><%= values.email || '' %></b> par bheja gaya 6-digit OTP daalo.</p>
+      <p class="muted" style="margin:0.3rem 0 0.8rem;font-size:0.85rem">Step 2/3 — enter the 6-digit OTP sent to <b><%= values.email || '' %></b>.</p>
       <form method="POST" action="/signup/verify" class="form">
         <label>6-digit OTP
           <input type="text" name="otp" required autofocus inputmode="numeric" pattern="[0-9]{6}" maxlength="6" class="otp-input" placeholder="••••••">
@@ -56,7 +56,7 @@
         <button type="submit" class="btn full" id="resendBtn" style="background:transparent;border:1px solid rgba(255,255,255,0.2);font-size:0.82rem">Resend OTP</button>
       </form>
     <% } else { %>
-      <p class="muted" style="margin:0.3rem 0 0.8rem;font-size:0.85rem">Step 3/3 — <b><%= values.username || '' %></b>, email verified ✓. Ab strong password set karo.</p>
+      <p class="muted" style="margin:0.3rem 0 0.8rem;font-size:0.85rem">Step 3/3 — <b><%= values.username || '' %></b>, email verified ✓. Now set a strong password.</p>
       <form method="POST" action="/signup/complete" class="form" autocomplete="off">
         <label>Password (min 8 chars — letter + number)
           <input type="password" name="password" required autofocus minlength="8" autocomplete="new-password">
@@ -69,7 +69,7 @@
             <img src="/signup/captcha.svg?t=<%= Date.now() %>" id="captchaImg" alt="captcha" title="Click for new captcha">
             <input type="text" name="captcha" required maxlength="10" placeholder="type the text" autocomplete="off">
           </span>
-          <span class="hint">Upar image mein likhe 5 characters type karo (image par click = naya captcha)</span>
+          <span class="hint">Type the 5 characters shown in the image above (click the image for a new captcha)</span>
         </label>
         <button type="submit" class="btn full">Create account →</button>
       </form>

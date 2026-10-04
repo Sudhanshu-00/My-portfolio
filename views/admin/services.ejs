@@ -8,14 +8,14 @@
   <form method="POST" action="<%= editService ? '/admin/services/' + editService._id + '/update' : '/admin/services' %>" class="form"><input type="hidden" name="_csrf" value="<%= csrf %>">
     <div class="row-form">
       <label>Service Title
-        <input type="text" name="title" placeholder="e.g. Web App Penetration Test" required value="<%= editService ? editService.title : '' %>">
+        <input type="text" name="title" maxlength="100" placeholder="e.g. Web App Penetration Test" required value="<%= editService ? editService.title : '' %>">
       </label>
       <label>Price
-        <input type="text" name="price" placeholder="e.g. ₹4,999 or Custom" value="<%= editService ? editService.price : '' %>">
+        <input type="text" name="price" maxlength="40" placeholder="e.g. ₹4,999 or Custom" value="<%= editService ? editService.price : '' %>">
       </label>
     </div>
     <label>Description
-      <textarea name="description" rows="3" placeholder="What's included in this service?"><%= editService ? editService.description : '' %></textarea>
+      <textarea name="description" rows="3" maxlength="1000" placeholder="What's included in this service?"><%= editService ? editService.description : '' %></textarea>
     </label>
     <button type="submit" class="btn"><%= editService ? '💾 Update Service' : '➕ Add Service' %></button>
     <% if (editService) { %><a class="btn ghost" href="<%= adminBase %>/services">Cancel</a><% } %>

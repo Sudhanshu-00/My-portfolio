@@ -78,7 +78,7 @@ router.get('/:username', requireSelf, async (req, res) => {
   });
 });
 
-// ---------- EDIT OWN PROFILE (sirf apni details — requireSelf guard) ----------
+// ---------- EDIT OWN PROFILE (own details only — requireSelf guard) ----------
 router.post('/:username/profile', requireSelf, async (req, res) => {
   const back = `/user/${encodeURIComponent(req.params.username)}`;
   const body = req.body || {};

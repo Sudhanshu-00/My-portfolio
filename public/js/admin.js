@@ -22,8 +22,8 @@
       var row = document.createElement('div');
       row.className = 'cl-row';
       row.innerHTML =
-        '<input type="text" name="custom_label" placeholder="Label (e.g. YouTube)">' +
-        '<input type="text" name="custom_url" placeholder="https://...">' +
+        '<input type="text" name="custom_label" maxlength="40" placeholder="Label (e.g. YouTube)">' +
+        '<input type="text" name="custom_url" maxlength="500" placeholder="https://...">' +
         '<button type="button" class="btn small danger cl-del">✕</button>';
       list.appendChild(row);
     });

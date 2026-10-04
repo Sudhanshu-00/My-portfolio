@@ -1,7 +1,7 @@
 <%- include('../partials/admin_head', { title: 'Users' }) %>
 
 <h1>👥 Users <span class="badge"><%= users.length %> accounts</span></h1>
-<p class="muted">Har user ki details yahan dikhti hain — username, password, details sab change kar sakta ho. <strong>'sudhanshu' ka naam change nahi hota</strong> (admin-gate isi naam se juda hai). Users kabhi kisi doosre user ka data nahi dekh sakte — ye sirf admin ko dikhta hai.</p>
+<p class="muted">Every user's details are managed here — username, password and profile details can all be changed. <strong>The 'sudhanshu' username cannot be renamed</strong> (the admin-gate is tied to it). Users can never see another user's data — this page is admin-only.</p>
 
 <% if (msg) { %><div class="alert <%= /deleted|created|changed|now/.test(msg) ? 'success' : 'error' %>"><%= msg %></div><% } %>
 
@@ -53,7 +53,7 @@
       </form>
     </div>
     <% } else { %>
-      <p class="muted" style="margin:0.5rem 0 0;font-size:0.8rem">Ye tumhara session hai — role/delete self par locked (last-admin protection).</p>
+      <p class="muted" style="margin:0.5rem 0 0;font-size:0.8rem">This is your own session — role/delete locked on self (last-admin protection).</p>
     <% } %>
 
     <div class="ud-grid" style="grid-template-columns:1fr 1fr 1fr;margin-top:0.8rem">

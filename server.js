@@ -151,8 +151,8 @@ async function main() {
   });
 
   // ---------- security guard (blocked IPs → 403) ----------
-  // placed AFTER session so a logged-in admin is exempt — apni testing se khud
-  // block ho jao to panel phir bhi khulega (unblock Admin → Security se).
+  // placed AFTER session so a logged-in admin is exempt — if you block yourself
+  // during your own testing, the panel still opens (unblock via Admin → Security).
   app.use((req, res, next) => {
     if (req.session && req.session.admin) return next();
     security.guard(req, res, next);

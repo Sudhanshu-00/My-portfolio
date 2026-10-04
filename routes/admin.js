@@ -74,9 +74,9 @@ router.param('id', (req, res, next, id) => {
 
 router.get('/login', (req, res) => (req.session.admin ? res.redirect(go('/')) : res.render('admin/login', { error: null })));
 
-// ---------- public signup (visitor apna khud ka account bana sakta hai) ----------
-// Reserved names — koi 'sudhanshu'/'admin' naam ki account nahi bana sakta
-// (sirf asli owner ka user hi admin-gate dekhta hai). Lowercase enforced.
+// ---------- public signup (visitors can create their own account) ----------
+// Reserved names — nobody can register 'sudhanshu'/'admin'-style usernames
+// (only the real owner's user sees the admin-gate). Lowercase enforced.
 const RESERVED = new Set(['sudhanshu', 'admin', 'administrator', 'root', 'mod', 'moderator', 'support', 'help', 'staff', 'official', 'system', 'security', 'api', 'signup', 'login', 'logout', 'user', 'users', 'me', 'profile', 'settings', 'reset', 'forgot', 'null', 'undefined']);
 const USERNAME_RE = /^[a-z0-9_]{3,20}$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -84,9 +84,9 @@ const signupRate = new Map(); // ip → [timestamps]
 setInterval(() => signupRate.clear(), 60 * 60 * 1000).unref();
 
 const OTP_VALID_MS = 10 * 60 * 1000; // signup OTP 10 min valid
-const OTP_MAX_ATTEMPTS = 5; // 5 galat attempts → OTP dead
-const OTP_RESEND_MIN_MS = 45 * 1000; // do sends ke beech min gap
-const OTP_MAX_SENDS = 4; // ek signup session mein max 4 OTP
+const OTP_MAX_ATTEMPTS = 5; // 5 wrong attempts → OTP dead
+const OTP_RESEND_MIN_MS = 45 * 1000; // min gap between two sends
+const OTP_MAX_SENDS = 4; // max 4 OTPs per signup session
 const genOtp = () => String(require('crypto').randomInt(0, 1e6)).padStart(6, '0');
 
 async function sendSignupOtp(email, username, otp) {
@@ -94,7 +94,7 @@ async function sendSignupOtp(email, username, otp) {
     to: email,
     subject: `Email verification OTP: ${otp} — Portfolio signup`,
     text: `Hi ${username},\n\nYour Portfolio signup verification OTP: ${otp}\nValid for 10 minutes. If you did not request this, ignore this email.`,
-    html: `<div style="font-family:monospace;background:#0d1117;color:#e6edf3;padding:24px;border-radius:12px"><h2 style="color:#58a6ff">📧 Email Verification</h2><p>Hi <b style="color:#7ee787">${username}</b>, apna email verify karo:</p><p style="font-size:30px;letter-spacing:8px;color:#ffa657;font-weight:bold">${otp}</p><p style="color:#8b949e">Valid for 10 minutes. Agar tumne request nahi ki, is email ko ignore karo.</p></div>`,
+    html: `<div style="font-family:monospace;background:#0d1117;color:#e6edf3;padding:24px;border-radius:12px"><h2 style="color:#58a6ff">📧 Email Verification</h2><p>Hi <b style="color:#7ee787">${username}</b>, verify your email address:</p><p style="font-size:30px;letter-spacing:8px;color:#ffa657;font-weight:bold">${otp}</p><p style="color:#8b949e">Valid for 10 minutes. If you did not request this, please ignore this email.</p></div>`,
   });
   if (!sent && process.env.NODE_ENV !== 'production') console.log(`[DEV] signup OTP for ${username}: ${otp}`); // SMTP absent → dev console only
   return sent;
@@ -126,10 +126,10 @@ router.get('/signup', (req, res) => {
   res.render('signup', { step: 1, error: null, info: null, values: {} });
 });
 
-// legacy POST /signup (purana bookmark/form) → wizard ke step 1 pe
+// legacy POST /signup (old bookmark/form) → bounce to wizard step 1
 router.post('/signup', (req, res) => res.redirect('/signup'));
 
-// ---- step 1: username + email → OTP bhejo ----
+// ---- step 1: username + email → send OTP ----
 router.post('/signup/start', async (req, res) => {
   if (req.session.user) return res.redirect(`/user/${encodeURIComponent(req.session.user)}`);
   const b = req.body || {};
@@ -143,21 +143,21 @@ router.post('/signup/start', async (req, res) => {
   if (!otpRate(`${req.ip}|signup-start`, 6, 60 * 60 * 1000)) return back('Too many attempts from this network — try again later.', 429);
   if (!USERNAME_RE.test(values.username)) return back('Username: 3-20 chars, only a-z, 0-9, underscore.');
   if (RESERVED.has(values.username)) return back('That username is reserved — please choose another.');
-  if (!EMAIL_RE.test(values.email)) return back('Valid email required — verification OTP usi par jayega.');
+  if (!EMAIL_RE.test(values.email)) return back('Valid email required — the verification OTP will be sent there.');
 
   if (await AdminUser.findOne({ username: values.username }).catch(() => null)) return back('That username is already taken — please choose another.', 409);
-  if (await AdminUser.findOne({ email: values.email }).catch(() => null)) return back('That email is already registered — login try karo ya doosra email use karo.', 409);
+  if (await AdminUser.findOne({ email: values.email }).catch(() => null)) return back('That email is already registered — try logging in or use another email.', 409);
 
   const otp = genOtp();
   req.session.signup = {
     name: values.name, username: values.username, email: values.email,
-    otpHash: await bcrypt.hash(otp, 10), // plain OTP kabhi store nahi hota
+    otpHash: await bcrypt.hash(otp, 10), // plain OTP is never stored
     otpExpiry: Date.now() + OTP_VALID_MS,
     otpAttempts: 0, verified: false, sends: 1, lastSent: Date.now(),
   };
   const sent = await sendSignupOtp(values.email, values.username, otp);
   security.logEvent(req, { reason: 'signup-otp-sent', severity: 'info', status: 200, path: '/signup/start' });
-  if (!sent) return res.status(500).render('signup', { step: 2, error: 'OTP email send nahi ho paya — thodi der baad "Resend OTP" dabao.', info: null, values });
+  if (!sent) return res.status(500).render('signup', { step: 2, error: 'The OTP email could not be sent — press "Resend OTP" in a moment.', info: null, values });
   return res.render('signup', { step: 2, error: null, info: `OTP sent to ${values.email} — 10 minutes valid.`, values });
 });
 
@@ -169,17 +169,17 @@ router.post('/signup/verify', async (req, res) => {
   const otp = String(req.body.otp || '').replace(/\D/g, '').slice(0, 6);
   const fail = (error, code = 400) => res.status(code).render('signup', { step: 2, error, info: null, values: { username: s.username, email: s.email } });
 
-  if (Date.now() > s.otpExpiry) { req.session.signup = null; return fail('OTP expire ho gaya — signup dobara start karo.'); }
-  if (s.otpAttempts >= OTP_MAX_ATTEMPTS) { req.session.signup = null; security.logEvent(req, { reason: 'signup-otp-fail', severity: 'medium', status: 200, path: '/signup/verify' }); return fail('Too many wrong attempts — signup dobara start karo.'); }
+  if (Date.now() > s.otpExpiry) { req.session.signup = null; return fail('This OTP has expired — please start the signup again.'); }
+  if (s.otpAttempts >= OTP_MAX_ATTEMPTS) { req.session.signup = null; security.logEvent(req, { reason: 'signup-otp-fail', severity: 'medium', status: 200, path: '/signup/verify' }); return fail('Too many wrong attempts — please start the signup again.'); }
 
   s.otpAttempts += 1;
   if (!(await bcrypt.compare(otp, s.otpHash))) {
     const left = OTP_MAX_ATTEMPTS - s.otpAttempts;
-    if (left <= 0) { // aakhri attempt bhi galat → signup state hi maar do
+    if (left <= 0) { // last attempt also wrong → kill the signup state
       req.session.signup = null;
       await new Promise((r) => req.session.save(r));
       security.logEvent(req, { reason: 'signup-otp-fail', severity: 'medium', status: 200, path: '/signup/verify' });
-      return fail('Too many wrong attempts — signup dobara start karo.');
+      return fail('Too many wrong attempts — please start the signup again.');
     }
     await new Promise((r) => req.session.save(r)); // attempt count persist
     security.logEvent(req, { reason: 'signup-otp-fail', severity: 'medium', status: 200, path: '/signup/verify' });
@@ -188,7 +188,7 @@ router.post('/signup/verify', async (req, res) => {
   s.verified = true;
   await new Promise((r) => req.session.save(r));
   security.logEvent(req, { reason: 'signup-otp-verified', severity: 'info', status: 200, path: '/signup/verify' });
-  return res.render('signup', { step: 3, error: null, info: 'Email verified ✓ — ab password set karo.', values: { username: s.username, email: s.email, name: s.name } });
+  return res.render('signup', { step: 3, error: null, info: 'Email verified ✓ — now set your password.', values: { username: s.username, email: s.email, name: s.name } });
 });
 
 // ---- step 2: OTP resend (rate-limited) ----
@@ -198,8 +198,8 @@ router.post('/signup/resend', async (req, res) => {
   if (s.verified) return res.render('signup', { step: 3, error: null, info: null, values: s });
   const values = { username: s.username, email: s.email };
   const fail = (error, code = 429) => res.status(code).render('signup', { step: 2, error, info: null, values });
-  if (!otpRate(`${req.ip}|signup-resend`, 10, 60 * 60 * 1000)) return fail('Too many requests — thodi der baad try karo.');
-  if (s.sends >= OTP_MAX_SENDS) { req.session.signup = null; return fail('OTP resend limit reached — signup dobara start karo.'); }
+  if (!otpRate(`${req.ip}|signup-resend`, 10, 60 * 60 * 1000)) return fail('Too many requests — please try again in a while.');
+  if (s.sends >= OTP_MAX_SENDS) { req.session.signup = null; return fail('OTP resend limit reached — please start the signup again.'); }
   const waitLeft = OTP_RESEND_MIN_MS - (Date.now() - s.lastSent);
   if (waitLeft > 0) return fail(`Please wait ${Math.ceil(waitLeft / 1000)}s before requesting a new OTP.`);
   const otp = genOtp();
@@ -209,18 +209,18 @@ router.post('/signup/resend', async (req, res) => {
   s.sends += 1;
   s.lastSent = Date.now();
   const sent = await sendSignupOtp(s.email, s.username, otp);
-  if (!sent) return fail('OTP email send nahi ho paya — thodi der baad try karo.', 500);
+  if (!sent) return fail('The OTP email could not be sent — please try again in a while.', 500);
   return res.render('signup', { step: 2, error: null, info: `New OTP sent to ${s.email} — 10 minutes valid.`, values });
 });
 
-// ---- captcha image (sirf OTP-verified users ko milti hai) ----
+// ---- captcha image (only served to OTP-verified users) ----
 router.get('/signup/captcha.svg', (req, res) => {
   const s = req.session.signup;
   if (!s || !s.verified) return res.status(404).type('text/plain').send('not found');
   const chars = 'abcdefghjkmnpqrstuvwxyz23456789'; // 0/o, 1/i/l confusion hataya
   const text = Array.from({ length: 5 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
   req.session.captcha = { answer: text, exp: Date.now() + 5 * 60 * 1000 };
-  if (process.env.NODE_ENV !== 'production') console.log(`[DEV] captcha: ${text}`); // automated test ke liye (dev only)
+  if (process.env.NODE_ENV !== 'production') console.log(`[DEV] captcha: ${text}`); // for automated tests (dev only)
   res.type('image/svg+xml').set('Cache-Control', 'no-store');
   res.send(captchaSvg(text));
 });
@@ -238,12 +238,12 @@ router.post('/signup/complete', async (req, res) => {
 
   // captcha — single-use, 5 min expiry, case-insensitive
   const cap = req.session.captcha;
-  req.session.captcha = null; // ek captcha sirf ek baar
+  req.session.captcha = null; // single-use captcha
   const guess = String(req.body.captcha || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-  if (!cap || Date.now() > cap.exp) return back('Captcha expire ho gaya — naya captcha load ho gaya, dobara type karo.', 429);
+  if (!cap || Date.now() > cap.exp) return back('The captcha has expired — a new captcha has loaded, please type it again.', 429);
   if (guess !== cap.answer) {
     security.logEvent(req, { reason: 'signup-captcha-fail', severity: 'low', status: 200, path: '/signup/complete' });
-    return back('Captcha galat hai — naya captcha load ho gaya, dobara try karo.');
+    return back('The captcha is wrong — a new captcha has loaded, please try again.');
   }
 
   // max 5 signups / IP / hour (abuse shield — actual creation par)
@@ -251,9 +251,9 @@ router.post('/signup/complete', async (req, res) => {
   const arr = (signupRate.get(req.ip) || []).filter((t) => now - t < 60 * 60 * 1000);
   if (arr.length >= 5) return back('Too many accounts created from this network — try again later.', 429);
 
-  // race re-check — OTP verify ke baad koi aur ne le liya ho
-  if (await AdminUser.findOne({ username: s.username }).catch(() => null)) { req.session.signup = null; return back('That username was just taken — doosre username se signup start karo.', 409); }
-  if (await AdminUser.findOne({ email: s.email }).catch(() => null)) { req.session.signup = null; return back('That email was just registered — doosre email se signup start karo.', 409); }
+  // race re-check — someone may have claimed it after OTP verification
+  if (await AdminUser.findOne({ username: s.username }).catch(() => null)) { req.session.signup = null; return back('That username was just taken — please start the signup with a different username.', 409); }
+  if (await AdminUser.findOne({ email: s.email }).catch(() => null)) { req.session.signup = null; return back('That email was just registered — please start the signup with a different email.', 409); }
 
   await AdminUser.create({
     username: s.username,
@@ -276,7 +276,7 @@ router.post('/signup/complete', async (req, res) => {
   });
 });
 
-// legacy admin-entrance alias → normal login (koi alag 'admin page' publicly kabhi nahi dikhta)
+// legacy admin-entrance alias → normal login (no separate public 'admin page' ever exists)
 router.get('/login/adminlogin', (req, res) => res.redirect('/login'));
 
 // ---------- brute-force lock (login) ----------
@@ -518,8 +518,8 @@ router.get('/', async (req, res) => {
 });
 
 // ---------- user accounts manager (admin sees + changes EVERYONE) ----------
-// Har user ki details yahan dikhti hain; admin username/password/details change
-// kar sakta hai, account banaa/delete kar sakta hai. Guards: self-protect.
+// Every user's details are managed here; admin can change username/password/details
+// and create/delete accounts. Guards: self-protect.
 const userPageData = async () => {
   const users = await AdminUser.find().sort({ createdAt: -1 }).lean();
   return users;
@@ -540,7 +540,7 @@ const cleanProfile = (b) => ({
   bio: String(b.bio || '').trim().slice(0, 300),
 });
 
-// create a new account (user ya admin — admin ka bhi naya yahin se)
+// create a new account (user or admin — admins are created here too)
 router.post('/users/create', async (req, res) => {
   const b = req.body || {};
   const username = String(b.username || '').trim().toLowerCase().slice(0, 20);
@@ -564,7 +564,7 @@ router.post('/users/:id/username', async (req, res) => {
   const target = await AdminUser.findById(req.params.id).catch(() => null);
   const fail = (m) => res.redirect(go(`/admin/users?msg=${encodeURIComponent(m)}`));
   if (!target) return fail('User not found');
-  if (target.username === 'sudhanshu') return fail("'sudhanshu' ka naam nahi badla ja sakta (admin-gate isi naam se juda hai)");
+  if (target.username === 'sudhanshu') return fail("The username 'sudhanshu' cannot be changed (the admin-gate is tied to it)");
   const nu = String((req.body || {}).username || '').trim().toLowerCase().slice(0, 20);
   if (!USERNAME_RE.test(nu)) return fail('Invalid username (3-20 chars: a-z, 0-9, _)');
   if (RESERVED.has(nu)) return fail('That username is reserved');
@@ -593,11 +593,11 @@ router.post('/users/:id/role', async (req, res) => {
   const target = await AdminUser.findById(req.params.id).catch(() => null);
   const fail = (m) => res.redirect(go(`/admin/users?msg=${encodeURIComponent(m)}`));
   if (!target) return fail('User not found');
-  if (target.username === req.session.admin) return fail('Apna role nahi badal sakte');
+  if (target.username === req.session.admin) return fail('You cannot change your own role');
   const role = (req.body || {}).role === 'admin' ? 'admin' : 'user';
   if (target.role === 'admin' && role === 'user') {
     const admins = await AdminUser.countDocuments({ role: 'admin' });
-    if (admins <= 1) return fail('Last admin ko demote nahi kar sakte');
+    if (admins <= 1) return fail('The last admin cannot be demoted');
   }
   target.role = role;
   await target.save();
@@ -608,10 +608,10 @@ router.post('/users/:id/delete', async (req, res) => {
   const target = await AdminUser.findById(req.params.id).catch(() => null);
   const fail = (m) => res.redirect(go(`/admin/users?msg=${encodeURIComponent(m)}`));
   if (!target) return fail('User not found');
-  if (target.username === req.session.admin) return fail('Apna account delete nahi kar sakte');
+  if (target.username === req.session.admin) return fail('You cannot delete your own account');
   if (target.role === 'admin') {
     const admins = await AdminUser.countDocuments({ role: 'admin' });
-    if (admins <= 1) return fail('Last admin delete nahi ho sakta');
+    if (admins <= 1) return fail('The last admin cannot be deleted');
   }
   await target.deleteOne();
   res.redirect(go(`/admin/users?msg=${encodeURIComponent('Account ' + target.username + ' deleted')}`));
@@ -681,11 +681,11 @@ router.get('/settings', (req, res) => res.render('admin/settings'));
 
 router.post('/settings', upload.single('photo'), async (req, res) => {
   const s = await SiteSetting.get();
-  ['siteName', 'heroTitle', 'heroSubtitle', 'aboutText', 'email', 'phone', 'location', 'githubUsername', 'thmUsername'].forEach(
-    (f) => {
-      if (req.body[f] !== undefined) s[f] = String(req.body[f]).slice(0, 3000);
-    }
-  );
+  // per-field length caps (match the schema limits)
+  const caps = { siteName: 100, heroTitle: 150, heroSubtitle: 300, aboutText: 5000, email: 100, phone: 20, location: 120, githubUsername: 60, thmUsername: 60 };
+  Object.entries(caps).forEach(([f, n]) => {
+    if (req.body[f] !== undefined) s[f] = String(req.body[f]).slice(0, n);
+  });
   // social URLs stored http(s)-only (javascript:/data: XSS blocked at write time)
   ['github', 'linkedin', 'twitter', 'instagram'].forEach((f) => {
     if (req.body[f] !== undefined) s[f] = safeUrl(req.body[f]);
@@ -710,7 +710,8 @@ router.post('/resume', resumeUpload.single('resume'), async (req, res) => {
   if (!req.file) return res.redirect(go('/admin/settings?resume_error=1'));
   const s = await SiteSetting.get();
   s.resumeFile = `data:application/pdf;base64,${req.file.buffer.toString('base64')}`;
-  s.resumeName = req.file.originalname.endsWith('.pdf') ? req.file.originalname : req.file.originalname + '.pdf';
+  const rawName = req.file.originalname.endsWith('.pdf') ? req.file.originalname : req.file.originalname + '.pdf';
+  s.resumeName = String(rawName).slice(0, 200);
   await s.save();
   res.redirect(go('/admin/settings?resume=1'));
 });
@@ -731,14 +732,24 @@ router.get('/services', async (req, res) => {
 
 router.post('/services', async (req, res) => {
   const { title, description, price } = req.body;
-  if (title && title.trim()) await Service.create({ title: title.trim(), description, price });
+  if (title && String(title).trim()) {
+    await Service.create({
+      title: String(title).trim().slice(0, 100),
+      description: String(description || '').slice(0, 1000),
+      price: String(price || '').slice(0, 40),
+    });
+  }
   res.redirect(go('/admin/services'));
 });
 
 router.post('/services/:id/update', async (req, res) => {
   const { title, description, price } = req.body;
-  if (title && title.trim()) {
-    await Service.findByIdAndUpdate(req.params.id, { title: title.trim(), description, price }).catch(() => {});
+  if (title && String(title).trim()) {
+    await Service.findByIdAndUpdate(req.params.id, {
+      title: String(title).trim().slice(0, 100),
+      description: String(description || '').slice(0, 1000),
+      price: String(price || '').slice(0, 40),
+    }).catch(() => {});
   }
   res.redirect(go('/admin/services'));
 });
@@ -758,9 +769,9 @@ router.post('/testimonials', async (req, res) => {
   const { name, company, text, rating } = req.body;
   if (name && name.trim() && text && text.trim()) {
     await Testimonial.create({
-      name: name.trim(),
-      company: company || '',
-      text: text.trim(),
+      name: String(name).trim().slice(0, 60),
+      company: String(company || '').trim().slice(0, 80),
+      text: String(text).trim().slice(0, 500),
       rating: Math.min(5, Math.max(1, parseInt(rating, 10) || 5)),
     });
   }
@@ -771,9 +782,9 @@ router.post('/testimonials/:id/update', async (req, res) => {
   const { name, company, text, rating } = req.body;
   if (name && name.trim() && text && text.trim()) {
     await Testimonial.findByIdAndUpdate(req.params.id, {
-      name: name.trim(),
-      company: company || '',
-      text: text.trim(),
+      name: String(name).trim().slice(0, 60),
+      company: String(company || '').trim().slice(0, 80),
+      text: String(text).trim().slice(0, 500),
       rating: Math.min(5, Math.max(1, parseInt(rating, 10) || 5)),
     }).catch(() => {});
   }
@@ -795,10 +806,10 @@ router.post('/experience', async (req, res) => {
   const { company, role, duration, description, order } = req.body;
   if (company && company.trim() && role && role.trim()) {
     await Experience.create({
-      company: company.trim(),
-      role: role.trim(),
-      duration: duration || '',
-      description: description || '',
+      company: String(company).trim().slice(0, 80),
+      role: String(role).trim().slice(0, 80),
+      duration: String(duration || '').slice(0, 60),
+      description: String(description || '').slice(0, 1000),
       current: req.body.current === 'on',
       order: parseInt(order, 10) || 0,
     });
@@ -810,10 +821,10 @@ router.post('/experience/:id/update', async (req, res) => {
   const { company, role, duration, description, order } = req.body;
   if (company && company.trim() && role && role.trim()) {
     await Experience.findByIdAndUpdate(req.params.id, {
-      company: company.trim(),
-      role: role.trim(),
-      duration: duration || '',
-      description: description || '',
+      company: String(company).trim().slice(0, 80),
+      role: String(role).trim().slice(0, 80),
+      duration: String(duration || '').slice(0, 60),
+      description: String(description || '').slice(0, 1000),
       current: req.body.current === 'on',
       order: parseInt(order, 10) || 0,
     }).catch(() => {});
@@ -837,9 +848,9 @@ router.post('/labs', async (req, res) => {
   if (title && title.trim()) {
     await Lab.create({
       platform: platform || 'TryHackMe',
-      title: title.trim(),
-      category: (category || 'General').trim(),
-      difficulty: difficulty || 'Easy',
+      title: String(title).trim().slice(0, 120),
+      category: String(category || 'General').trim().slice(0, 40),
+      difficulty: String(difficulty || 'Easy').slice(0, 20),
       url: safeUrl(url),
       solvedAt: solvedAt ? new Date(solvedAt) : undefined,
     });
@@ -852,9 +863,9 @@ router.post('/labs/:id/update', async (req, res) => {
   if (title && title.trim()) {
     await Lab.findByIdAndUpdate(req.params.id, {
       platform: platform || 'TryHackMe',
-      title: title.trim(),
-      category: (category || 'General').trim(),
-      difficulty: difficulty || 'Easy',
+      title: String(title).trim().slice(0, 120),
+      category: String(category || 'General').trim().slice(0, 40),
+      difficulty: String(difficulty || 'Easy').slice(0, 20),
       url: safeUrl(url),
       solvedAt: solvedAt ? new Date(solvedAt) : undefined,
     }).catch(() => {});
@@ -919,9 +930,9 @@ router.post('/skills', async (req, res) => {
   const { name, level, category } = req.body;
   if (name && name.trim()) {
     await Skill.create({
-      name: name.trim(),
+      name: String(name).trim().slice(0, 60),
       level: Math.min(100, Math.max(0, parseInt(level, 10) || 80)),
-      category: (category || 'General').trim(),
+      category: String(category || 'General').trim().slice(0, 40),
     });
   }
   res.redirect(go('/admin/skills'));
@@ -931,9 +942,9 @@ router.post('/skills/:id/update', async (req, res) => {
   const { name, level, category } = req.body;
   if (name && name.trim()) {
     await Skill.findByIdAndUpdate(req.params.id, {
-      name: name.trim(),
+      name: String(name).trim().slice(0, 60),
       level: Math.min(100, Math.max(0, parseInt(level, 10) || 80)),
-      category: (category || 'General').trim(),
+      category: String(category || 'General').trim().slice(0, 40),
     }).catch(() => {});
   }
   res.redirect(go('/admin/skills'));

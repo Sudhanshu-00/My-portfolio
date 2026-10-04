@@ -8,10 +8,10 @@
   <form method="POST" action="<%= editTestimonial ? '/admin/testimonials/' + editTestimonial._id + '/update' : '/admin/testimonials' %>" class="form"><input type="hidden" name="_csrf" value="<%= csrf %>">
     <div class="row-form">
       <label>Client Name
-        <input type="text" name="name" placeholder="e.g. Rahul Sharma" required value="<%= editTestimonial ? editTestimonial.name : '' %>">
+        <input type="text" name="name" maxlength="60" placeholder="e.g. Rahul Sharma" required value="<%= editTestimonial ? editTestimonial.name : '' %>">
       </label>
       <label>Company (optional)
-        <input type="text" name="company" placeholder="e.g. ShopKart India" value="<%= editTestimonial ? editTestimonial.company : '' %>">
+        <input type="text" name="company" maxlength="80" placeholder="e.g. ShopKart India" value="<%= editTestimonial ? editTestimonial.company : '' %>">
       </label>
       <label>Rating
         <select name="rating">
@@ -22,7 +22,7 @@
       </label>
     </div>
     <label>Feedback
-      <textarea name="text" rows="3" placeholder="What did the client say?" required><%= editTestimonial ? editTestimonial.text : '' %></textarea>
+      <textarea name="text" rows="3" maxlength="500" placeholder="What did the client say?" required><%= editTestimonial ? editTestimonial.text : '' %></textarea>
     </label>
     <button type="submit" class="btn"><%= editTestimonial ? '💾 Update Testimonial' : '➕ Add Testimonial' %></button>
     <% if (editTestimonial) { %><a class="btn ghost" href="<%= adminBase %>/testimonials">Cancel</a><% } %>
