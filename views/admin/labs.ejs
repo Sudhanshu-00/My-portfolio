@@ -5,7 +5,7 @@
 
 <div class="panel">
   <h2><%= editLab ? '✏️ Edit Lab: ' + editLab.title : '➕ Add Solved Lab' %></h2>
-  <form method="POST" action="<%= editLab ? '/admin/labs/' + editLab._id + '/update' : '/admin/labs' %>" class="form">
+  <form method="POST" action="<%= editLab ? '/admin/labs/' + editLab._id + '/update' : '/admin/labs' %>" class="form"><input type="hidden" name="_csrf" value="<%= csrf %>">
     <div class="row-form">
       <label>Platform
         <select name="platform">
@@ -55,7 +55,7 @@
       <td>
         <div class="actions" style="justify-content:flex-end">
           <a class="btn small ghost" href="<%= adminBase %>/labs?edit=<%= l._id %>">✏️ Edit</a>
-          <form method="POST" action="<%= adminBase %>/labs/<%= l._id %>/delete" class="inline" onsubmit="return confirm('Delete this lab?')">
+          <form method="POST" action="<%= adminBase %>/labs/<%= l._id %>/delete" class="inline" onsubmit="return confirm('Delete this lab?')"><input type="hidden" name="_csrf" value="<%= csrf %>">
             <button type="submit" class="btn small danger">🗑 Delete</button>
           </form>
         </div>

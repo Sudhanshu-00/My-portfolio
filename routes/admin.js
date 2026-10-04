@@ -8,6 +8,13 @@ const { sendMail } = require('../services/mailer');
 const ADMIN_PATH = process.env.ADMIN_PATH || 'admin';
 const go = (p) => '/' + ADMIN_PATH + p; // redirects secret-path aware
 
+// lab/tool URLs sirf http(s) — javascript:/data: href XSS block
+const safeUrl = (u) => {
+  const s = String(u || '').trim().slice(0, 500);
+  if (!s) return '';
+  return /^https?:\/\//i.test(s) ? s : 'https://' + s;
+};
+
 // ---------- photo upload helper ----------
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -24,18 +31,34 @@ const resumeUpload = multer({
 });
 
 // ---------- auth ----------
+// ---------- auth ----------
+const crypto = require('crypto');
 const requireAuth = async (req, res, next) => {
   if (req.session.admin) {
+    // ---- CSRF guard: har admin POST pe token verify (state-changing attacks block) ----
+    if (req.method === 'POST') {
+      const token = req.body && req.body._csrf; // req.body undefined ho sakta hai (empty POST)
+      if (!req.session.csrf || token !== req.session.csrf) {
+        return res.status(403).send('Security check failed — page reload karke dobara try karo.');
+      }
+    } else {
+      // GET pe token issue karo (views me hidden input ke through jata hai)
+      if (!req.session.csrf) req.session.csrf = crypto.randomBytes(32).toString('hex');
+      res.locals.csrf = req.session.csrf;
+    }
     res.locals.admin = req.session.admin; // username for views
     res.locals.path = '/admin' + req.path; // sidebar active-state (router prefix-stripped path deta hai)
     res.locals.unread = await Message.countDocuments({ read: false });
     res.locals.pendingFeedback = await Feedback.countDocuments({ status: 'pending' });
     return next();
   }
-  res.redirect(go('/login'));
+  res.redirect(go('/login/adminlogin'));
 };
 
-router.get('/login', (req, res) => (req.session.admin ? res.redirect(go('/admin')) : res.render('admin/login', { error: null })));
+router.get('/login', (req, res) => (req.session.admin ? res.redirect(go('/')) : res.render('admin/login', { error: null })));
+
+// admin login — sirf ye page asli admin auth deta hai (normal login se link ke through)
+router.get('/login/adminlogin', (req, res) => (req.session.admin ? res.redirect(go('/')) : res.render('admin/admin_login', { error: null })));
 
 // ---------- brute-force lock (login) ----------
 // 5 failed attempts (IP+username) → 15 min lock. In-memory, restart pe reset.
@@ -395,7 +418,7 @@ router.post('/labs', async (req, res) => {
       title: title.trim(),
       category: (category || 'General').trim(),
       difficulty: difficulty || 'Easy',
-      url: url || '',
+      url: safeUrl(url),
       solvedAt: solvedAt ? new Date(solvedAt) : undefined,
     });
   }
@@ -410,7 +433,7 @@ router.post('/labs/:id/update', async (req, res) => {
       title: title.trim(),
       category: (category || 'General').trim(),
       difficulty: difficulty || 'Easy',
-      url: url || '',
+      url: safeUrl(url),
       solvedAt: solvedAt ? new Date(solvedAt) : undefined,
     }).catch(() => {});
   }

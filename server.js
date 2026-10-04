@@ -52,6 +52,29 @@ async function main() {
     next();
   });
 
+  // ---------- global rate limit + IP auto-block ----------
+  // 300 req/min per IP — cross karne pe 5 min ke liye block. (DoS/fuzzing shield)
+  const RL_LIMIT = 300, RL_WINDOW = 60_000, RL_BLOCK = 5 * 60_000;
+  const rateMap = new Map();
+  setInterval(() => rateMap.clear(), 10 * 60 * 1000).unref();
+  app.use((req, res, next) => {
+    const now = Date.now();
+    const r = rateMap.get(req.ip) || { count: 0, win: now, blockedUntil: 0 };
+    if (r.blockedUntil > now) {
+      res.set('Retry-After', Math.ceil((r.blockedUntil - now) / 1000));
+      return res.status(429).send('Too many requests — IP temporarily blocked.');
+    }
+    if (now - r.win > RL_WINDOW) { r.count = 0; r.win = now; }
+    r.count++;
+    if (r.count > RL_LIMIT) {
+      r.blockedUntil = now + RL_BLOCK;
+      console.warn(`⛔ IP blocked (rate limit): ${req.ip}`);
+      return res.status(429).send('Too many requests — IP temporarily blocked.');
+    }
+    rateMap.set(req.ip, r);
+    next();
+  });
+
   app.use(express.urlencoded({ extended: true }));
   app.use(express.static(path.join(__dirname, 'public')));
 
@@ -89,7 +112,7 @@ async function main() {
   // Panel: sirf secret path (ADMIN_PATH) — /admin/* publicly 404.
   // /login, /forgot, /reset public aliases — taaki site se login + email-OTP recovery ho sake
   // aur secret path kabhi public HTML me leak na ho.
-  const AUTH_PATHS = ['/login', '/forgot', '/forgot/verify', '/reset'];
+  const AUTH_PATHS = ['/login', '/login/adminlogin', '/forgot', '/forgot/verify', '/reset'];
   app.use((req, res, next) => {
     res.locals.adminBase = SECRET_MOUNT; // views me saare admin links isse bante hain
     if (req.url === SECRET_MOUNT || req.url.startsWith(SECRET_MOUNT + '/')) {

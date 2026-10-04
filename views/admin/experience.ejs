@@ -5,7 +5,7 @@
 
 <div class="panel">
   <h2><%= editExp ? '✏️ Edit: ' + editExp.role + ' @ ' + editExp.company : '➕ Add Experience' %></h2>
-  <form method="POST" action="<%= editExp ? '/admin/experience/' + editExp._id + '/update' : '/admin/experience' %>" class="form">
+  <form method="POST" action="<%= editExp ? '/admin/experience/' + editExp._id + '/update' : '/admin/experience' %>" class="form"><input type="hidden" name="_csrf" value="<%= csrf %>">
     <div class="row-form">
       <label>Company Name
         <input type="text" name="company" placeholder="e.g. CyberShield Solutions" required value="<%= editExp ? editExp.company : '' %>">
@@ -47,7 +47,7 @@
       <td>
         <div class="actions" style="justify-content:flex-end">
           <a class="btn small ghost" href="<%= adminBase %>/experience?edit=<%= e._id %>">✏️ Edit</a>
-          <form method="POST" action="<%= adminBase %>/experience/<%= e._id %>/delete" class="inline" onsubmit="return confirm('Delete this experience?')">
+          <form method="POST" action="<%= adminBase %>/experience/<%= e._id %>/delete" class="inline" onsubmit="return confirm('Delete this experience?')"><input type="hidden" name="_csrf" value="<%= csrf %>">
             <button type="submit" class="btn small danger">🗑 Delete</button>
           </form>
         </div>

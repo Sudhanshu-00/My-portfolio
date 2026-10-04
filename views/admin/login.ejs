@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Auth</title>
+  <title>Login</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body class="login-page">
   <div class="login-box">
-    <h1>&gt;_ AUTH REQUIRED</h1>
+    <h1>&gt;_ LOGIN</h1>
     <% if (query.reset) { %><div class="alert success">✅ Password reset ho gaya — naye password se login karo.</div><% } %>
     <% if (error) { %><div class="alert error"><%= error %></div><% } %>
     <form method="POST" action="/login" class="form">
@@ -24,6 +24,8 @@
       <a href="/forgot" class="link" style="font-size:0.82rem">Forgot password?</a>
       <a href="/" class="link" style="font-size:0.82rem">← Website</a>
     </div>
+    <div class="side-sep" style="margin:1rem 0"></div>
+    <a href="/login/adminlogin" class="link" style="font-size:0.85rem;opacity:0.7">🔐 Admin Access →</a>
   </div>
 </body>
 </html>

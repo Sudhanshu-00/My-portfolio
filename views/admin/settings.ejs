@@ -8,7 +8,7 @@
 <% if (query.resume_deleted) { %><div class="alert success">🗑 Resume deleted.</div><% } %>
 <% if (query.resume_error) { %><div class="alert error">❌ Upload failed — sirf PDF (max 5 MB) upload karo.</div><% } %>
 
-<form method="POST" action="<%= adminBase %>/settings" enctype="multipart/form-data" class="form">
+<form method="POST" action="<%= adminBase %>/settings" enctype="multipart/form-data" class="form"><input type="hidden" name="_csrf" value="<%= csrf %>">
   <h2>General</h2>
   <label>Website Name
     <input type="text" name="siteName" value="<%= settings.siteName %>" required>
@@ -39,14 +39,14 @@
   <% if (settings.resumeFile) { %>
     <div class="resume-row">
       <span>📎 <a class="link" href="/resume" target="_blank"><%= settings.resumeName %></a> <small class="muted">(current, ~<%= Math.round((settings.resumeFile.length * 0.75) / 1024) %> KB)</small></span>
-      <form method="POST" action="<%= adminBase %>/resume/delete" class="inline" onsubmit="return confirm('Delete resume?')">
+      <form method="POST" action="<%= adminBase %>/resume/delete" class="inline" onsubmit="return confirm('Delete resume?')"><input type="hidden" name="_csrf" value="<%= csrf %>">
         <button type="submit" class="btn small danger">🗑 Delete</button>
       </form>
     </div>
   <% } else { %>
     <p class="muted">⚠️ No resume uploaded yet.</p>
   <% } %>
-  <form method="POST" action="<%= adminBase %>/resume" enctype="multipart/form-data" class="form">
+  <form method="POST" action="<%= adminBase %>/resume" enctype="multipart/form-data" class="form"><input type="hidden" name="_csrf" value="<%= csrf %>">
     <div class="row-form">
       <label>Upload PDF (max 5 MB)
         <input type="file" name="resume" accept="application/pdf" required>

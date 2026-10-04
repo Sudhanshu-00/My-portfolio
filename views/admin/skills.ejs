@@ -4,7 +4,7 @@
 
 <div class="panel">
   <h2><%= editSkill ? '✏️ Edit Skill: ' + editSkill.name : '＋ Add Skill' %></h2>
-  <form method="POST" action="<%= editSkill ? '/admin/skills/' + editSkill._id + '/update' : '/admin/skills' %>" class="form row-form">
+  <form method="POST" action="<%= editSkill ? '/admin/skills/' + editSkill._id + '/update' : '/admin/skills' %>" class="form row-form"><input type="hidden" name="_csrf" value="<%= csrf %>">
     <label>Name
       <input type="text" name="name" required placeholder="e.g. React" value="<%= editSkill ? editSkill.name : '' %>">
     </label>
@@ -33,7 +33,7 @@
       <td>
         <div class="actions">
           <a class="btn small ghost" href="<%= adminBase %>/skills?edit=<%= s._id %>">✏️ Edit</a>
-          <form method="POST" action="<%= adminBase %>/skills/<%= s._id %>/delete" class="inline">
+          <form method="POST" action="<%= adminBase %>/skills/<%= s._id %>/delete" class="inline"><input type="hidden" name="_csrf" value="<%= csrf %>">
             <button type="submit" class="btn small danger">Delete</button>
           </form>
         </div>

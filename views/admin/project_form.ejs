@@ -4,6 +4,7 @@
 
 <form method="POST" enctype="multipart/form-data" class="form"
       action="<%= project ? '/admin/projects/' + project._id : '/admin/projects' %>">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
   <label>Title
     <input type="text" name="title" required value="<%= project ? project.title : '' %>">
   </label>

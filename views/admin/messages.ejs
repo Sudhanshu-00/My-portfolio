@@ -19,11 +19,11 @@
     <p style="white-space: pre-line;"><%= m.message %></p>
     <div class="actions">
       <% if (!m.read) { %>
-        <form method="POST" action="<%= adminBase %>/messages/<%= m._id %>/read" class="inline">
+        <form method="POST" action="<%= adminBase %>/messages/<%= m._id %>/read" class="inline"><input type="hidden" name="_csrf" value="<%= csrf %>">
           <button type="submit" class="btn small outline">Mark as Read</button>
         </form>
       <% } %>
-      <form method="POST" action="<%= adminBase %>/messages/<%= m._id %>/delete" class="inline">
+      <form method="POST" action="<%= adminBase %>/messages/<%= m._id %>/delete" class="inline"><input type="hidden" name="_csrf" value="<%= csrf %>">
         <button type="submit" class="btn small danger">Delete</button>
       </form>
     </div>

@@ -41,21 +41,21 @@
 
     <div class="actions" style="margin-top: 0.7rem;">
       <% if (f.status !== 'approved') { %>
-        <form method="POST" action="<%= adminBase %>/feedback/<%= f._id %>/approve" class="inline">
+        <form method="POST" action="<%= adminBase %>/feedback/<%= f._id %>/approve" class="inline"><input type="hidden" name="_csrf" value="<%= csrf %>">
           <button type="submit" class="btn small">✅ Approve & Live</button>
         </form>
       <% } %>
       <% if (f.status !== 'hidden') { %>
-        <form method="POST" action="<%= adminBase %>/feedback/<%= f._id %>/hide" class="inline">
+        <form method="POST" action="<%= adminBase %>/feedback/<%= f._id %>/hide" class="inline"><input type="hidden" name="_csrf" value="<%= csrf %>">
           <button type="submit" class="btn small outline">🙈 Hide</button>
         </form>
       <% } %>
-      <form method="POST" action="<%= adminBase %>/feedback/<%= f._id %>/delete" class="inline">
+      <form method="POST" action="<%= adminBase %>/feedback/<%= f._id %>/delete" class="inline"><input type="hidden" name="_csrf" value="<%= csrf %>">
         <button type="submit" class="btn small danger">🗑 Delete</button>
       </form>
     </div>
 
-    <form method="POST" action="<%= adminBase %>/feedback/<%= f._id %>/reply" class="row-form" style="margin-top: 0.6rem;">
+    <form method="POST" action="<%= adminBase %>/feedback/<%= f._id %>/reply" class="row-form" style="margin-top: 0.6rem;"><input type="hidden" name="_csrf" value="<%= csrf %>">
       <label style="flex: 1;">Reply (public dikhega — khaali submit karne se reply delete ho jata hai)
         <textarea name="reply" rows="2" maxlength="1000" placeholder="Thanks for the feedback! 🙌"><%= (f.reply && f.reply.text) || '' %></textarea>
       </label>

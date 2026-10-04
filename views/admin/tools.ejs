@@ -17,7 +17,7 @@
       <td><%= t.featured ? '⭐' : '—' %></td>
       <td class="actions">
         <a class="btn small ghost" href="<%= adminBase %>/tools/<%= t._id %>/edit">Edit</a>
-        <form method="POST" action="<%= adminBase %>/tools/<%= t._id %>/delete" class="inline">
+        <form method="POST" action="<%= adminBase %>/tools/<%= t._id %>/delete" class="inline"><input type="hidden" name="_csrf" value="<%= csrf %>">
           <button type="submit" class="btn small danger">Delete</button>
         </form>
       </td>

@@ -5,7 +5,7 @@
 
 <div class="panel">
   <h2><%= editTestimonial ? '✏️ Edit Testimonial: ' + editTestimonial.name : '➕ Add New Testimonial' %></h2>
-  <form method="POST" action="<%= editTestimonial ? '/admin/testimonials/' + editTestimonial._id + '/update' : '/admin/testimonials' %>" class="form">
+  <form method="POST" action="<%= editTestimonial ? '/admin/testimonials/' + editTestimonial._id + '/update' : '/admin/testimonials' %>" class="form"><input type="hidden" name="_csrf" value="<%= csrf %>">
     <div class="row-form">
       <label>Client Name
         <input type="text" name="name" placeholder="e.g. Rahul Sharma" required value="<%= editTestimonial ? editTestimonial.name : '' %>">
@@ -41,7 +41,7 @@
       <td>
         <div class="actions">
           <a class="btn small ghost" href="<%= adminBase %>/testimonials?edit=<%= t._id %>">✏️ Edit</a>
-          <form method="POST" action="<%= adminBase %>/testimonials/<%= t._id %>/delete" class="inline" onsubmit="return confirm('Delete this testimonial?')">
+          <form method="POST" action="<%= adminBase %>/testimonials/<%= t._id %>/delete" class="inline" onsubmit="return confirm('Delete this testimonial?')"><input type="hidden" name="_csrf" value="<%= csrf %>">
             <button type="submit" class="btn small danger">🗑 Delete</button>
           </form>
         </div>
