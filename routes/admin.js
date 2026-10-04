@@ -2,6 +2,7 @@ const router = require('express').Router();
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const { AdminUser, Project, Skill, Message, SiteSetting, Tool, PageView, Service, Testimonial, Experience, Lab, Feedback } = require('../models');
+const { sendMail } = require('../services/mailer');
 
 // Secret admin path (server.js ke secret-mount se match hona chahiye)
 const ADMIN_PATH = process.env.ADMIN_PATH || 'admin';
@@ -69,6 +70,100 @@ router.post('/login', async (req, res) => {
 });
 
 router.post('/logout', (req, res) => req.session.destroy(() => res.redirect(go('/login'))));
+
+// ---------- forgot password (email OTP) — self-service recovery ----------
+const GENERIC_MSG = 'Agar ye details admin account se match hui, OTP email pe chala gaya hai (10 min valid).';
+const otpRequests = new Map(); // ip|username → [timestamps]
+setInterval(() => otpRequests.clear(), 60 * 60 * 1000).unref();
+
+function otpRate(key, max, windowMs) {
+  const now = Date.now();
+  const arr = (otpRequests.get(key) || []).filter((t) => now - t < windowMs);
+  if (arr.length >= max) return false;
+  arr.push(now);
+  otpRequests.set(key, arr);
+  return true;
+}
+
+router.get('/forgot', (req, res) => {
+  res.render('admin/forgot', { step: 'request', error: null, info: null, username: '' });
+});
+
+router.post('/forgot', async (req, res) => {
+  const u = String(req.body.username || '').trim().toLowerCase().slice(0, 40);
+  if (!otpRate(`${req.ip}|${u}`, 3, 15 * 60 * 1000)) {
+    return res.render('admin/forgot', { step: 'request', error: 'Bahut zyada requests — 15 min baad try karo.', info: null, username: '' });
+  }
+  await new Promise((r) => setTimeout(r, 300)); // enumeration slow
+  const user = await AdminUser.findOne({ username: u }).catch(() => null);
+  const email = String(req.body.email || '').trim().toLowerCase();
+  if (user && user.email && email === user.email) {
+    const otp = String(require('crypto').randomInt(0, 1e6)).padStart(6, '0');
+    user.otpHash = await bcrypt.hash(otp, 10); // plain OTP kabhi store nahi
+    user.otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+    user.otpAttempts = 0;
+    await user.save();
+    const sent = await sendMail({
+      to: user.email,
+      subject: 'Password Reset OTP — Portfolio Admin',
+      text: `Reset OTP: ${otp}\n10 minute me expire. Agar tumne request nahi ki, ignore karo.`,
+      html: `<p>Reset OTP: <b style="font-size:24px;letter-spacing:4px">${otp}</b></p><p>10 minute me expire. Agar tumne ye request nahi ki, email ignore karo.</p>`,
+    });
+    if (!sent) console.log(`[DEV] OTP for ${u}: ${otp}`); // SMTP set nahi → sirf server console
+  }
+  // hamesha same generic jawab — kisi ko pata na chale account hai ya nahi
+  res.render('admin/forgot', { step: 'otp', error: null, info: GENERIC_MSG, username: u });
+});
+
+router.post('/forgot/verify', async (req, res) => {
+  const u = String(req.body.username || '').trim().toLowerCase().slice(0, 40);
+  const otp = String(req.body.otp || '').replace(/\D/g, '').slice(0, 6);
+  if (!otpRate(`${req.ip}|${u}`, 10, 15 * 60 * 1000)) {
+    return res.render('admin/forgot', { step: 'otp', error: 'Too many attempts — thodi der baad try karo.', info: null, username: u });
+  }
+  const user = await AdminUser.findOne({ username: u }).catch(() => null);
+  const valid =
+    user && user.otpHash && user.otpExpiry && user.otpExpiry > new Date() &&
+    user.otpAttempts < 5 && otp.length === 6 &&
+    (await bcrypt.compare(otp, user.otpHash));
+  if (!valid) {
+    if (user && user.otpHash) {
+      user.otpAttempts += 1; // 5 galat → OTP dead
+      await user.save();
+    }
+    return res.render('admin/forgot', { step: 'otp', error: 'OTP galat ya expire — dobara try karo.', info: null, username: u });
+  }
+  // OTP sahi — 10 min ka reset window (session me, URL me token nahi)
+  req.session.resetAuth = { user: u, exp: Date.now() + 10 * 60 * 1000 };
+  res.redirect('/reset');
+});
+
+router.get('/reset', (req, res) => {
+  if (!req.session.resetAuth || req.session.resetAuth.exp < Date.now()) return res.redirect('/forgot');
+  res.render('admin/forgot', { step: 'reset', error: null, info: null, username: req.session.resetAuth.user });
+});
+
+router.post('/reset', async (req, res) => {
+  if (!req.session.resetAuth || req.session.resetAuth.exp < Date.now()) return res.redirect('/forgot');
+  const u = req.session.resetAuth.user;
+  const p = String(req.body.password || '');
+  const strong = p.length >= 10 && /[a-zA-Z]/.test(p) && /[0-9]/.test(p);
+  if (!strong) {
+    return res.render('admin/forgot', { step: 'reset', error: 'Password weak — min 10 characters, letter + number dono ho.', info: null, username: u });
+  }
+  if (p !== String(req.body.confirm || '')) {
+    return res.render('admin/forgot', { step: 'reset', error: 'Dono passwords same nahi hain.', info: null, username: u });
+  }
+  const user = await AdminUser.findOne({ username: u });
+  if (!user) return res.redirect('/forgot');
+  user.passwordHash = await bcrypt.hash(p, 12);
+  user.otpHash = '';
+  user.otpExpiry = undefined;
+  user.otpAttempts = 0;
+  await user.save();
+  delete req.session.resetAuth;
+  req.session.destroy(() => res.redirect('/login?reset=1'));
+});
 
 // everything below requires login
 router.use(requireAuth);

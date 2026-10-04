@@ -81,6 +81,10 @@ const MessageSchema = new mongoose.Schema(
 const AdminUserSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true, trim: true },
   passwordHash: { type: String, required: true },
+  email: { type: String, default: '', trim: true, lowercase: true }, // forgot-password OTP
+  otpHash: { type: String, default: '' }, // bcrypt(otp), plain kabhi store nahi
+  otpExpiry: { type: Date },
+  otpAttempts: { type: Number, default: 0 },
 });
 
 const PageViewSchema = new mongoose.Schema(

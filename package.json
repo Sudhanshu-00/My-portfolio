@@ -19,7 +19,8 @@
     "express": "^5.1.0",
     "express-session": "^1.18.2",
     "mongoose": "^8.20.0",
-    "multer": "^2.0.2"
+    "multer": "^2.0.2",
+    "nodemailer": "^10.0.14"
   },
   "devDependencies": {
     "mongodb-memory-server": "^10.2.3"

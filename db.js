@@ -14,6 +14,12 @@ async function initDB() {
   await mongoose.connect(activeUri, { dbName: 'portfolio' });
   console.log('✅ MongoDB connected');
   await seed();
+
+  // admin email backfill (forgot-password OTP isi pe jayega)
+  if (process.env.ADMIN_EMAIL) {
+    const { AdminUser } = require('./models');
+    await AdminUser.updateOne({ email: { $in: [null, ''] } }, { email: process.env.ADMIN_EMAIL }).catch(() => {});
+  }
 }
 
 const svg = (t, c1, c2) =>

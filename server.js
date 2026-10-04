@@ -85,13 +85,19 @@ async function main() {
     next();
   });
 
-  // ---------- secret admin mount ----------
-  // /x<secret>/... ka prefix strip karke adminRoutes chalate hain (router ko relative path milta hai).
-  // Direct /admin/* kisi router se match nahi hota → 404 (panel ka existence pata hi nahi chalta).
+  // ---------- secret admin mount + public auth pages ----------
+  // Panel: sirf secret path (ADMIN_PATH) — /admin/* publicly 404.
+  // /login, /forgot, /reset public aliases — taaki site se login + email-OTP recovery ho sake
+  // aur secret path kabhi public HTML me leak na ho.
+  const AUTH_PATHS = ['/login', '/forgot', '/forgot/verify', '/reset'];
   app.use((req, res, next) => {
     res.locals.adminBase = SECRET_MOUNT; // views me saare admin links isse bante hain
     if (req.url === SECRET_MOUNT || req.url.startsWith(SECRET_MOUNT + '/')) {
       req.url = req.url.slice(SECRET_MOUNT.length) || '/';
+      return adminRoutes(req, res, next);
+    }
+    if (AUTH_PATHS.includes(req.path)) {
+      // req.url already relative (/login) — router direct match karega
       return adminRoutes(req, res, next);
     }
     next();
