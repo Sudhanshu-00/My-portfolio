@@ -35,7 +35,7 @@ const requireSelf = (req, res, next) => {
   next();
 };
 
-// ---------- USER DASHBOARD (read-only) ----------
+// ---------- USER DASHBOARD (read-only site data + own profile) ----------
 router.get('/:username', requireSelf, async (req, res) => {
   const username = req.params.username;
   const csrf = issueCsrf(req);
@@ -43,13 +43,15 @@ router.get('/:username', requireSelf, async (req, res) => {
   const adminGate = username === 'sudhanshu';
   let projects = [];
   let tools = [];
+  let profile = {};
   let stats = { projects: 0, tools: 0, labs: 0, experience: 0, testimonials: 0, services: 0 };
   try {
-    [projects, tools] = await Promise.all([
+    [projects, tools, profile] = await Promise.all([
       Project.find({}, 'title description techStack liveUrl githubUrl featured')
         .sort({ createdAt: -1 })
         .lean(),
       Tool.find({}, 'name').sort({ name: 1 }).lean(),
+      AdminUser.findOne({ username }, 'name email phone bio role createdAt lastLoginAt').lean(),
     ]);
     stats = {
       projects: await Project.countDocuments(),
@@ -67,12 +69,37 @@ router.get('/:username', requireSelf, async (req, res) => {
     username,
     csrf,
     adminGate,
+    profile: profile || {},
     projects,
     tools,
     stats,
     saved: req.query.saved === '1',
     pwError: req.query.pwerr || null,
   });
+});
+
+// ---------- EDIT OWN PROFILE (sirf apni details — requireSelf guard) ----------
+router.post('/:username/profile', requireSelf, async (req, res) => {
+  const back = `/user/${encodeURIComponent(req.params.username)}`;
+  const body = req.body || {};
+  const csrf = String(body._csrf || '');
+  if (!req.session.csrf || !csrf || !safeEqual(req.session.csrf, csrf)) {
+    return res.redirect(`${back}?pwerr=Security+check+failed+—+reload+the+page`);
+  }
+  const email = String(body.email || '').trim().toLowerCase().slice(0, 100);
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+    return res.redirect(`${back}?pwerr=${encodeURIComponent('That email address does not look valid.')}`);
+  }
+  await AdminUser.updateOne(
+    { username: req.params.username },
+    {
+      name: String(body.name || '').trim().slice(0, 60),
+      email,
+      phone: String(body.phone || '').replace(/[^0-9+\-\s()]/g, '').slice(0, 20),
+      bio: String(body.bio || '').trim().slice(0, 300),
+    }
+  );
+  res.redirect(`${back}?saved=1`);
 });
 
 // ---------- CHANGE OWN PASSWORD ----------
@@ -140,6 +167,7 @@ router.post('/:username/admin/login', adminGate, async (req, res) => {
   const admin = await AdminUser.findOne({ username, role: 'admin' }).catch(() => null);
   if (admin && (await bcrypt.compare(password, admin.passwordHash))) {
     gateAttempts.delete(key);
+    AdminUser.updateOne({ username: admin.username }, { lastLoginAt: new Date() }).catch(() => {});
     security.logEvent(req, { reason: 'admin-login', severity: 'info', status: 302, path: '/user/[user]/admin/login' });
     return req.session.regenerate(() => {
       req.session.admin = admin.username; // panel session (fresh session id)

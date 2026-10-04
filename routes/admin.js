@@ -74,6 +74,61 @@ router.param('id', (req, res, next, id) => {
 
 router.get('/login', (req, res) => (req.session.admin ? res.redirect(go('/')) : res.render('admin/login', { error: null })));
 
+// ---------- public signup (visitor apna khud ka account bana sakta hai) ----------
+// Reserved names — koi 'sudhanshu'/'admin' naam ki account nahi bana sakta
+// (sirf asli owner ka user hi admin-gate dekhta hai). Lowercase enforced.
+const RESERVED = new Set(['sudhanshu', 'admin', 'administrator', 'root', 'mod', 'moderator', 'support', 'help', 'staff', 'official', 'system', 'security', 'api', 'signup', 'login', 'logout', 'user', 'users', 'me', 'profile', 'settings', 'reset', 'forgot', 'null', 'undefined']);
+const USERNAME_RE = /^[a-z0-9_]{3,20}$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const signupRate = new Map(); // ip → [timestamps]
+setInterval(() => signupRate.clear(), 60 * 60 * 1000).unref();
+
+router.get('/signup', (req, res) => {
+  if (req.session.user) return res.redirect(`/user/${encodeURIComponent(req.session.user)}`);
+  res.render('signup', { error: null, values: {} });
+});
+
+router.post('/signup', async (req, res) => {
+  const b = req.body || {};
+  const values = {
+    name: String(b.name || '').trim().slice(0, 60),
+    username: String(b.username || '').trim().toLowerCase().slice(0, 20),
+    email: String(b.email || '').trim().toLowerCase().slice(0, 100),
+  };
+  const back = (error, code = 400) => res.status(code).render('signup', { error, values });
+
+  // max 5 signups / IP / hour (abuse shield)
+  const now = Date.now();
+  const arr = (signupRate.get(req.ip) || []).filter((t) => now - t < 60 * 60 * 1000);
+  if (arr.length >= 5) return back('Too many accounts created from this network — try again later.', 429);
+
+  if (!USERNAME_RE.test(values.username)) return back('Username: 3-20 chars, only a-z, 0-9, underscore.');
+  if (RESERVED.has(values.username)) return back('That username is reserved — please choose another.');
+  if (values.email && !EMAIL_RE.test(values.email)) return back('That email address does not look valid.');
+  const pass = String(b.password || '');
+  if (pass.length < 8 || !/[a-zA-Z]/.test(pass) || !/[0-9]/.test(pass)) return back('Password: minimum 8 characters with at least one letter and one number.');
+  if (pass !== String(b.confirm || '')) return back('Passwords do not match.');
+  if (await AdminUser.findOne({ username: values.username }).catch(() => null)) return back('That username is already taken — please choose another.', 409);
+
+  await AdminUser.create({
+    username: values.username,
+    passwordHash: await bcrypt.hash(pass, 10),
+    role: 'user', // public signup = normal user ONLY (never admin)
+    name: values.name,
+    email: values.email,
+    lastLoginAt: new Date(),
+  });
+  arr.push(now);
+  signupRate.set(req.ip, arr);
+  security.logEvent(req, { reason: 'signup', severity: 'info', status: 302, path: '/signup' });
+
+  // auto-login — fresh session id (fixation safe)
+  return req.session.regenerate(() => {
+    req.session.user = values.username;
+    res.redirect(`/user/${encodeURIComponent(values.username)}`);
+  });
+});
+
 // legacy admin-entrance alias → normal login (koi alag 'admin page' publicly kabhi nahi dikhta)
 router.get('/login/adminlogin', (req, res) => res.redirect('/login'));
 
@@ -115,6 +170,7 @@ router.post('/login', async (req, res) => {
     }
     loginAttempts.delete(key);
     ipFails.delete(req.ip);
+    AdminUser.updateOne({ username: user.username }, { lastLoginAt: new Date() }).catch(() => {});
     security.logEvent(req, { reason: 'login-success', severity: 'info', status: 302, path: '/login' });
     // normal user session — fresh session id (fixation fix), → own dashboard
     return req.session.regenerate(() => {
@@ -247,7 +303,7 @@ router.get('/', async (req, res) => {
   const range = ['7d', '30d', '1y'].includes(req.query.range) ? req.query.range : '7d';
   const days = range === '7d' ? 7 : range === '30d' ? 30 : 365;
 
-  const [projects, skills, unread, tools, services, testimonials, totalMsgs, totalViews, viewsToday, labs, blockedNow, threatsToday] = await Promise.all([
+  const [projects, skills, unread, tools, services, testimonials, totalMsgs, totalViews, viewsToday, labs, blockedNow, threatsToday, userCount] = await Promise.all([
     Project.countDocuments(),
     Skill.countDocuments(),
     Message.countDocuments({ read: false }),
@@ -260,6 +316,7 @@ router.get('/', async (req, res) => {
     Lab.countDocuments(),
     BlockedIp.countDocuments({ $or: [{ until: null }, { until: { $gt: new Date() } }] }),
     SecurityEvent.countDocuments({ createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) }, reason: { $ne: 'visit' } }),
+    AdminUser.countDocuments(),
   ]);
 
   // chart: daily bars for 7d/30d, monthly for 1y
@@ -303,7 +360,7 @@ router.get('/', async (req, res) => {
   const maxCount = Math.max(1, ...chart.map((c) => c.count));
 
   res.render('admin/dashboard', {
-    counts: { projects, skills, unread, tools, services, testimonials, labs, blockedNow, threatsToday },
+    counts: { projects, skills, unread, tools, services, testimonials, labs, blockedNow, threatsToday, userCount },
     stats: { totalMsgs, totalViews, viewsToday, rangeViews },
     chart,
     maxCount,
@@ -311,6 +368,106 @@ router.get('/', async (req, res) => {
     recent,
     range,
   });
+});
+
+// ---------- user accounts manager (admin sees + changes EVERYONE) ----------
+// Har user ki details yahan dikhti hain; admin username/password/details change
+// kar sakta hai, account banaa/delete kar sakta hai. Guards: self-protect.
+const userPageData = async () => {
+  const users = await AdminUser.find().sort({ createdAt: -1 }).lean();
+  return users;
+};
+
+router.get('/users', async (req, res) => {
+  res.render('admin/users', {
+    users: await userPageData(),
+    me: req.session.admin,
+    msg: req.query.msg || '',
+  });
+});
+
+const cleanProfile = (b) => ({
+  name: String(b.name || '').trim().slice(0, 60),
+  email: String(b.email || '').trim().toLowerCase().slice(0, 100),
+  phone: String(b.phone || '').replace(/[^0-9+\-\s()]/g, '').slice(0, 20),
+  bio: String(b.bio || '').trim().slice(0, 300),
+});
+
+// create a new account (user ya admin — admin ka bhi naya yahin se)
+router.post('/users/create', async (req, res) => {
+  const b = req.body || {};
+  const username = String(b.username || '').trim().toLowerCase().slice(0, 20);
+  const pass = String(b.password || '');
+  const role = b.role === 'admin' ? 'admin' : 'user';
+  const fail = (m) => res.redirect(go(`/admin/users?msg=${encodeURIComponent(m)}`));
+  if (!USERNAME_RE.test(username)) return fail('Invalid username (3-20 chars: a-z, 0-9, _)');
+  if (RESERVED.has(username)) return fail('That username is reserved');
+  if (pass.length < 8 || !/[a-zA-Z]/.test(pass) || !/[0-9]/.test(pass)) return fail('Password: min 8 chars with a letter + number');
+  if (await AdminUser.findOne({ username }).catch(() => null)) return fail('Username already taken');
+  await AdminUser.create({ username, passwordHash: await bcrypt.hash(pass, 12), role, name: String(b.name || '').trim().slice(0, 60) });
+  res.redirect(go(`/admin/users?msg=${encodeURIComponent(`Account '${username}' created (${role})`)}`));
+});
+
+router.post('/users/:id/details', async (req, res) => {
+  await AdminUser.findByIdAndUpdate(req.params.id, cleanProfile(req.body || {})).catch(() => {});
+  res.redirect(go('/admin/users?msg=Details+updated'));
+});
+
+router.post('/users/:id/username', async (req, res) => {
+  const target = await AdminUser.findById(req.params.id).catch(() => null);
+  const fail = (m) => res.redirect(go(`/admin/users?msg=${encodeURIComponent(m)}`));
+  if (!target) return fail('User not found');
+  if (target.username === 'sudhanshu') return fail("'sudhanshu' ka naam nahi badla ja sakta (admin-gate isi naam se juda hai)");
+  const nu = String((req.body || {}).username || '').trim().toLowerCase().slice(0, 20);
+  if (!USERNAME_RE.test(nu)) return fail('Invalid username (3-20 chars: a-z, 0-9, _)');
+  if (RESERVED.has(nu)) return fail('That username is reserved');
+  if (nu !== target.username && (await AdminUser.findOne({ username: nu }).catch(() => null))) return fail('Username already taken');
+  target.username = nu;
+  await target.save();
+  res.redirect(go(`/admin/users?msg=${encodeURIComponent('Username changed to ' + nu)}`));
+});
+
+router.post('/users/:id/password', async (req, res) => {
+  const pass = String((req.body || {}).password || '');
+  const fail = (m) => res.redirect(go(`/admin/users?msg=${encodeURIComponent(m)}`));
+  if (pass.length < 8 || !/[a-zA-Z]/.test(pass) || !/[0-9]/.test(pass)) return fail('Password: min 8 chars with a letter + number');
+  const target = await AdminUser.findById(req.params.id).catch(() => null);
+  if (!target) return fail('User not found');
+  target.passwordHash = await bcrypt.hash(pass, 12);
+  target.otpHash = ''; // stale reset-OTP dead
+  target.otpExpiry = undefined;
+  target.otpAttempts = 0;
+  await target.save();
+  security.logEvent(req, { reason: 'admin-reset-password', severity: 'medium', status: 200, path: '/admin/users' });
+  res.redirect(go(`/admin/users?msg=${encodeURIComponent('Password changed for ' + target.username)}`));
+});
+
+router.post('/users/:id/role', async (req, res) => {
+  const target = await AdminUser.findById(req.params.id).catch(() => null);
+  const fail = (m) => res.redirect(go(`/admin/users?msg=${encodeURIComponent(m)}`));
+  if (!target) return fail('User not found');
+  if (target.username === req.session.admin) return fail('Apna role nahi badal sakte');
+  const role = (req.body || {}).role === 'admin' ? 'admin' : 'user';
+  if (target.role === 'admin' && role === 'user') {
+    const admins = await AdminUser.countDocuments({ role: 'admin' });
+    if (admins <= 1) return fail('Last admin ko demote nahi kar sakte');
+  }
+  target.role = role;
+  await target.save();
+  res.redirect(go(`/admin/users?msg=${encodeURIComponent(target.username + ' is now ' + role)}`));
+});
+
+router.post('/users/:id/delete', async (req, res) => {
+  const target = await AdminUser.findById(req.params.id).catch(() => null);
+  const fail = (m) => res.redirect(go(`/admin/users?msg=${encodeURIComponent(m)}`));
+  if (!target) return fail('User not found');
+  if (target.username === req.session.admin) return fail('Apna account delete nahi kar sakte');
+  if (target.role === 'admin') {
+    const admins = await AdminUser.countDocuments({ role: 'admin' });
+    if (admins <= 1) return fail('Last admin delete nahi ho sakta');
+  }
+  await target.deleteOne();
+  res.redirect(go(`/admin/users?msg=${encodeURIComponent('Account ' + target.username + ' deleted')}`));
 });
 
 // ---------- security & visitors (logs, blocked IPs, unblock) ----------

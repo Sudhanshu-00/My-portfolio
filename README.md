@@ -10,6 +10,7 @@ Fully dynamic portfolio website with admin panel. Everything runs from the datab
 - TryHackMe / PortSwigger lab tracker
 - Public feedback wall (admin-moderated)
 - Contact form → admin inbox
+- 👥 **Public signup + user accounts** — visitors create their own username/password, see only their own details on a private dashboard; nobody else's data is ever visible; admin sees & manages every account (details, username, password, role, delete)
 - Full admin panel: content, uploads (photo/resume), messages, settings
 - 🛡 **Security & Visitors panel** — every visitor/tester logged with IP, device (browser/OS/tool), and location; auto-blocks scanners (404 fuzzing, sensitive-path probing, brute force); blocked IPs visible + unblockable; logs auto-delete after 30 days
 - 📡 **Uptime monitor** — health check every 5 min, email on DOWN/recovery, Render keep-alive ping (no free-plan sleep), memory warning before crash

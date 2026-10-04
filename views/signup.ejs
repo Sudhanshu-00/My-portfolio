@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign up</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="login-page">
+  <div class="login-box">
+    <h1>&gt;_ SIGN UP</h1>
+    <p class="muted" style="margin:0.3rem 0 0.8rem;font-size:0.85rem">Apna account banao — phir apni details apne dashboard mein dekh sakte ho. Har account sirf apna data dekhta hai.</p>
+    <% if (error) { %><div class="alert error"><%= error %></div><% } %>
+    <form method="POST" action="/signup" class="form">
+      <label>Name (optional)
+        <input type="text" name="name" maxlength="60" value="<%= values.name || '' %>" autocomplete="name">
+      </label>
+      <label>Username (3-20 chars — a-z, 0-9, _)
+        <input type="text" name="username" required autofocus minlength="3" maxlength="20" pattern="[a-z0-9_]{3,20}" value="<%= values.username || '' %>" autocomplete="off">
+      </label>
+      <label>Email (optional — password recovery ke liye)
+        <input type="email" name="email" maxlength="100" value="<%= values.email || '' %>" autocomplete="email">
+      </label>
+      <label>Password (min 8 chars — letter + number)
+        <input type="password" name="password" required minlength="8" autocomplete="new-password">
+      </label>
+      <label>Confirm password
+        <input type="password" name="confirm" required minlength="8" autocomplete="new-password">
+      </label>
+      <button type="submit" class="btn full">Create account</button>
+    </form>
+    <div class="row-between" style="margin-top:0.8rem">
+      <a href="/login" class="link" style="font-size:0.82rem">Already have an account? Login</a>
+      <a href="/" class="link" style="font-size:0.82rem">← Website</a>
+    </div>
+  </div>
+</body>
+</html>

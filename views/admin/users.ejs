@@ -1,0 +1,98 @@
+<%- include('../partials/admin_head', { title: 'Users' }) %>
+
+<h1>👥 Users <span class="badge"><%= users.length %> accounts</span></h1>
+<p class="muted">Har user ki details yahan dikhti hain — username, password, details sab change kar sakta ho. <strong>'sudhanshu' ka naam change nahi hota</strong> (admin-gate isi naam se juda hai). Users kabhi kisi doosre user ka data nahi dekh sakte — ye sirf admin ko dikhta hai.</p>
+
+<% if (msg) { %><div class="alert <%= /deleted|created|changed|now/.test(msg) ? 'success' : 'error' %>"><%= msg %></div><% } %>
+
+<div class="panel">
+  <h2>➕ Create new account</h2>
+  <form method="POST" action="<%= adminBase %>/users/create" class="row-form">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <label>Name <input name="name" maxlength="60" placeholder="optional"></label>
+    <label>Username <input name="username" required maxlength="20" pattern="[a-z0-9_]{3,20}" placeholder="a-z 0-9 _"></label>
+    <label>Password <input name="password" required minlength="8" placeholder="min 8, letter+number" autocomplete="new-password"></label>
+    <label>Role
+      <select name="role">
+        <option value="user" selected>user</option>
+        <option value="admin">admin (panel access)</option>
+      </select>
+    </label>
+    <button type="submit" class="btn small">Create</button>
+  </form>
+</div>
+
+<% users.forEach((u) => { const isMe = u.username === me; %>
+  <div class="msg-card <%= isMe ? 'unread' : '' %>">
+    <div class="row-between">
+      <div>
+        <strong><%= u.username %></strong>
+        <% if (u.name) { %><span class="muted">(<%= u.name %>)</span><% } %>
+        <% if (u.role === 'admin') { %><span class="badge warn">ADMIN</span><% } else { %><span class="badge dim">user</span><% } %>
+        <% if (isMe) { %><span class="badge">YOU</span><% } %>
+        <% if (u.username === 'sudhanshu') { %><span class="badge" style="font-size:0.6rem">GATE OWNER</span><% } %>
+      </div>
+      <small class="muted">
+        joined <%= new Date(u.createdAt).toLocaleDateString('en-IN', { dateStyle: 'medium' }) %>
+        · last login <%= u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' }) : 'never' %>
+      </small>
+    </div>
+
+    <% if (!isMe) { %>
+    <div class="actions" style="margin-top:0.7rem">
+      <% if (u.username !== 'sudhanshu') { %>
+      <form method="POST" action="<%= adminBase %>/users/<%= u._id %>/role" class="inline">
+        <input type="hidden" name="_csrf" value="<%= csrf %>">
+        <input type="hidden" name="role" value="<%= u.role === 'admin' ? 'user' : 'admin' %>">
+        <button type="submit" class="btn small outline"><%= u.role === 'admin' ? '⬇ Demote to user' : '⬆ Make admin' %></button>
+      </form>
+      <% } %>
+      <form method="POST" action="<%= adminBase %>/users/<%= u._id %>/delete" class="inline">
+        <input type="hidden" name="_csrf" value="<%= csrf %>">
+        <button type="submit" class="btn small danger">🗑 Delete</button>
+      </form>
+    </div>
+    <% } else { %>
+      <p class="muted" style="margin:0.5rem 0 0;font-size:0.8rem">Ye tumhara session hai — role/delete self par locked (last-admin protection).</p>
+    <% } %>
+
+    <div class="ud-grid" style="grid-template-columns:1fr 1fr 1fr;margin-top:0.8rem">
+      <!-- details -->
+      <form method="POST" action="<%= adminBase %>/users/<%= u._id %>/details" class="form" style="gap:0.4rem">
+        <input type="hidden" name="_csrf" value="<%= csrf %>">
+        <small class="muted">PROFILE DETAILS</small>
+        <input name="name" maxlength="60" placeholder="name" value="<%= u.name || '' %>">
+        <input type="email" name="email" maxlength="100" placeholder="email" value="<%= u.email || '' %>">
+        <input name="phone" maxlength="20" placeholder="phone" value="<%= u.phone || '' %>">
+        <input name="bio" maxlength="300" placeholder="bio" value="<%= u.bio || '' %>">
+        <button type="submit" class="btn small">Save details</button>
+      </form>
+
+      <!-- username -->
+      <% if (u.username !== 'sudhanshu') { %>
+      <form method="POST" action="<%= adminBase %>/users/<%= u._id %>/username" class="form" style="gap:0.4rem">
+        <input type="hidden" name="_csrf" value="<%= csrf %>">
+        <small class="muted">USERNAME</small>
+        <input name="username" maxlength="20" pattern="[a-z0-9_]{3,20}" value="<%= u.username %>">
+        <button type="submit" class="btn small outline">Change username</button>
+      </form>
+      <% } else { %>
+      <div class="form" style="gap:0.4rem">
+        <small class="muted">USERNAME</small>
+        <input value="sudhanshu" disabled>
+        <small class="muted" style="font-size:0.7rem">locked — gate owner</small>
+      </div>
+      <% } %>
+
+      <!-- password -->
+      <form method="POST" action="<%= adminBase %>/users/<%= u._id %>/password" class="form" style="gap:0.4rem">
+        <input type="hidden" name="_csrf" value="<%= csrf %>">
+        <small class="muted">SET NEW PASSWORD</small>
+        <input type="password" name="password" required minlength="8" placeholder="min 8, letter+number" autocomplete="new-password">
+        <button type="submit" class="btn small outline">Reset password</button>
+      </form>
+    </div>
+  </div>
+<% }) %>
+
+<%- include('../partials/admin_foot') %>

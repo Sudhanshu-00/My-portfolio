@@ -82,7 +82,11 @@ const AdminUserSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true, trim: true },
   passwordHash: { type: String, required: true },
   role: { type: String, enum: ['admin', 'user'], default: 'user' }, // 'admin' → panel access, 'user' → normal login only
-  email: { type: String, default: '', trim: true, lowercase: true }, // forgot-password OTP
+  name: { type: String, default: '', trim: true, maxlength: 60 }, // public profile (self-editable, admin-editable)
+  email: { type: String, default: '', trim: true, lowercase: true, maxlength: 100 }, // forgot-password OTP
+  phone: { type: String, default: '', trim: true, maxlength: 20 },
+  bio: { type: String, default: '', trim: true, maxlength: 300 },
+  lastLoginAt: { type: Date },
   otpHash: { type: String, default: '' }, // bcrypt(otp) — plain OTP is never stored
   otpExpiry: { type: Date },
   otpAttempts: { type: Number, default: 0 },

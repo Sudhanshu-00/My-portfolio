@@ -58,7 +58,7 @@ async function main() {
     );
     // Never cache authenticated / auth pages — proxies (Burp etc.) must not store them
     if (req.path.startsWith(SECRET_MOUNT) || req.path.startsWith('/login') ||
-        req.path.startsWith('/forgot') || req.path.startsWith('/reset')) {
+        req.path.startsWith('/forgot') || req.path.startsWith('/reset') || req.path.startsWith('/signup')) {
       res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
       res.set('Pragma', 'no-cache');
     }
@@ -176,7 +176,7 @@ async function main() {
   // Panel: only the secret path (ADMIN_PATH) — /admin/* is always a public 404.
   // /login, /forgot, /reset are public aliases — so the site can offer login +
   // email-OTP recovery without ever leaking the secret path in public HTML.
-  const AUTH_PATHS = ['/login', '/login/adminlogin', '/forgot', '/forgot/verify', '/reset', '/logout'];
+  const AUTH_PATHS = ['/login', '/login/adminlogin', '/signup', '/forgot', '/forgot/verify', '/reset', '/logout'];
   app.use((req, res, next) => {
     res.locals.adminBase = SECRET_MOUNT; // all admin links in views are built from this
     if (req.url === SECRET_MOUNT || req.url.startsWith(SECRET_MOUNT + '/')) {

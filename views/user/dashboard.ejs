@@ -7,12 +7,12 @@
     <p class="ud-who">[ 👤 <%= username %> ] <span class="muted">— welcome back, commander</span></p>
   </div>
   <div style="text-align:right">
-    <span class="badge dim">ROLE: USER</span>
+    <span class="badge <%= profile.role === 'admin' ? 'warn' : 'dim' %>">ROLE: <%= (profile.role || 'user').toUpperCase() %></span>
     <span class="badge" style="font-size:0.68rem">SESSION: ENCRYPTED</span>
   </div>
 </div>
 
-<% if (saved) { %><div class="alert success">✅ Password changed successfully.</div><% } %>
+<% if (saved) { %><div class="alert success">✅ Saved<%= pwError ? '' : ' — profile updated.' %></div><% } %>
 <% if (pwError) { %><div class="alert error"><%= pwError %></div><% } %>
 
 <!-- ===== Stats (read-only) ===== -->
@@ -61,14 +61,22 @@
 
   <!-- ===== Right column ===== -->
   <div>
-    <!-- account info -->
+    <!-- account info (SIRF APNI details — doosre user ka data yahan kabhi nahi aata) -->
     <div class="ud-panel">
-      <h2>👤 ACCOUNT</h2>
+      <h2>👤 MY DETAILS</h2>
       <div class="ud-kv"><span>username</span><span class="mono"><%= username %></span></div>
-      <div class="ud-kv"><span>role</span><span class="mono ok">USER</span></div>
-      <div class="ud-kv"><span>permissions</span><span class="mono muted">read-only</span></div>
-      <div class="ud-kv"><span>transport</span><span class="mono ok">HTTPS / TLS</span></div>
-      <div class="ud-kv"><span>csrf guard</span><span class="mono ok">ACTIVE</span></div>
+      <div class="ud-kv"><span>role</span><span class="mono ok"><%= (profile.role || 'user').toUpperCase() %></span></div>
+      <div class="ud-kv"><span>joined</span><span class="mono"><%= profile.createdAt ? new Date(profile.createdAt).toLocaleDateString('en-IN', { dateStyle: 'medium' }) : '—' %></span></div>
+      <div class="ud-kv"><span>last login</span><span class="mono"><%= profile.lastLoginAt ? new Date(profile.lastLoginAt).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' }) : '—' %></span></div>
+      <div class="ud-kv"><span>privacy</span><span class="mono ok">PRIVATE — only you + admin</span></div>
+      <form method="POST" action="/user/<%= username %>/profile" class="form" style="margin-top:0.7rem">
+        <input type="hidden" name="_csrf" value="<%= csrf %>">
+        <label>Name <input name="name" maxlength="60" value="<%= profile.name || '' %>"></label>
+        <label>Email <input type="email" name="email" maxlength="100" value="<%= profile.email || '' %>"></label>
+        <label>Phone <input name="phone" maxlength="20" value="<%= profile.phone || '' %>"></label>
+        <label>Bio <input name="bio" maxlength="300" value="<%= profile.bio || '' %>"></label>
+        <button type="submit" class="btn full small">Save my details</button>
+      </form>
     </div>
 
     <!-- change own password -->
