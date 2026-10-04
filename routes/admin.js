@@ -73,8 +73,8 @@ router.param('id', (req, res, next, id) => {
 
 router.get('/login', (req, res) => (req.session.admin ? res.redirect(go('/')) : res.render('admin/login', { error: null })));
 
-// admin login — only this page performs real admin auth (linked from normal login)
-router.get('/login/adminlogin', (req, res) => (req.session.admin ? res.redirect(go('/')) : res.render('admin/admin_login', { error: null })));
+// legacy admin-entrance alias → normal login (koi alag 'admin page' publicly kabhi nahi dikhta)
+router.get('/login/adminlogin', (req, res) => res.redirect('/login'));
 
 // ---------- brute-force lock (login) ----------
 // 5 failed attempts per (IP+username) → 15 min lock, and 25 fails per IP → 15 min block.
