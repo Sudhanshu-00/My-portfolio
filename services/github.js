@@ -2,7 +2,7 @@
  * GitHub live-data service (server-side, zero deps)
  * - Repo details: meta + languages + README + file tree
  * - Profile intel: repos, followers, stars, top languages
- * - 30-min in-memory cache → GitHub rate-limit (60/hr) se bacha rehta hai
+ * - 30-min in-memory cache → protects against GitHub rate-limit (60/hr)
  */
 const TTL = 30 * 60 * 1000;
 const cache = new Map();
@@ -30,7 +30,7 @@ async function gh(path, opts = {}) {
     e.status = res.status;
     throw e;
   }
-  // raw text responses (e.g. README raw) ko JSON parse karne ki koshish mat karo
+  // never JSON-parse raw text responses (e.g. README raw)
   const ct = res.headers.get('content-type') || '';
   if (ct.includes('application/json')) return res.json();
   return res.text();
@@ -71,7 +71,7 @@ async function getRepoDetails(repoUrl) {
       gh(`/repos/${owner}/${repo}/languages`).catch(() => ({})),
       gh(`/repos/${owner}/${repo}/readme`, { headers: { Accept: 'application/vnd.github.raw+json' } })
         .then((r) => (typeof r === 'string' ? r : ''))
-        .catch(() => ''),  // raw text milega → gh() ab text return karta hai
+        .catch(() => ''),  // raw text → gh() now returns text for non-JSON responses
       gh(`/repos/${owner}/${repo}/contents`).catch(() => []),
     ]);
     const langTotal = Object.values(langs).reduce((a, b) => a + b, 0) || 1;
@@ -144,10 +144,17 @@ async function getProfile(username) {
   });
 }
 
-/** Minimal markdown → HTML (safe: HTML pehle escape hota hai) */
+/** Minimal markdown → HTML (safe: input HTML-escaped first, links validated) */
 function mdToHtml(md) {
-  const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  let html = esc(md || '');
+  // escape ALL HTML specials including quotes — attribute injection impossible
+  const esc = (s) =>
+    String(s || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  let html = esc(md);
 
   // fenced code blocks
   html = html.replace(/```[a-z]*\n([\s\S]*?)```/g, (_, code) => `<pre class="md-code">${code.trim()}</pre>`);
@@ -175,10 +182,19 @@ function mdToHtml(md) {
   if (inList) out.push('</ul>');
   html = out.join('\n');
 
-  // inline: bold, italic, code, links, images→alt
+  // inline: bold, italic, code, links (http/https only), images→alt
+  const safeHref = (u) => {
+    const url = String(u || '').trim();
+    return /^https?:\/\//i.test(url) ? url : null; // javascript:/data: etc. blocked
+  };
   html = html
     .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<span class="md-img">🖼 $1</span>')
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" class="md-link">$1</a>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (m, text, url) => {
+      const href = safeHref(url);
+      return href
+        ? `<a href="${href}" target="_blank" rel="noopener noreferrer nofollow" class="md-link">${text}</a>`
+        : text; // unsafe URL → render link text only
+    })
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/(^|\W)\*([^*\n]+)\*/g, '$1<em>$2</em>')
     .replace(/`([^`]+)`/g, '<code class="md-inline">$1</code>');

@@ -2,11 +2,11 @@
 
 <section class="section">
   <h1><span class="sec-tag">&gt;_</span> FEEDBACK <span class="muted" style="font-size:0.9rem">[ visitor wall ]</span></h1>
-  <p class="muted">Mere kaam, tools ya website pe feedback do — admin approval ke baad tumhara feedback yahan live dikhega.</p>
+  <p class="muted">Share feedback about my work, tools or website — your feedback goes live here after admin approval.</p>
 
-  <% if (query.sent) { %><div class="alert success">✅ Feedback mil gaya! Approval ke baad live ho jayega.</div><% } %>
-  <% if (query.error === '1') { %><div class="alert error">❌ Name aur message dono required hain.</div><% } %>
-  <% if (query.error === 'rate') { %><div class="alert error">⏳ Ek feedback de chuke ho — 2 minute baad try karo.</div><% } %>
+  <% if (query.sent) { %><div class="alert success">✅ Feedback received! It will go live after approval.</div><% } %>
+  <% if (query.error === '1') { %><div class="alert error">❌ Both name and message are required.</div><% } %>
+  <% if (query.error === 'rate') { %><div class="alert error">⏳ You already submitted feedback — try again after 2 minutes.</div><% } %>
 
   <div class="two-col">
     <!-- Form -->
@@ -27,11 +27,11 @@
             </select>
           </label>
         </div>
-        <label>Email (optional — reply ke liye)
+        <label>Email (optional — for a reply)
           <input type="text" name="email" maxlength="100" placeholder="you@example.com">
         </label>
         <label>Your Feedback *
-          <textarea name="message" rows="4" maxlength="1000" required placeholder="Kaisa laga portfolio? Tools kaise lage?"></textarea>
+          <textarea name="message" rows="4" maxlength="1000" required placeholder="How did you like the portfolio? How are the tools?"></textarea>
         </label>
         <!-- honeypot (invisible to humans) -->
         <input type="text" name="website" value="" style="position:absolute; left:-9999px" tabindex="-1" autocomplete="off">
@@ -43,7 +43,7 @@
     <div>
       <h2 style="margin-bottom:0.6rem">📢 Live Feedback (<%= approved.length %>)</h2>
       <% if (!approved.length) { %>
-        <div class="panel"><p class="muted">Abhi tak koi feedback live nahi hua — pehla tum bhejo! 😄</p></div>
+        <div class="panel"><p class="muted">No feedback is live yet — be the first to send one! 😄</p></div>
       <% } %>
       <% approved.forEach(f => { %>
         <div class="fb-card">

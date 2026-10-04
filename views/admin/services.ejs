@@ -1,7 +1,7 @@
 <%- include('../partials/admin_head') %>
 
 <h1>💼 Services (Hire Me)</h1>
-<p class="muted">Jo services bechta ho (pentest packages etc.) — ye Home page ke <strong>HIRE_ME</strong> section me price ke saath dikhengi.</p>
+<p class="muted">Services you sell (pentest packages etc.) — shown in the Home page's <strong>HIRE_ME</strong> section with pricing.</p>
 
 <div class="panel">
   <h2><%= editService ? '✏️ Edit Service: ' + editService.title : '➕ Add New Service' %></h2>
@@ -15,7 +15,7 @@
       </label>
     </div>
     <label>Description
-      <textarea name="description" rows="3" placeholder="Kya milega is service me?"><%= editService ? editService.description : '' %></textarea>
+      <textarea name="description" rows="3" placeholder="What's included in this service?"><%= editService ? editService.description : '' %></textarea>
     </label>
     <button type="submit" class="btn"><%= editService ? '💾 Update Service' : '➕ Add Service' %></button>
     <% if (editService) { %><a class="btn ghost" href="<%= adminBase %>/services">Cancel</a><% } %>
@@ -23,7 +23,7 @@
 </div>
 
 <h2>Current Services (<%= services.length %>)</h2>
-<% if (!services.length) { %><p class="muted">No services yet — upar se add karo.</p><% } %>
+<% if (!services.length) { %><p class="muted">No services yet — add one using the form above.</p><% } %>
 <table class="table">
   <tr><th>Title</th><th>Price</th><th>Description</th><th style="text-align:right">Actions</th></tr>
   <% services.forEach(s => { %>
@@ -34,7 +34,7 @@
       <td>
         <div class="actions">
           <a class="btn small ghost" href="<%= adminBase %>/services?edit=<%= s._id %>">✏️ Edit</a>
-          <form method="POST" action="<%= adminBase %>/services/<%= s._id %>/delete" class="inline" onsubmit="return confirm('Delete this service?')"><input type="hidden" name="_csrf" value="<%= csrf %>">
+          <form method="POST" action="<%= adminBase %>/services/<%= s._id %>/delete" class="inline" data-confirm="Delete this service?"><input type="hidden" name="_csrf" value="<%= csrf %>">
             <button type="submit" class="btn small danger">🗑 Delete</button>
           </form>
         </div>

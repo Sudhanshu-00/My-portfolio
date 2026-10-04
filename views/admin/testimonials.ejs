@@ -1,7 +1,7 @@
 <%- include('../partials/admin_head') %>
 
 <h1>🗣 Testimonials</h1>
-<p class="muted">Clients ka feedback — Home page ke <strong>CLIENT_FEEDBACK</strong> section me ⭐ ratings ke saath dikhenge.</p>
+<p class="muted">Client feedback — shown in the Home page <strong>CLIENT_FEEDBACK</strong> section with ⭐ ratings.</p>
 
 <div class="panel">
   <h2><%= editTestimonial ? '✏️ Edit Testimonial: ' + editTestimonial.name : '➕ Add New Testimonial' %></h2>
@@ -30,7 +30,7 @@
 </div>
 
 <h2>Current Testimonials (<%= testimonials.length %>)</h2>
-<% if (!testimonials.length) { %><p class="muted">No testimonials yet — upar se add karo.</p><% } %>
+<% if (!testimonials.length) { %><p class="muted">No testimonials yet — add one using the form above.</p><% } %>
 <table class="table">
   <tr><th>Client</th><th>Rating</th><th>Feedback</th><th style="text-align:right">Actions</th></tr>
   <% testimonials.forEach(t => { %>
@@ -41,7 +41,7 @@
       <td>
         <div class="actions">
           <a class="btn small ghost" href="<%= adminBase %>/testimonials?edit=<%= t._id %>">✏️ Edit</a>
-          <form method="POST" action="<%= adminBase %>/testimonials/<%= t._id %>/delete" class="inline" onsubmit="return confirm('Delete this testimonial?')"><input type="hidden" name="_csrf" value="<%= csrf %>">
+          <form method="POST" action="<%= adminBase %>/testimonials/<%= t._id %>/delete" class="inline" data-confirm="Delete this testimonial?"><input type="hidden" name="_csrf" value="<%= csrf %>">
             <button type="submit" class="btn small danger">🗑 Delete</button>
           </form>
         </div>

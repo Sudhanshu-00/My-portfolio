@@ -1,6 +1,6 @@
 /* ============ Anti-Inspect Guard (deterrent layer) ============
-   Note: ye client-side deterrent hai — casual users/inspectors roko.
-   Determined attacker (curl, extensions) ko server-side security hi rok sakti hai. */
+   Note: this is a client-side deterrent — stops casual users/inspectors.
+   Determined attackers (curl, extensions) can only be stopped by server-side security. */
 (function () {
   'use strict';
 
@@ -8,7 +8,7 @@
   try { console.clear(); } catch (e) {}
   var style = 'color:#ff2d55;font-size:22px;font-weight:900;text-shadow:0 0 8px rgba(255,45,85,.5)';
   console.log('%c⚠ STOP — ACCESS RESTRICTED', style);
-  console.log('%cYe area unauthorized inspection ke liye monitored hai. Agar khud ka developer ho, admin panel use karo.', 'color:#00ff41;font-size:12px');
+  console.log('%cThis area is monitored for unauthorized inspection. If you are the developer, use the admin panel.', 'color:#00ff41;font-size:12px');
 
   // ---- right-click block ----
   document.addEventListener('contextmenu', function (e) {
@@ -45,7 +45,7 @@
     overlay.innerHTML =
       '<div style="font-size:64px">🚫</div>' +
       '<h1 style="font-size:26px;margin:.5em 0;letter-spacing:2px">DEVELOPER TOOLS DETECTED</h1>' +
-      '<p style="color:#888;max-width:420px;line-height:1.6">Is website ka content protected hai.<br>DevTools band karo — page apne aap wapas aa jayega.</p>';
+      '<p style="color:#888;max-width:420px;line-height:1.6">Content on this website is protected.<br>Close DevTools — the page will restore itself automatically.</p>';
     document.documentElement.appendChild(overlay);
   }
   function devtoolsFlash() {

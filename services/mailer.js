@@ -1,7 +1,7 @@
 /**
- * Mailer — Gmail SMTP (env se creds, koi hardcoded secret nahi).
- * SMTP_PASS = Gmail "App Password" (2FA enable karke banate hain, 16-char).
- * SMTP configure na ho to DEV fallback: OTP server console pe log hota hai.
+ * Mailer — Gmail SMTP (creds from env, no hardcoded secrets).
+ * SMTP_PASS = Gmail "App Password" (requires 2FA, 16-char).
+ * If SMTP is not configured → DEV fallback: OTP is logged to the server console.
  */
 const nodemailer = require('nodemailer');
 
@@ -17,7 +17,7 @@ if (process.env.SMTP_USER && process.env.SMTP_PASS) {
 
 async function sendMail({ to, subject, text, html }) {
   if (!transporter) {
-    console.warn('⚠️  SMTP not configured (.env me SMTP_PASS bharo) — DEV fallback, email nahi gaya:');
+    console.warn('⚠️  SMTP not configured (set SMTP_PASS in .env) — DEV fallback, email was NOT sent:');
     console.warn(`   to=${to} subject=${subject}`);
     return false;
   }

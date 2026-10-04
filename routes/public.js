@@ -81,7 +81,8 @@ router.get('/feedback', async (req, res) => {
 });
 
 router.post('/feedback', async (req, res) => {
-  // honeypot: bots 'website' field fill karte hain → chupchaap success dikhao
+  // honeypot: bots fill the 'website' field → show quiet success
+  if (req.body.website) return res.redirect('/feedback?sent=1');
   if (req.body.website) return res.redirect('/feedback?sent=1');
 
   const { name, email, rating, message } = req.body;
@@ -91,12 +92,12 @@ router.post('/feedback', async (req, res) => {
 
   if (!cleanName || !cleanMsg) return res.redirect('/feedback?error=1');
 
-  // BUGFIX: trust proxy=1 hai to X-Forwarded-For spoof karke IP-limit bypass ho sakta hai —
-  // global flood-cap bhi lagao (10 min me max 20 submissions site-wide)
+  // BUGFIX: trust proxy=1 means X-Forwarded-For could be spoofed to bypass the per-IP limit —
+  // a global flood-cap is applied as well (max 20 submissions site-wide per 10 min)
   const flood = await Feedback.countDocuments({ createdAt: { $gte: new Date(Date.now() - 10 * 60 * 1000) } }).catch(() => 0);
   if (flood >= 20) return res.redirect('/feedback?error=rate');
 
-  // rate limit: same IP se 2 min me ek hi feedback
+  // rate limit: one feedback per IP per 2 min
   const recent = await Feedback.countDocuments({ ip: req.ip, createdAt: { $gte: new Date(Date.now() - 2 * 60 * 1000) } }).catch(() => 0);
   if (recent > 0) return res.redirect('/feedback?error=rate');
 
@@ -111,7 +112,7 @@ router.post('/contact', async (req, res) => {
   if (!name || !email || !message || !/\S+@\S+\.\S+/.test(email)) {
     return res.redirect('/contact?error=1');
   }
-  // rate limit: same IP se 2 min me ek hi message (spam hone se bachne ke liye)
+  // rate limit: one message per IP per 2 min (spam protection)
   const recent = await Message.countDocuments({ ip: req.ip, createdAt: { $gte: new Date(Date.now() - 2 * 60 * 1000) } }).catch(() => 0);
   if (recent > 0) return res.redirect('/contact?error=rate');
   await Message.create({

@@ -15,28 +15,28 @@
       <% }) %>
     </select>
   </label>
-  <label>Price (e.g. ₹1,999 ya $29)
+  <label>Price (e.g. ₹1,999 or $29)
     <input type="text" name="price" value="<%= tool ? tool.price : '' %>">
   </label>
-  <label>Description (tool kya karta hai, features etc.)
+  <label>Description (what the tool does, features etc.)
     <textarea name="description" rows="5"><%= tool ? tool.description : '' %></textarea>
   </label>
   <label>Demo / Video URL (optional)
     <input type="text" name="demoUrl" value="<%= tool ? tool.demoUrl : '' %>" placeholder="https://youtube.com/...">
   </label>
-  <label>Buy URL (optional — khali chhoda to WhatsApp link automatic ban jayega)
-    <input type="text" name="buyUrl" value="<%= tool ? tool.buyUrl : '' %>" placeholder="https://razorpay.me/... ya khali chhodo">
+  <label>Buy URL (optional — leave empty to auto-generate a WhatsApp link)
+    <input type="text" name="buyUrl" value="<%= tool ? tool.buyUrl : '' %>" placeholder="https://razorpay.me/... or leave empty">
   </label>
   <label>Screenshot / Photo
     <input type="file" name="image" accept="image/*">
   </label>
   <% if (tool && tool.image) { %>
     <img src="<%= tool.image %>" class="thumb big" alt="">
-    <small class="muted">(Naya upload karne par change hogi)</small>
+    <small class="muted">(Uploading a new one will replace this)</small>
   <% } %>
   <label class="check">
     <input type="checkbox" name="featured" <%= tool && tool.featured ? 'checked' : '' %>>
-    ⭐ Featured (home page par dikhega)
+    ⭐ Featured (shown on the home page)
   </label>
   <div class="btn-row">
     <button type="submit" class="btn"><%= tool ? '💾 Update Tool' : '＋ Create Tool' %></button>

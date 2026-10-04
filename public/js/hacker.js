@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // ---- Auto-fit grids: cards shrink/expand with item count ----
-  // 3 items → 3 bade columns; 5+ items → 4 chhote columns, baaki niche rows me
+  // 3 items → 3 large columns; 5+ items → 4 smaller columns, rest wraps to rows below
   function autoGrids() {
     const w = window.innerWidth;
     const maxByWidth = w < 640 ? 1 : w < 1000 ? 2 : 4;

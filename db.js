@@ -15,7 +15,7 @@ async function initDB() {
   console.log('✅ MongoDB connected');
   await seed();
 
-  // admin email backfill (forgot-password OTP isi pe jayega)
+  // admin email backfill (forgot-password OTP goes to this address)
   if (process.env.ADMIN_EMAIL) {
     const { AdminUser } = require('./models');
     await AdminUser.updateOne({ email: { $in: [null, ''] } }, { email: process.env.ADMIN_EMAIL }).catch(() => {});

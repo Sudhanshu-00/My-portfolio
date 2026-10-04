@@ -2,7 +2,7 @@
 
 <section class="section narrow">
   <h1><span class="sec-tag">&gt;_</span> SECURE_CONTACT</h1>
-  <p class="muted">Neeche form bharo — message seedha mere admin panel me transmit hoga. 🔒</p>
+  <p class="muted">Fill the form below — your message goes straight to my admin panel. 🔒</p>
 
   <div class="terminal small">
     <div class="term-bar">
@@ -13,12 +13,12 @@
       <p class="term-line"><span class="p">➜</span> <span class="cmd">./send_message --encrypted</span></p>
 
       <% if (query.sent) { %>
-        <div class="alert success">&gt;&gt; TRANSMISSION COMPLETE. Jaldi reply milega.</div>
+        <div class="alert success">&gt;&gt; TRANSMISSION COMPLETE. You will get a reply soon.</div>
       <% } %>
       <% if (query.error === 'rate') { %>
-        <div class="alert error">&gt;&gt; Ek message de chuke ho — 2 minute baad try karo.</div>
+        <div class="alert error">&gt;&gt; You already sent a message — try again after 2 minutes.</div>
       <% } else if (query.error) { %>
-        <div class="alert error">&gt;&gt; ERROR: sab fields bharo + valid email do.</div>
+        <div class="alert error">&gt;&gt; ERROR: fill all fields with a valid email.</div>
       <% } %>
 
       <form method="POST" action="/contact" class="form">

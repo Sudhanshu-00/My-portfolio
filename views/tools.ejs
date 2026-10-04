@@ -2,7 +2,7 @@
 
 <section class="section">
   <h1><span class="sec-tag">&gt;_</span> ARSENAL</h1>
-  <p class="muted">Professional security tools — built, battle-tested aur ready to deploy. Buy karne ke liye BUY dabao, direct WhatsApp pe baat hogi.</p>
+  <p class="muted">Professional security tools — built, battle-tested and ready to deploy. Hit BUY to purchase, we'll talk directly on WhatsApp.</p>
 
   <div class="filter-row" id="filters">
     <button class="btn small active" data-filter="all">ALL</button>
@@ -14,7 +14,7 @@
 
   <div class="card-grid" id="tools-grid" data-autogrid="4">
   <% if (!tools.length) { %>
-    <p class="muted">No tools listed yet. Aa rahe hain jaldi... ⏳</p>
+    <p class="muted">No tools listed yet. More coming soon... ⏳</p>
   <% } %>
   <% tools.forEach(t => { const buy = t.buyUrl || (settings.whatsapp ? 'https://wa.me/' + settings.whatsapp.replace(/\D/g, '') + '?text=' + encodeURIComponent('Hi! I want to buy: ' + t.name + ' (' + (t.price || 'price on request') + ')') : ''); %>
     <div class="card" data-cat="<%= t.category.toLowerCase() %>">

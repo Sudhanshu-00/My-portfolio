@@ -1,50 +1,52 @@
-# 🚀 Portfolio — Naye Device Pe Setup & Recovery Guide
+# 🚀 Portfolio — Setup & Recovery Guide for a New Device
 
-## 📦 Fresh Setup (naya device / naya clone)
+## 📦 Fresh Setup (new device / new clone)
 
 ```bash
 git clone https://github.com/Sudhanshu-00/My-portfolio.git
 cd My-portfolio
 npm install
-cp .env.example .env        # ← phir .env me REAL values bharo (backup se)
+cp .env.example .env        # ← then fill REAL values into .env (from your backup)
 node server.js
 ```
 
-## 🔑 .env Kaha Se Wapas Milega?
+## 🔑 How Do I Get .env Back?
 
-`.env` git me **kabhi nahi jata** (secrets hain). Recovery ke 2 raste:
+`.env` never goes into git (it contains secrets). Two recovery paths:
 
-### Raste 1: Tumhara backup (sabse aasan)
-`.env` ka content tumne apne Gmail / Drive / password manager me save kiya hua hai
-(backup file: device pe `~/portfolio-env-backup.txt`). Usse copy-paste karke `.env` banao.
+### Path 1: Your own backup (easiest)
+You saved the `.env` content in your Gmail / Drive / password manager
+(backup file on device: `~/portfolio-env-backup.txt`). Copy-paste it to recreate `.env`.
 
-### Raste 2: MongoDB Atlas dashboard (agar backup bhi gaya)
-1. **cloud.mongodb.com** → apne Gmail se login
-2. **Database → Connect → Drivers** → connection string copy karo
-   (isame DB password replace hota hai — Atlas pe user banaya tha wahi)
-3. `MONGODB_URI=` me paste karo
+### Path 2: MongoDB Atlas dashboard (if the backup is gone too)
+1. **cloud.mongodb.com** → log in with your Gmail
+2. **Database → Connect → Drivers** → copy the connection string
+   (replace the DB password with the one you set for the Atlas user)
+3. Paste it into `MONGODB_URI=`
 
-Baaki values fir se bana sakte ho:
-- `SESSION_SECRET` → `openssl rand -hex 32` (naya bhi chalega — bas sab logout ho jayenge)
-- `ADMIN_PATH` → `openssl rand -hex 10` (naya path = naya secret URL, aur behtar)
-- `ADMIN_PASS` → sirf first-run seed ke liye; account DB me pehle se hai to ignore
+You can regenerate the other values:
+- `SESSION_SECRET` → `openssl rand -hex 32` (a new one is fine — everyone just gets logged out)
+- `ADMIN_PATH` → `openssl rand -hex 10` (new path = new secret URL, even better)
+- `ADMIN_PASS` → only used for the first-run seed; if the account already exists in the DB, ignore it
 - `SMTP_PASS` → Gmail App Password (myaccount.google.com → App passwords)
 
-⚠️ **Dhyan**: `MONGODB_URI` ke bina app **in-memory MongoDB** pe chalta hai —
-data sirf tab tak rahega jab tak server chal raha hai. Hamesha Atlas URI lagao.
+⚠️ **Note**: without `MONGODB_URI` the app runs on an **in-memory MongoDB** —
+data lasts only as long as the server is running. Always use the Atlas URI.
 
-## 🧘 Tension-Free Recovery (password bhool gaye, device badal diye, kuch bhi)
+## 🧘 Stress-Free Recovery (forgot password, changed device, anything)
 
-1. Portfolio kholo → footer 🔐 → login page
+1. Open the portfolio → footer 🔐 → login page
 2. **Forgot password?** → username + registered email
-3. 📧 OTP email pe (3 min valid) → OTP daalo → naya password set
-4. Login ✅ — admin panel wapas
+3. 📧 OTP arrives by email (valid 3 min) → enter OTP → set new password
+4. Login ✅ — admin panel restored
 
-> Note: OTP recovery Atlas DB se chalti hai, isliye `MONGODB_URI` sahi hona chahiye.
+> Note: OTP recovery runs on the Atlas DB, so `MONGODB_URI` must be correct.
 
 ## 🔐 Security Notes
 
-- `/admin` hamesha 404 — asli panel sirf `/<ADMIN_PATH>` pe
-- Login brute-force: 5 galat → 15 min lock
-- OTP: 3 min valid, 5 galat → dead, 3 requests/15 min
-- Session cookie httpOnly — JS access nahi kar sakta
+- `/admin` always returns 404 — the real panel only exists at `/<ADMIN_PATH>`
+- Login brute force: 5 failures per (IP+username) → 15 min lock; 25 failures per IP → IP blocked
+- Global rate limit: 300 req/min per IP → 5 min auto-block
+- OTP: valid 3 min, 5 wrong attempts → dead, max 3 requests / 15 min
+- Session cookie is httpOnly — JavaScript cannot access it
+- CSRF tokens on every admin POST; strict CSP (no inline scripts anywhere)

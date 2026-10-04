@@ -82,7 +82,7 @@ const AdminUserSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true, trim: true },
   passwordHash: { type: String, required: true },
   email: { type: String, default: '', trim: true, lowercase: true }, // forgot-password OTP
-  otpHash: { type: String, default: '' }, // bcrypt(otp), plain kabhi store nahi
+  otpHash: { type: String, default: '' }, // bcrypt(otp) — plain OTP is never stored
   otpExpiry: { type: Date },
   otpAttempts: { type: Number, default: 0 },
 });
@@ -120,7 +120,7 @@ const ExperienceSchema = new mongoose.Schema(
     duration: { type: String, default: '' }, // e.g. "Jan 2024 – Present"
     description: { type: String, default: '' },
     current: { type: Boolean, default: false },
-    order: { type: Number, default: 0 }, // lower = upar dikhega
+    order: { type: Number, default: 0 }, // lower = shown higher
   },
   { timestamps: true }
 );
@@ -144,7 +144,7 @@ const FeedbackSchema = new mongoose.Schema(
     rating: { type: Number, default: 5, min: 1, max: 5 },
     message: { type: String, required: true, trim: true, maxlength: 1000 },
     status: { type: String, enum: ['pending', 'approved', 'hidden'], default: 'pending' },
-    ip: { type: String, default: '' }, // rate-limit ke liye
+    ip: { type: String, default: '' }, // for rate limiting
     reply: {
       text: { type: String, default: '' },
       at: { type: Date },

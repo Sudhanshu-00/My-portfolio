@@ -1,7 +1,7 @@
 <%- include('../partials/admin_head') %>
 
 <h1>🏢 Work Experience</h1>
-<p class="muted">Kis company me kaam karte ho, kis role pe, kab se — ye About page ke <strong>WORK_HISTORY</strong> section me timeline ke roop me dikhega.</p>
+<p class="muted">Where you work, in what role, since when — shown as a timeline in the About page's <strong>WORK_HISTORY</strong> section.</p>
 
 <div class="panel">
   <h2><%= editExp ? '✏️ Edit: ' + editExp.role + ' @ ' + editExp.company : '➕ Add Experience' %></h2>
@@ -18,11 +18,11 @@
       <label>Duration
         <input type="text" name="duration" placeholder="e.g. Jan 2024 – Present" value="<%= editExp ? editExp.duration : '' %>">
       </label>
-      <label>Order (lower = upar)
+      <label>Order (lower = shown higher)
         <input type="number" name="order" value="<%= editExp ? editExp.order : 0 %>">
       </label>
     </div>
-    <label>Description (kya kaam karte ho wahan — responsibilities, achievements)
+    <label>Description (what you do there — responsibilities, achievements)
       <textarea name="description" rows="4" placeholder="e.g. Performing VAPT on client web & Android apps, preparing reports, working with dev teams on fixes..."><%= editExp ? editExp.description : '' %></textarea>
     </label>
     <label style="display:flex; align-items:center; gap:0.5rem; font-weight:normal">
@@ -35,7 +35,7 @@
 </div>
 
 <h2>Current Entries (<%= experience.length %>)</h2>
-<% if (!experience.length) { %><p class="muted">No experience added yet — upar se apni company add karo.</p><% } %>
+<% if (!experience.length) { %><p class="muted">No experience added yet — add your company using the form above.</p><% } %>
 <table class="table">
   <tr><th>Role @ Company</th><th>Duration</th><th>Status</th><th>Order</th><th style="text-align:right">Actions</th></tr>
   <% experience.forEach(e => { %>
@@ -47,7 +47,7 @@
       <td>
         <div class="actions" style="justify-content:flex-end">
           <a class="btn small ghost" href="<%= adminBase %>/experience?edit=<%= e._id %>">✏️ Edit</a>
-          <form method="POST" action="<%= adminBase %>/experience/<%= e._id %>/delete" class="inline" onsubmit="return confirm('Delete this experience?')"><input type="hidden" name="_csrf" value="<%= csrf %>">
+          <form method="POST" action="<%= adminBase %>/experience/<%= e._id %>/delete" class="inline" data-confirm="Delete this experience?"><input type="hidden" name="_csrf" value="<%= csrf %>">
             <button type="submit" class="btn small danger">🗑 Delete</button>
           </form>
         </div>

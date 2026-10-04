@@ -25,11 +25,11 @@
   </label>
   <% if (project && project.image) { %>
     <img src="<%= project.image %>" class="thumb big" alt="">
-    <small class="muted">(Naya photo upload nahi karoge to purana rahega)</small>
+    <small class="muted">(If you don't upload a new photo, the old one stays)</small>
   <% } %>
   <label class="check">
     <input type="checkbox" name="featured" <%= project && project.featured ? 'checked' : '' %>>
-    ⭐ Featured (home page par dikhega)
+    ⭐ Featured (shown on the home page)
   </label>
   <div class="btn-row">
     <button type="submit" class="btn"><%= project ? '💾 Update Project' : '＋ Create Project' %></button>

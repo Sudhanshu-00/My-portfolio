@@ -4,22 +4,27 @@ const multer = require('multer');
 const { AdminUser, Project, Skill, Message, SiteSetting, Tool, PageView, Service, Testimonial, Experience, Lab, Feedback } = require('../models');
 const { sendMail } = require('../services/mailer');
 
-// Secret admin path (server.js ke secret-mount se match hona chahiye)
+// Secret admin path (must match the secret-mount in server.js).
+// go() builds secret-path-aware redirects and normalizes legacy '/admin/...' args.
 const ADMIN_PATH = process.env.ADMIN_PATH || 'admin';
-const go = (p) => '/' + ADMIN_PATH + p; // redirects secret-path aware
+const go = (p) => '/' + ADMIN_PATH + String(p || '/').replace(/^\/admin(?=\/|\?|$)/, '');
 
-// lab/tool URLs sirf http(s) — javascript:/data: href XSS block
+// URL hardening: only http(s) allowed — javascript:/data: href XSS blocked.
 const safeUrl = (u) => {
   const s = String(u || '').trim().slice(0, 500);
   if (!s) return '';
   return /^https?:\/\//i.test(s) ? s : 'https://' + s;
 };
 
+// Mongo ObjectId format check — invalid ids never reach the query layer.
+const isId = (v) => /^[a-f\d]{24}$/i.test(String(v || ''));
+
 // ---------- photo upload helper ----------
+const IMG_MIME = /^image\/(png|jpe?g|gif|webp|avif)$/i; // strict whitelist (no svg/html)
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 3 * 1024 * 1024 }, // 3 MB
-  fileFilter: (req, file, cb) => cb(null, /^image\//.test(file.mimetype)),
+  fileFilter: (req, file, cb) => cb(null, IMG_MIME.test(file.mimetype)),
 });
 const toDataUrl = (f) => (f ? `data:${f.mimetype};base64,${f.buffer.toString('base64')}` : '');
 
@@ -31,23 +36,28 @@ const resumeUpload = multer({
 });
 
 // ---------- auth ----------
-// ---------- auth ----------
 const crypto = require('crypto');
+// timing-safe string compare (no early-exit timing oracle)
+const safeEqual = (a, b) => {
+  const A = Buffer.from(String(a || ''));
+  const B = Buffer.from(String(b || ''));
+  return A.length === B.length && crypto.timingSafeEqual(A, B);
+};
 const requireAuth = async (req, res, next) => {
   if (req.session.admin) {
-    // ---- CSRF guard: har admin POST pe token verify (state-changing attacks block) ----
+    // ---- CSRF guard: verify token on every admin POST (blocks state-changing attacks) ----
     if (req.method === 'POST') {
-      const token = req.body && req.body._csrf; // req.body undefined ho sakta hai (empty POST)
-      if (!req.session.csrf || token !== req.session.csrf) {
-        return res.status(403).send('Security check failed — page reload karke dobara try karo.');
+      const token = req.body && req.body._csrf; // req.body may be undefined (empty POST)
+      if (!req.session.csrf || !token || !safeEqual(req.session.csrf, token)) {
+        return res.status(403).send('Security check failed — reload the page and try again.');
       }
     } else {
-      // GET pe token issue karo (views me hidden input ke through jata hai)
+      // issue token on GET (passed to views via a hidden input)
       if (!req.session.csrf) req.session.csrf = crypto.randomBytes(32).toString('hex');
       res.locals.csrf = req.session.csrf;
     }
     res.locals.admin = req.session.admin; // username for views
-    res.locals.path = '/admin' + req.path; // sidebar active-state (router prefix-stripped path deta hai)
+    res.locals.path = '/admin' + req.path; // sidebar active-state (router gives prefix-stripped path)
     res.locals.unread = await Message.countDocuments({ read: false });
     res.locals.pendingFeedback = await Feedback.countDocuments({ status: 'pending' });
     return next();
@@ -55,28 +65,44 @@ const requireAuth = async (req, res, next) => {
   res.redirect(go('/login/adminlogin'));
 };
 
+// Validate every :id param — non-ObjectId input gets bounced (CastError/500 impossible)
+router.param('id', (req, res, next, id) => {
+  if (!isId(id)) return res.redirect(go('/admin/'));
+  next();
+});
+
 router.get('/login', (req, res) => (req.session.admin ? res.redirect(go('/')) : res.render('admin/login', { error: null })));
 
-// admin login — sirf ye page asli admin auth deta hai (normal login se link ke through)
+// admin login — only this page performs real admin auth (linked from normal login)
 router.get('/login/adminlogin', (req, res) => (req.session.admin ? res.redirect(go('/')) : res.render('admin/admin_login', { error: null })));
 
 // ---------- brute-force lock (login) ----------
-// 5 failed attempts (IP+username) → 15 min lock. In-memory, restart pe reset.
+// 5 failed attempts per (IP+username) → 15 min lock, and 25 fails per IP → 15 min block.
+// In-memory; resets on restart. NoSQLi-safe: inputs are coerced to plain strings.
 const loginAttempts = new Map();
-setInterval(() => loginAttempts.clear(), 60 * 60 * 1000).unref(); // ghante me ek sweep
+const ipFails = new Map();
+setInterval(() => { loginAttempts.clear(); ipFails.clear(); }, 60 * 60 * 1000).unref(); // hourly sweep
 
 router.post('/login', async (req, res) => {
-  const key = `${req.ip}|${String(req.body.username || '').toLowerCase().slice(0, 40)}`;
-  const rec = loginAttempts.get(key) || { fails: 0, lockUntil: 0 };
-  if (rec.lockUntil > Date.now()) {
-    const mins = Math.ceil((rec.lockUntil - Date.now()) / 60000);
-    return res.status(429).render('admin/login', { error: `Too many failed attempts — ${mins} min baad try karo.` });
+  const body = req.body || {}; // never throw on empty/absent body
+  const username = String(body.username || '').toLowerCase().slice(0, 40);
+  const password = String(body.password || '');
+  if (!username || !password) {
+    return res.status(401).render('admin/login', { error: 'Invalid username or password' });
   }
-  const { username, password } = req.body;
-  const user = await AdminUser.findOne({ username });
-  if (user && (await bcrypt.compare(password || '', user.passwordHash))) {
+  const key = `${req.ip}|${username}`;
+  const now = Date.now();
+  const rec = loginAttempts.get(key) || { fails: 0, lockUntil: 0 };
+  const ipRec = ipFails.get(req.ip) || { fails: 0, lockUntil: 0 };
+  if (rec.lockUntil > now || ipRec.lockUntil > now) {
+    const mins = Math.ceil((Math.max(rec.lockUntil, ipRec.lockUntil) - now) / 60000);
+    return res.status(429).render('admin/login', { error: `Too many failed attempts — try again in ${mins} minute(s).` });
+  }
+  const user = await AdminUser.findOne({ username }).catch(() => null);
+  if (user && (await bcrypt.compare(password, user.passwordHash))) {
     loginAttempts.delete(key);
-    // session fixation fix — login pe fresh session id
+    ipFails.delete(req.ip);
+    // session fixation fix — fresh session id on login
     return req.session.regenerate(() => {
       req.session.admin = user.username;
       res.redirect(go('/'));
@@ -84,18 +110,24 @@ router.post('/login', async (req, res) => {
   }
   rec.fails++;
   if (rec.fails >= 5) {
-    rec.lockUntil = Date.now() + 15 * 60 * 1000;
+    rec.lockUntil = now + 15 * 60 * 1000;
     rec.fails = 0;
   }
   loginAttempts.set(key, rec);
-  await new Promise((r) => setTimeout(r, 400)); // online brute-force slow
+  ipRec.fails++;
+  if (ipRec.fails >= 25) {
+    ipRec.lockUntil = now + 15 * 60 * 1000;
+    ipRec.fails = 0;
+  }
+  ipFails.set(req.ip, ipRec);
+  await new Promise((r) => setTimeout(r, 400)); // slow down online brute force
   res.status(401).render('admin/login', { error: 'Invalid username or password' });
 });
 
 router.post('/logout', (req, res) => req.session.destroy(() => res.redirect(go('/login'))));
 
 // ---------- forgot password (email OTP) — self-service recovery ----------
-const GENERIC_MSG = 'Agar ye details admin account se match hui, OTP email pe chala gaya hai (3 min valid).';
+const GENERIC_MSG = 'If these details match an admin account, an OTP has been sent to the email (valid for 3 minutes).';
 const otpRequests = new Map(); // ip|username → [timestamps]
 setInterval(() => otpRequests.clear(), 60 * 60 * 1000).unref();
 
@@ -115,26 +147,26 @@ router.get('/forgot', (req, res) => {
 router.post('/forgot', async (req, res) => {
   const u = String(req.body.username || '').trim().toLowerCase().slice(0, 40);
   if (!otpRate(`${req.ip}|${u}`, 3, 15 * 60 * 1000)) {
-    return res.render('admin/forgot', { step: 'request', error: 'Bahut zyada requests — 15 min baad try karo.', info: null, username: '' });
+    return res.render('admin/forgot', { step: 'request', error: 'Too many requests — try again after 15 minutes.', info: null, username: '' });
   }
-  await new Promise((r) => setTimeout(r, 300)); // enumeration slow
+  await new Promise((r) => setTimeout(r, 300)); // slow account enumeration
   const user = await AdminUser.findOne({ username: u }).catch(() => null);
   const email = String(req.body.email || '').trim().toLowerCase();
   if (user && user.email && email === user.email) {
     const otp = String(require('crypto').randomInt(0, 1e6)).padStart(6, '0');
-    user.otpHash = await bcrypt.hash(otp, 10); // plain OTP kabhi store nahi
+    user.otpHash = await bcrypt.hash(otp, 10); // plain OTP is never stored
     user.otpExpiry = new Date(Date.now() + 3 * 60 * 1000); // 3 min
     user.otpAttempts = 0;
     await user.save();
     const sent = await sendMail({
       to: user.email,
       subject: 'Password Reset OTP — Portfolio Admin',
-      text: `Reset OTP: ${otp}\n3 minute me expire. Agar tumne request nahi ki, ignore karo.`,
-      html: `<p>Reset OTP: <b style="font-size:24px;letter-spacing:4px">${otp}</b></p><p>3 minute me expire. Agar tumne ye request nahi ki, email ignore karo.</p>`,
+      text: `Reset OTP: ${otp}\nExpires in 3 minutes. If you did not request this, ignore this email.`,
+      html: `<p>Reset OTP: <b style="font-size:24px;letter-spacing:4px">${otp}</b></p><p>Expires in 3 minutes. If you did not request this, ignore this email.</p>`,
     });
-    if (!sent) console.log(`[DEV] OTP for ${u}: ${otp}`); // SMTP set nahi → sirf server console
+    if (!sent) console.log(`[DEV] OTP for ${u}: ${otp}`); // SMTP not set → server console only
   }
-  // hamesha same generic jawab — kisi ko pata na chale account hai ya nahi
+  // always the same generic answer — nobody learns whether the account exists
   res.render('admin/forgot', { step: 'otp', error: null, info: GENERIC_MSG, username: u });
 });
 
@@ -142,7 +174,7 @@ router.post('/forgot/verify', async (req, res) => {
   const u = String(req.body.username || '').trim().toLowerCase().slice(0, 40);
   const otp = String(req.body.otp || '').replace(/\D/g, '').slice(0, 6);
   if (!otpRate(`${req.ip}|${u}`, 10, 15 * 60 * 1000)) {
-    return res.render('admin/forgot', { step: 'otp', error: 'Too many attempts — thodi der baad try karo.', info: null, username: u });
+    return res.render('admin/forgot', { step: 'otp', error: 'Too many attempts — try again in a few minutes.', info: null, username: u });
   }
   const user = await AdminUser.findOne({ username: u }).catch(() => null);
   const valid =
@@ -151,12 +183,12 @@ router.post('/forgot/verify', async (req, res) => {
     (await bcrypt.compare(otp, user.otpHash));
   if (!valid) {
     if (user && user.otpHash) {
-      user.otpAttempts += 1; // 5 galat → OTP dead
+      user.otpAttempts += 1; // 5 wrong attempts → OTP dead
       await user.save();
     }
-    return res.render('admin/forgot', { step: 'otp', error: 'OTP galat ya expire — dobara try karo.', info: null, username: u });
+    return res.render('admin/forgot', { step: 'otp', error: 'OTP is wrong or expired — try again.', info: null, username: u });
   }
-  // OTP sahi — 5 min ka reset window (session me, URL me token nahi)
+  // OTP correct — 5 min reset window (kept in session, never in URLs)
   req.session.resetAuth = { user: u, exp: Date.now() + 5 * 60 * 1000 };
   res.redirect('/reset');
 });
@@ -172,10 +204,10 @@ router.post('/reset', async (req, res) => {
   const p = String(req.body.password || '');
   const strong = p.length >= 10 && /[a-zA-Z]/.test(p) && /[0-9]/.test(p);
   if (!strong) {
-    return res.render('admin/forgot', { step: 'reset', error: 'Password weak — min 10 characters, letter + number dono ho.', info: null, username: u });
+    return res.render('admin/forgot', { step: 'reset', error: 'Password too weak — minimum 10 characters with at least one letter and one number.', info: null, username: u });
   }
   if (p !== String(req.body.confirm || '')) {
-    return res.render('admin/forgot', { step: 'reset', error: 'Dono passwords same nahi hain.', info: null, username: u });
+    return res.render('admin/forgot', { step: 'reset', error: 'Passwords do not match.', info: null, username: u });
   }
   const user = await AdminUser.findOne({ username: u });
   if (!user) return res.redirect('/forgot');
@@ -234,7 +266,7 @@ router.get('/', async (req, res) => {
       chart.push({ label: d.toLocaleDateString('en-IN', { month: 'short' }), count });
     }
   } else {
-    const step = range === '30d' ? 3 : 1; // 30d me har 3rd day ka label (crowding avoid)
+    const step = range === '30d' ? 3 : 1; // label every 3rd day for 30d (avoid crowding)
     for (let i = days - 1; i >= 0; i--) {
       const d = new Date(Date.now() - i * 864e5);
       const key = d.toISOString().slice(0, 10);
@@ -265,18 +297,24 @@ router.get('/settings', (req, res) => res.render('admin/settings'));
 
 router.post('/settings', upload.single('photo'), async (req, res) => {
   const s = await SiteSetting.get();
-  ['siteName', 'heroTitle', 'heroSubtitle', 'aboutText', 'email', 'phone', 'location', 'github', 'linkedin', 'twitter', 'instagram', 'whatsapp', 'telegram', 'githubUsername', 'thmUsername'].forEach(
+  ['siteName', 'heroTitle', 'heroSubtitle', 'aboutText', 'email', 'phone', 'location', 'githubUsername', 'thmUsername'].forEach(
     (f) => {
-      if (req.body[f] !== undefined) s[f] = req.body[f];
+      if (req.body[f] !== undefined) s[f] = String(req.body[f]).slice(0, 3000);
     }
   );
+  // social URLs stored http(s)-only (javascript:/data: XSS blocked at write time)
+  ['github', 'linkedin', 'twitter', 'instagram'].forEach((f) => {
+    if (req.body[f] !== undefined) s[f] = safeUrl(req.body[f]);
+  });
+  if (req.body.whatsapp !== undefined) s.whatsapp = String(req.body.whatsapp).replace(/\D/g, '').slice(0, 15);
+  if (req.body.telegram !== undefined) s.telegram = String(req.body.telegram).replace(/[^\w.@-]/g, '').slice(0, 60);
   if (req.file) s.profilePhoto = toDataUrl(req.file);
 
-  // custom social links (label + url pairs)
-  const labels = [].concat(req.body['custom_label'] || []);
-  const urls = [].concat(req.body['custom_url'] || []);
+  // custom social links (label + url pairs) — works with both key styles
+  const labels = [].concat(req.body['custom_label'] || req.body['custom_label[]'] || []);
+  const urls = [].concat(req.body['custom_url'] || req.body['custom_url[]'] || []);
   s.customLinks = labels
-    .map((label, i) => ({ label: (label || '').trim(), url: (urls[i] || '').trim() }))
+    .map((label, i) => ({ label: String(label || '').trim().slice(0, 40), url: safeUrl(urls[i]) }))
     .filter((l) => l.label && l.url);
 
   await s.save();
@@ -303,7 +341,7 @@ router.post('/resume/delete', async (req, res) => {
 
 // ---------- services (hire me) ----------
 router.get('/services', async (req, res) => {
-  const editService = req.query.edit ? await Service.findById(req.query.edit).catch(() => null) : null;
+  const editService = req.query.edit && isId(req.query.edit) ? await Service.findById(req.query.edit).catch(() => null) : null;
   res.render('admin/services', { services: await Service.find().sort({ createdAt: 1 }), editService });
 });
 
@@ -328,7 +366,7 @@ router.post('/services/:id/delete', async (req, res) => {
 
 // ---------- testimonials ----------
 router.get('/testimonials', async (req, res) => {
-  const editTestimonial = req.query.edit ? await Testimonial.findById(req.query.edit).catch(() => null) : null;
+  const editTestimonial = req.query.edit && isId(req.query.edit) ? await Testimonial.findById(req.query.edit).catch(() => null) : null;
   res.render('admin/testimonials', { testimonials: await Testimonial.find().sort({ createdAt: -1 }), editTestimonial });
 });
 
@@ -365,7 +403,7 @@ router.post('/testimonials/:id/delete', async (req, res) => {
 
 // ---------- experience (work history) ----------
 router.get('/experience', async (req, res) => {
-  const editExp = req.query.edit ? await Experience.findById(req.query.edit).catch(() => null) : null;
+  const editExp = req.query.edit && isId(req.query.edit) ? await Experience.findById(req.query.edit).catch(() => null) : null;
   res.render('admin/experience', { experience: await Experience.find().sort({ current: -1, order: 1, createdAt: -1 }), editExp });
 });
 
@@ -406,7 +444,7 @@ router.post('/experience/:id/delete', async (req, res) => {
 
 // ---------- labs (TryHackMe / PortSwigger) ----------
 router.get('/labs', async (req, res) => {
-  const editLab = req.query.edit ? await Lab.findById(req.query.edit).catch(() => null) : null;
+  const editLab = req.query.edit && isId(req.query.edit) ? await Lab.findById(req.query.edit).catch(() => null) : null;
   res.render('admin/labs', { labs: await Lab.find().sort({ createdAt: -1 }), editLab });
 });
 
@@ -449,7 +487,7 @@ router.post('/labs/:id/delete', async (req, res) => {
 router.get('/feedback', async (req, res) => {
   const show = ['pending', 'approved', 'hidden', 'all'].includes(req.query.show) ? req.query.show : 'pending';
   const filter = show === 'all' ? {} : { status: show };
-  // BUGFIX: Mongo alphabetical sort status:1 se approved pehle aata tha — pending first chahiye
+  // pending first, then approved, then hidden (newest first inside each group)
   const list = await Feedback.find(filter).sort({ createdAt: -1 }).lean();
   const order = { pending: 0, approved: 1, hidden: 2 };
   list.sort((a, b) => order[a.status] - order[b.status] || new Date(b.createdAt) - new Date(a.createdAt));
@@ -476,7 +514,7 @@ router.post('/feedback/:id/hide', async (req, res) => {
 
 router.post('/feedback/:id/reply', async (req, res) => {
   const text = String(req.body.reply || '').trim().slice(0, 1000);
-  // reply set karo; khaali submit = reply clear (taaki galti se reply hata sake)
+  // set reply; empty submit clears the reply (so a reply can be removed by submitting empty)
   const update = text ? { reply: { text, at: new Date() } } : { $unset: { reply: '' } };
   await Feedback.findByIdAndUpdate(req.params.id, update).catch(() => {});
   res.redirect(go('/admin/feedback'));
@@ -489,7 +527,7 @@ router.post('/feedback/:id/delete', async (req, res) => {
 
 // ---------- skills ----------
 router.get('/skills', async (req, res) => {
-  const editSkill = req.query.edit ? await Skill.findById(req.query.edit).catch(() => null) : null;
+  const editSkill = req.query.edit && isId(req.query.edit) ? await Skill.findById(req.query.edit).catch(() => null) : null;
   res.render('admin/skills', { skills: await Skill.find().sort({ category: 1, level: -1 }), editSkill });
 });
 
@@ -531,13 +569,13 @@ router.get('/projects/new', (req, res) => res.render('admin/project_form', { pro
 
 router.post('/projects', upload.single('image'), async (req, res) => {
   const { title, description, techStack, liveUrl, githubUrl } = req.body;
-  if (title && title.trim()) {
+  if (title && String(title).trim()) {
     await Project.create({
-      title: title.trim(),
-      description,
-      techStack,
-      liveUrl,
-      githubUrl,
+      title: String(title).trim().slice(0, 120),
+      description: String(description || '').slice(0, 5000),
+      techStack: String(techStack || '').slice(0, 300),
+      liveUrl: safeUrl(liveUrl),
+      githubUrl: safeUrl(githubUrl),
       featured: req.body.featured === 'on',
       image: toDataUrl(req.file),
     });
@@ -552,14 +590,14 @@ router.get('/projects/:id/edit', async (req, res) => {
 });
 
 router.post('/projects/:id', upload.single('image'), async (req, res) => {
-  const p = await Project.findById(req.params.id);
+  const p = await Project.findById(req.params.id).catch(() => null);
   if (!p) return res.redirect(go('/admin/projects'));
   Object.assign(p, {
-    title: req.body.title,
-    description: req.body.description,
-    techStack: req.body.techStack,
-    liveUrl: req.body.liveUrl,
-    githubUrl: req.body.githubUrl,
+    title: String(req.body.title || p.title).trim().slice(0, 120),
+    description: String(req.body.description || '').slice(0, 5000),
+    techStack: String(req.body.techStack || '').slice(0, 300),
+    liveUrl: safeUrl(req.body.liveUrl),
+    githubUrl: safeUrl(req.body.githubUrl),
     featured: req.body.featured === 'on',
   });
   if (req.file) p.image = toDataUrl(req.file);
@@ -581,14 +619,14 @@ router.get('/tools/new', (req, res) => res.render('admin/tool_form', { tool: nul
 
 router.post('/tools', upload.single('image'), async (req, res) => {
   const { name, description, category, price, demoUrl, buyUrl } = req.body;
-  if (name && name.trim()) {
+  if (name && String(name).trim()) {
     await Tool.create({
-      name: name.trim(),
-      description,
-      category: category || 'Other',
-      price,
-      demoUrl,
-      buyUrl,
+      name: String(name).trim().slice(0, 120),
+      description: String(description || '').slice(0, 5000),
+      category: String(category || 'Other').slice(0, 40),
+      price: String(price || '').slice(0, 40),
+      demoUrl: safeUrl(demoUrl),
+      buyUrl: safeUrl(buyUrl),
       featured: req.body.featured === 'on',
       image: toDataUrl(req.file),
     });
@@ -603,15 +641,15 @@ router.get('/tools/:id/edit', async (req, res) => {
 });
 
 router.post('/tools/:id', upload.single('image'), async (req, res) => {
-  const t = await Tool.findById(req.params.id);
+  const t = await Tool.findById(req.params.id).catch(() => null);
   if (!t) return res.redirect(go('/admin/tools'));
   Object.assign(t, {
-    name: req.body.name,
-    description: req.body.description,
-    category: req.body.category,
-    price: req.body.price,
-    demoUrl: req.body.demoUrl,
-    buyUrl: req.body.buyUrl,
+    name: String(req.body.name || t.name).trim().slice(0, 120),
+    description: String(req.body.description || '').slice(0, 5000),
+    category: String(req.body.category || 'Other').slice(0, 40),
+    price: String(req.body.price || '').slice(0, 40),
+    demoUrl: safeUrl(req.body.demoUrl),
+    buyUrl: safeUrl(req.body.buyUrl),
     featured: req.body.featured === 'on',
   });
   if (req.file) t.image = toDataUrl(req.file);

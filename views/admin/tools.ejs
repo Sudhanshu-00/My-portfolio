@@ -7,7 +7,7 @@
 
 <table class="table">
   <tr><th>Photo</th><th>Name</th><th>Category</th><th>Price</th><th>Featured</th><th>Actions</th></tr>
-  <% if (!tools.length) { %><tr><td colspan="6" class="muted">No tools yet. Click "Add Tool" — jo tool bechna hai wo yahan add karo.</td></tr><% } %>
+  <% if (!tools.length) { %><tr><td colspan="6" class="muted">No tools yet. Click "Add Tool" — every tool you sell is added here.</td></tr><% } %>
   <% tools.forEach(t => { %>
     <tr>
       <td><% if (t.image) { %><img src="<%= t.image %>" class="thumb" alt=""><% } %></td>

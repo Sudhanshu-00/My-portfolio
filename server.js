@@ -9,8 +9,8 @@ const { SiteSetting, PageView } = require('./models');
 const publicRoutes = require('./routes/public');
 const adminRoutes = require('./routes/admin');
 
-// Secret admin entrance — /admin publicly 404 dega, asli panel sirf
-// ADMIN_PATH (env, .env me) se khulega. Path kisi HTML/JS me expose nahi hota.
+// Secret admin entrance — /admin always returns 404 publicly; the real panel
+// only opens on ADMIN_PATH (env, set in .env). The path is never exposed in HTML/JS.
 const ADMIN_PATH = process.env.ADMIN_PATH || 'admin';
 const SECRET_MOUNT = '/' + ADMIN_PATH;
 
@@ -18,7 +18,7 @@ async function main() {
   await initDB();
 
   const app = express();
-  app.disable('x-powered-by'); // fingerprinting kam
+  app.disable('x-powered-by'); // reduce fingerprinting
   app.set('trust proxy', 1);
   app.set('view engine', 'ejs');
   app.set('views', path.join(__dirname, 'views'));
@@ -31,14 +31,18 @@ async function main() {
       'Referrer-Policy': 'no-referrer',
       'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
       'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Resource-Policy': 'same-origin',
+      'X-Permitted-Cross-Domain-Policies': 'none',
     });
-    // CSP — admin pages me inline script (settings helper) hai, public me nahi
-    const isAdmin = req.path === SECRET_MOUNT || req.path.startsWith(SECRET_MOUNT + '/');
+    if (process.env.NODE_ENV === 'production') {
+      res.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    }
+    // CSP — all scripts served from /js (no inline JS anywhere, public or admin)
     res.set(
       'Content-Security-Policy',
       [
         "default-src 'self'",
-        `script-src 'self'${isAdmin ? " 'unsafe-inline'" : ''}`,
+        "script-src 'self'",
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
         "font-src 'self' data: https://fonts.gstatic.com",
         "img-src 'self' data: https:",
@@ -49,11 +53,17 @@ async function main() {
         "frame-ancestors 'none'",
       ].join('; ')
     );
+    // Never cache authenticated / auth pages — proxies (Burp etc.) must not store them
+    if (req.path.startsWith(SECRET_MOUNT) || req.path.startsWith('/login') ||
+        req.path.startsWith('/forgot') || req.path.startsWith('/reset')) {
+      res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+      res.set('Pragma', 'no-cache');
+    }
     next();
   });
 
   // ---------- global rate limit + IP auto-block ----------
-  // 300 req/min per IP — cross karne pe 5 min ke liye block. (DoS/fuzzing shield)
+  // 300 req/min per IP — exceeding it blocks the IP for 5 min. (DoS / fuzzing shield)
   const RL_LIMIT = 300, RL_WINDOW = 60_000, RL_BLOCK = 5 * 60_000;
   const rateMap = new Map();
   setInterval(() => rateMap.clear(), 10 * 60 * 1000).unref();
@@ -68,19 +78,41 @@ async function main() {
     r.count++;
     if (r.count > RL_LIMIT) {
       r.blockedUntil = now + RL_BLOCK;
-      console.warn(`⛔ IP blocked (rate limit): ${req.ip}`);
+      console.warn(`[BLOCK] IP blocked (rate limit exceeded): ${req.ip}`);
       return res.status(429).send('Too many requests — IP temporarily blocked.');
     }
     rateMap.set(req.ip, r);
+    if (process.env.RATE_DEBUG) console.log("[RATE]", req.ip, r.count, "blockedUntil:", r.blockedUntil > 0);
     next();
   });
 
-  app.use(express.urlencoded({ extended: true }));
-  app.use(express.static(path.join(__dirname, 'public')));
+  // extended:false → `username[$gt]=` style payloads stay literal strings (NoSQLi-safe),
+  // never become MongoDB operator objects.
+  app.use(express.urlencoded({ extended: false }));
+  app.use(express.json({ limit: '100kb' })); // JSON bodies parsed & size-capped
+
+  // ---------- injection sanitizer (defense in depth) ----------
+  // Strip any key that could carry MongoDB operators ($-prefixed or dotted)
+  // from body/query/params, and force values to stay plain strings/numbers.
+  const clean = (obj) => {
+    if (!obj || typeof obj !== 'object') return obj;
+    for (const k of Object.keys(obj)) {
+      if (k.startsWith('$') || k.includes('.') || k.includes('[')) delete obj[k];
+      else if (obj[k] && typeof obj[k] === 'object') clean(obj[k]);
+    }
+    return obj;
+  };
+  app.use((req, res, next) => {
+    clean(req.body);
+    clean(req.params);
+    next();
+  });
+
+  app.use(express.static(path.join(__dirname, 'public'), { dotfiles: 'ignore', maxAge: '1d' }));
 
   app.use(
     session({
-      name: 'hsid', // default connect.sid fingerprint hatao
+      name: 'hsid', // hide the default connect.sid fingerprint
       secret: process.env.SESSION_SECRET || 'dev-secret-change-me',
       resave: false,
       saveUninitialized: false,
@@ -109,27 +141,26 @@ async function main() {
   });
 
   // ---------- secret admin mount + public auth pages ----------
-  // Panel: sirf secret path (ADMIN_PATH) — /admin/* publicly 404.
-  // /login, /forgot, /reset public aliases — taaki site se login + email-OTP recovery ho sake
-  // aur secret path kabhi public HTML me leak na ho.
+  // Panel: only the secret path (ADMIN_PATH) — /admin/* is always a public 404.
+  // /login, /forgot, /reset are public aliases — so the site can offer login +
+  // email-OTP recovery without ever leaking the secret path in public HTML.
   const AUTH_PATHS = ['/login', '/login/adminlogin', '/forgot', '/forgot/verify', '/reset'];
   app.use((req, res, next) => {
-    res.locals.adminBase = SECRET_MOUNT; // views me saare admin links isse bante hain
+    res.locals.adminBase = SECRET_MOUNT; // all admin links in views are built from this
     if (req.url === SECRET_MOUNT || req.url.startsWith(SECRET_MOUNT + '/')) {
       req.url = req.url.slice(SECRET_MOUNT.length) || '/';
       return adminRoutes(req, res, next);
     }
     if (AUTH_PATHS.includes(req.path)) {
-      // req.url already relative (/login) — router direct match karega
       return adminRoutes(req, res, next);
     }
     next();
   });
 
-  // Page view analytics (public pages only — admin rewrite ho chuka hai, /admin skip works)
+  // Page view analytics (public pages only — admin requests were rewritten above)
   app.use((req, res, next) => {
     if (req.method === 'GET' && !req.path.startsWith('/admin')) {
-      PageView.create({ path: req.path }).catch(() => {});
+      PageView.create({ path: String(req.path).slice(0, 200) }).catch(() => {});
     }
     next();
   });
@@ -157,17 +188,25 @@ async function main() {
   // 404
   app.use((req, res) => res.status(404).render('404'));
 
-  // Error handler — stack leak nahi
+  // body-parser errors (malformed JSON etc.) → clean 400
   app.use((err, req, res, next) => {
-    console.error(err);
+    if (err.type === 'entity.parse.failed' || err.type === 'entity.too.large' || err.status === 400) {
+      return res.status(400).send('Bad request.');
+    }
+    next(err);
+  });
+
+  // Error handler — never leak stack traces
+  app.use((err, req, res, next) => {
+    console.error('[ERROR]', err.message);
     res.status(500).send('Something went wrong. Please try again.');
   });
 
   const port = process.env.PORT || 3000;
-  app.listen(port, () => console.log(`🚀 Portfolio running → http://localhost:${port}`));
+  app.listen(port, () => console.log(`[OK] Portfolio running → http://localhost:${port}`));
 }
 
 main().catch((e) => {
-  console.error('Failed to start:', e);
+  console.error('Failed to start:', e.message);
   process.exit(1);
 });

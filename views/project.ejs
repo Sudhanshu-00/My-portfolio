@@ -74,7 +74,7 @@
       <div class="panel">
         <h2>📖 README.md</h2>
         <% if (readmeHtml) { %>
-          <div class="readme"><%= readmeHtml %></div>
+          <div class="readme"><%- readmeHtml %></div>
         <% } else { %>
           <p class="muted">No README in this repo.</p>
         <% } %>
@@ -82,7 +82,7 @@
     </div>
   </section>
   <% } else if (gh.reason === 'rate-limited') { %>
-    <p class="muted">⏳ GitHub live-data rate-limited — thodi der baad refresh karo.</p>
+    <p class="muted">⏳ GitHub live-data is rate-limited — refresh in a little while.</p>
   <% } %>
 </article>
 

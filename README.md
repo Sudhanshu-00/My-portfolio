@@ -1,93 +1,77 @@
-# 🌐 My Portfolio — Dynamic Website + Admin Panel
+# My Portfolio — H4x0r Theme
 
-Fully dynamic portfolio website with admin panel. Sab kuch database se chalta hai — pages, photos, skills, projects, contact messages. Admin panel se **kahi se bhi** (sirf browser se) manage karo.
+Fully dynamic portfolio website with admin panel. Everything runs from the database — pages, photos, skills, projects, contact messages. Manage it entirely from the admin panel (just a browser, from anywhere).
 
 ## ✨ Features
 
-- 🏠 **Home / About / Projects / Contact** — sab pages dynamic (database se)
-- 🔐 **Admin Panel** (`/admin`) — secure login (session + bcrypt password)
-- 🖼️ **Photo Upload** — profile photo aur project images (database me store)
-- 📩 **Contact Form** — messages admin panel me dikhenge
-- 🚀 **Free Hosting** — MongoDB Atlas + Render
+- Dynamic home page (hero, skills, services, projects, testimonials) — all DB-driven
+- Tools for sale with WhatsApp buy integration
+- Projects with live GitHub repo data (stars, languages, README)
+- TryHackMe / PortSwigger lab tracker
+- Public feedback wall (admin-moderated)
+- Contact form → admin inbox
+- Full admin panel: content, uploads (photo/resume), messages, settings
 
-## 🛠️ Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Backend | Node.js + Express 5 |
-| Database | MongoDB (Atlas — free cloud) |
-| Frontend | EJS templates + vanilla CSS |
-| Auth | express-session + bcryptjs |
-| Uploads | multer (images DB me base64) |
-
-## 💻 Local Me Chalana
+## 💻 Run Locally
 
 ```bash
 npm install
-npm run dev
+npm start        # or: npm run dev (auto-restart on file changes)
 ```
 
-> `MONGODB_URI` set nahi hai to khud ek temporary in-memory MongoDB start hota hai (test ke liye — data restart pe delete ho jata hai).
+> If `MONGODB_URI` is not set, a temporary in-memory MongoDB starts automatically (for testing — data is deleted on restart).
 
-- Website: http://localhost:3000
-- Admin: http://localhost:3000/admin → **admin / admin@123**
+## ☁️ MongoDB Atlas (Free Cloud DB)
 
-## ☁️ Step 1 — MongoDB Atlas (Free Database)
+1. Create an account at https://www.mongodb.com/cloud/atlas/register (Google login is fastest)
+2. Create a **Free M0 cluster** (region: Mumbai `ap-south-1`)
+3. **Database Access** → Add New Database User → set username/password
+4. **Network Access** → Allow from anywhere `0.0.0.0/0` (or your server IP)
+5. **Database → Connect → Drivers** → copy the connection string:
 
-1. https://www.mongodb.com/cloud/atlas/register pe account banao (Google login fastest)
-2. **Free M0 cluster** banao (region: Mumbai `ap-south-1`)
-3. **Database Access** → Add New Database User → username/password set karo
-4. **Network Access** → Add IP → `0.0.0.0/0` (Allow from anywhere)
-5. **Database → Connect → Drivers** → connection string copy karo:
-   ```
-   mongodb+srv://user:pass@cluster0.xxxxx.mongodb.net/portfolio
-   ```
-6. Project me `.env` banao (`.env.example` copy karke) aur `MONGODB_URI` me wo string daalo
+```
+mongodb+srv://<user>:<pass>@cluster0.xxxxx.mongodb.net/?retryWrites=true
+```
 
-## 🐙 Step 2 — GitHub Pe Push
+6. Create `.env` in the project (copy `.env.example`) and paste the string into `MONGODB_URI`
+
+## 🚀 Deploy to Render (Free)
+
+1. Push the code to GitHub:
 
 ```bash
-cd "my portfolio"
+git init
 git add .
-git commit -m "Portfolio website with admin panel"
-```
-
-Phir https://github.com/new pe **new repository** banao (naam: `my-portfolio`), aur:
-
-```bash
-git remote add origin https://github.com/TUMHARA-USERNAME/my-portfolio.git
+git commit -m "portfolio"
+git remote add origin https://github.com/USERNAME/my-portfolio.git
 git push -u origin main
 ```
 
-## 🚀 Step 3 — Render Pe Host (Free)
+2. Go to https://render.com → log in with GitHub
+3. **New → Web Service** → select your `my-portfolio` repo
+4. Settings:
+   - **Build Command**: `npm install`
+   - **Start Command**: `npm start`
+5. **Environment** → add all variables from `.env` (MONGODB_URI, SESSION_SECRET, ADMIN_USER, ADMIN_PASS, ADMIN_PATH, ADMIN_EMAIL, SMTP_*)
 
-1. https://render.com → GitHub se login karo
-2. **New → Web Service** → apna `my-portfolio` repo select karo
-3. Settings:
-   - **Build Command:** `npm install`
-   - **Start Command:** `npm start`
-   - **Environment Variables:**
-     | Key | Value |
-     |-----|-------|
-     | `MONGODB_URI` | Atlas wali connection string |
-     | `SESSION_SECRET` | koi lamba random string |
-     | `NODE_ENV` | `production` |
-4. **Create Web Service** → 2-3 min me live! 🎉
+> After the first Render deploy, every `git push` auto-deploys. Edit code → push → live!
 
-> Render deploy hone ke baad har `git push` pe **auto-deploy** ho jata hai. Code edit karo → push → live!
+## 🛠 Admin Panel
 
-## 🎛️ Admin Panel Se Kya-Kya Manage Hoga
+| Section | What you can do |
+|---|---|
+| **Dashboard** | Traffic stats, visitor chart, quick actions |
+| **Settings** | Site name, hero, about text, contact info, all social links, profile photo, resume upload |
+| **Tools** | Add/edit/delete tools for sale (with photos, prices, buy links) |
+| **Projects** | Case-file style portfolio projects |
+| **Skills** | Skill bars with levels & categories |
+| **Services** | Hire-me packages with pricing |
+| **Testimonials** | Client feedback with star ratings |
+| **Experience** | Work-history timeline |
+| **Labs** | TryHackMe / PortSwigger solved labs |
+| **Messages** | Read / delete contact-form messages |
+| **Feedback** | Approve / hide / reply to public feedback |
+| **Password** | Change admin password |
 
-| Section | Kya kar sakte ho |
-|---------|-----------------|
-| **Settings** | Site name, hero title/subtitle, profile photo, about text, email/phone/location, social links |
-| **Projects** | Add / Edit / Delete projects + photo upload + featured mark |
-| **Skills** | Add / Delete skills with level bars |
-| **Messages** | Contact form ke messages dekho / mark read / delete |
-| **Password** | Admin password change |
-
-## 🔒 Security Notes
-
-- First login ke baad **password change kar lo** (`/admin/password`)
-- `.env` file GitHub pe push NahI hoti (`.gitignore` me hai) — secrets safe
-- Passwords bcrypt se hash hote hain, sessions MongoDB me store hote hain
+- `.env` is never pushed to GitHub (it's in `.gitignore`) — secrets stay safe
+- **ADMIN_PATH** is the secret panel path — `/admin` always shows a public 404

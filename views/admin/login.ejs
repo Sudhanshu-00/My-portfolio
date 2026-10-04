@@ -9,7 +9,7 @@
 <body class="login-page">
   <div class="login-box">
     <h1>&gt;_ LOGIN</h1>
-    <% if (query.reset) { %><div class="alert success">✅ Password reset ho gaya — naye password se login karo.</div><% } %>
+    <% if (query.reset) { %><div class="alert success">✅ Password has been reset — log in with your new password.</div><% } %>
     <% if (error) { %><div class="alert error"><%= error %></div><% } %>
     <form method="POST" action="/login" class="form">
       <label>Username
