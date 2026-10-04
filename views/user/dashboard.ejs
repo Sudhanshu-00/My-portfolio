@@ -1,73 +1,119 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard | <%= username %></title>
-  <link rel="stylesheet" href="/css/style.css">
-</head>
-<body class="login-page">
-  <div class="login-box" style="max-width:820px">
+<%- include('../partials/header', { title: 'Dashboard' }) %>
+
+<!-- ===== Dashboard header ===== -->
+<div class="ud-head">
+  <div>
     <h1>&gt;_ USER DASHBOARD</h1>
-    <p class="mono" style="color:var(--green,#00ff41)">[ 👤 <%= username %> ] <span class="muted">— session active</span></p>
-    <% if (saved) { %><div class="alert success">✅ Password changed successfully.</div><% } %>
-    <% if (pwError) { %><div class="alert error"><%= pwError %></div><% } %>
+    <p class="ud-who">[ 👤 <%= username %> ] <span class="muted">— welcome back, commander</span></p>
+  </div>
+  <div style="text-align:right">
+    <span class="badge dim">ROLE: USER</span>
+    <span class="badge" style="font-size:0.68rem">SESSION: ENCRYPTED</span>
+  </div>
+</div>
 
-    <!-- ===== Projects (READ ONLY) ===== -->
-    <h2 class="mono" style="font-size:1rem;margin-top:1.2rem">📁 PROJECTS <span class="badge warn" style="font-size:0.7rem">READ-ONLY</span></h2>
-    <p class="muted" style="font-size:0.8rem">You can view projects here — editing is not allowed.</p>
+<% if (saved) { %><div class="alert success">✅ Password changed successfully.</div><% } %>
+<% if (pwError) { %><div class="alert error"><%= pwError %></div><% } %>
+
+<!-- ===== Stats (read-only) ===== -->
+<div class="ud-stats">
+  <div class="ud-stat"><b><%= stats.projects %></b><span>PROJECTS</span></div>
+  <div class="ud-stat"><b><%= stats.tools %></b><span>TOOLS</span></div>
+  <div class="ud-stat"><b><%= stats.labs %></b><span>LABS</span></div>
+  <div class="ud-stat"><b><%= stats.experience %></b><span>EXPERIENCE</span></div>
+  <div class="ud-stat"><b><%= stats.testimonials %></b><span>TESTIMONIALS</span></div>
+  <div class="ud-stat"><b><%= stats.services %></b><span>SERVICES</span></div>
+</div>
+
+<div class="ud-grid">
+  <!-- ===== Left: projects (READ-ONLY) ===== -->
+  <div class="ud-panel">
+    <h2>📁 PROJECTS <span class="badge warn" style="font-size:0.62rem">READ-ONLY</span></h2>
+    <p class="muted" style="font-size:0.8rem;margin-bottom:0.4rem">View only — editing is disabled for user accounts.</p>
     <% if (!projects.length) { %>
-      <p class="muted" style="font-size:0.85rem">No projects yet.</p>
+      <p class="muted" style="font-size:0.88rem">No projects published yet.</p>
     <% } else { %>
-      <div style="text-align:left">
-        <% projects.forEach((p) => { %>
-          <div class="msg-card" style="margin:0.6rem 0">
-            <div class="row-between">
-              <strong><%= p.title %></strong>
-              <% if (p.featured) { %><span class="badge ok" style="font-size:0.65rem">★ FEATURED</span><% } %>
-            </div>
-            <% if (p.description) { %><p style="font-size:0.85rem;margin:0.3rem 0"><%= String(p.description).slice(0, 180) %><%= String(p.description).length > 180 ? '…' : '' %></p><% } %>
-            <% if (p.techStack) { %><small class="muted mono">tech: <%= p.techStack %></small><% } %>
-            <div style="margin-top:0.4rem">
-              <% if (p.liveUrl) { %><a href="<%= p.liveUrl %>" target="_blank" rel="noopener noreferrer" class="link" style="font-size:0.8rem">[ live ↗ ]</a><% } %>
-              <% if (p.githubUrl) { %><a href="<%= p.githubUrl %>" target="_blank" rel="noopener noreferrer" class="link" style="font-size:0.8rem;margin-left:0.5rem">[ github ↗ ]</a><% } %>
-              <a href="/projects" class="link" style="font-size:0.8rem;margin-left:0.5rem">[ public page ]</a>
-            </div>
+      <% projects.forEach((p) => { %>
+        <div class="ud-proj">
+          <div class="row-between">
+            <strong><%= p.title %></strong>
+            <% if (p.featured) { %><span class="badge" style="font-size:0.6rem">★ FEATURED</span><% } %>
           </div>
-        <% }) %>
-      </div>
+          <% if (p.description) { %>
+            <p style="font-size:0.85rem;margin:0.35rem 0 0.15rem"><%= String(p.description).slice(0, 200) %><%= String(p.description).length > 200 ? '…' : '' %></p>
+          <% } %>
+          <% if (p.techStack) { %>
+            <div class="ud-chips">
+              <% String(p.techStack).split(',').map((t) => t.trim()).filter(Boolean).forEach((t) => { %>
+                <span class="ud-chip"><%= t %></span>
+              <% }) %>
+            </div>
+          <% } %>
+          <div style="margin-top:0.5rem">
+            <% if (p.liveUrl) { %><a href="<%= p.liveUrl %>" target="_blank" rel="noopener noreferrer nofollow" class="link" style="font-size:0.78rem">[ live ↗ ]</a><% } %>
+            <% if (p.githubUrl) { %><a href="<%= p.githubUrl %>" target="_blank" rel="noopener noreferrer nofollow" class="link" style="font-size:0.78rem;margin-left:0.5rem">[ github ↗ ]</a><% } %>
+            <a href="/projects" class="link" style="font-size:0.78rem;margin-left:0.5rem">[ public page ]</a>
+          </div>
+        </div>
+      <% }) %>
     <% } %>
+  </div>
 
-    <!-- ===== Change own password ===== -->
-    <h2 class="mono" style="font-size:1rem;margin-top:1.4rem">🔑 CHANGE MY PASSWORD</h2>
-    <form method="POST" action="/user/<%= username %>/password" class="form">
-      <input type="hidden" name="_csrf" value="<%= csrf %>">
-      <label>Current password
-        <input type="password" name="current" required autocomplete="current-password">
-      </label>
-      <label>New password (min 8 chars)
-        <input type="password" name="next" required minlength="8" autocomplete="new-password">
-      </label>
-      <label>Confirm new password
-        <input type="password" name="confirm" required minlength="8" autocomplete="new-password">
-      </label>
-      <button type="submit" class="btn full">Update password</button>
-    </form>
+  <!-- ===== Right column ===== -->
+  <div>
+    <!-- account info -->
+    <div class="ud-panel">
+      <h2>👤 ACCOUNT</h2>
+      <div class="ud-kv"><span>username</span><span class="mono"><%= username %></span></div>
+      <div class="ud-kv"><span>role</span><span class="mono ok">USER</span></div>
+      <div class="ud-kv"><span>permissions</span><span class="mono muted">read-only</span></div>
+      <div class="ud-kv"><span>transport</span><span class="mono ok">HTTPS / TLS</span></div>
+      <div class="ud-kv"><span>csrf guard</span><span class="mono ok">ACTIVE</span></div>
+    </div>
 
-    <div class="row-between" style="margin-top:1rem">
-      <a href="/" class="link" style="font-size:0.82rem">← Website</a>
-      <form method="POST" action="/logout" class="inline" style="display:inline">
-        <button type="submit" class="link" style="background:none;border:none;cursor:pointer;font-size:0.82rem">Logout</button>
+    <!-- change own password -->
+    <div class="ud-panel">
+      <h2>🔑 CHANGE MY PASSWORD</h2>
+      <form method="POST" action="/user/<%= username %>/password" class="form">
+        <input type="hidden" name="_csrf" value="<%= csrf %>">
+        <label>Current password
+          <input type="password" name="current" required autocomplete="current-password">
+        </label>
+        <label>New password (min 8 chars)
+          <input type="password" name="next" required minlength="8" autocomplete="new-password">
+        </label>
+        <label>Confirm new password
+          <input type="password" name="confirm" required minlength="8" autocomplete="new-password">
+        </label>
+        <button type="submit" class="btn full">Update password</button>
       </form>
     </div>
 
-    <% if (adminGate) { %>
-    <!-- ===== Admin option (ONLY for user 'sudhanshu') ===== -->
-    <div class="side-sep" style="margin:1.2rem 0"></div>
-    <p style="text-align:center;margin:0">
-      <a href="/user/<%= username %>/admin/login" class="link" style="font-size:0.85rem;opacity:0.7">⚡ Admin</a>
-    </p>
-    <% } %>
+    <!-- tools (read-only) -->
+    <div class="ud-panel">
+      <h2>🧰 TOOLS <span class="badge warn" style="font-size:0.62rem">READ-ONLY</span></h2>
+      <% if (!tools.length) { %>
+        <p class="muted" style="font-size:0.85rem">No tools yet.</p>
+      <% } else { %>
+        <div class="ud-chips">
+          <% tools.forEach((t) => { %><span class="ud-chip"><%= t.name %></span><% }) %>
+        </div>
+      <% } %>
+    </div>
   </div>
-</body>
-</html>
+</div>
+
+<!-- ===== Footer actions ===== -->
+<div class="ud-foot">
+  <a href="/" class="btn ghost small" style="margin-right:0.6rem">← Website</a>
+  <form method="POST" action="/logout" class="inline" style="display:inline">
+    <button type="submit" class="btn ghost small">Logout</button>
+  </form>
+  <% if (adminGate) { %>
+    <!-- Admin option — ONLY for the user named 'sudhanshu' -->
+    <div class="side-sep" style="margin:1.2rem auto;max-width:70%"></div>
+    <p><a href="/user/<%= username %>/admin/login" class="link" style="font-size:0.9rem;opacity:0.75">⚡ Admin</a></p>
+  <% } %>
+</div>
+
+<%- include('../partials/footer') %>

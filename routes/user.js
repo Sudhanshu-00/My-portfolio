@@ -8,7 +8,7 @@
 const router = require('express').Router();
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
-const { AdminUser, Project } = require('../models');
+const { AdminUser, Project, Tool, Lab, Experience, Testimonial, Service } = require('../models');
 const ADMIN_PATH = require('../adminPath');
 
 // timing-safe compare (same pattern as admin routes)
@@ -41,18 +41,34 @@ router.get('/:username', requireSelf, async (req, res) => {
   // admin option ONLY for the user named 'sudhanshu'
   const adminGate = username === 'sudhanshu';
   let projects = [];
+  let tools = [];
+  let stats = { projects: 0, tools: 0, labs: 0, experience: 0, testimonials: 0, services: 0 };
   try {
-    projects = await Project.find({}, 'title description techStack liveUrl githubUrl featured')
-      .sort({ createdAt: -1 })
-      .lean();
+    [projects, tools] = await Promise.all([
+      Project.find({}, 'title description techStack liveUrl githubUrl featured')
+        .sort({ createdAt: -1 })
+        .lean(),
+      Tool.find({}, 'name').sort({ name: 1 }).lean(),
+    ]);
+    stats = {
+      projects: await Project.countDocuments(),
+      tools: await Tool.countDocuments(),
+      labs: await Lab.countDocuments(),
+      experience: await Experience.countDocuments(),
+      testimonials: await Testimonial.countDocuments(),
+      services: await Service.countDocuments(),
+    };
   } catch {
     projects = [];
+    tools = [];
   }
   res.render('user/dashboard', {
     username,
     csrf,
     adminGate,
     projects,
+    tools,
+    stats,
     saved: req.query.saved === '1',
     pwError: req.query.pwerr || null,
   });
