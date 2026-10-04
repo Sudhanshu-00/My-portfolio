@@ -5,6 +5,10 @@
  */
 const nodemailer = require('nodemailer');
 
+// Cloud hosts (e.g. Render) often have no working outbound IPv6 route while
+// Node ≥17 prefers AAAA records — the SMTP connect then silently hangs.
+try { require('dns').setDefaultResultOrder('ipv4first'); } catch (_) { /* older Node */ }
+
 let transporter = null;
 if (process.env.SMTP_USER && process.env.SMTP_PASS) {
   transporter = nodemailer.createTransport({
@@ -12,6 +16,16 @@ if (process.env.SMTP_USER && process.env.SMTP_PASS) {
     port: parseInt(process.env.SMTP_PORT, 10) || 465,
     secure: (parseInt(process.env.SMTP_PORT, 10) || 465) === 465,
     auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    // one pooled connection reused across emails — repeated fresh SMTP
+    // logins from a datacenter IP get tarpitted by Gmail
+    pool: true,
+    maxConnections: 1,
+    maxMessages: 50,
+    // hard ceilings so a stalled SMTP connection can never hang a request
+    connectionTimeout: 10_000, // TCP connect
+    greetingTimeout: 10_000,   // EHLO banner
+    socketTimeout: 20_000,     // idle/stalled socket
+    dnsTimeout: 5_000,
   });
 }
 
@@ -65,12 +79,20 @@ async function sendMail({ to, subject, text, html }) {
     console.warn(`   to=${to} subject=${subject}`);
     return false;
   }
-  try {
-    await transporter.sendMail({ from: `"Portfolio Admin" <${process.env.SMTP_USER}>`, to, subject, text, html });
-    return true;
-  } catch (e) {
-    console.error('Mail error:', e.message);
-    return false;
+  const mail = { from: `"Portfolio Admin" <${process.env.SMTP_USER}>`, to, subject, text, html };
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      await transporter.sendMail(mail);
+      return true;
+    } catch (e) {
+      console.error(`Mail error (attempt ${attempt}/2):`, e.message);
+      if (attempt === 1) {
+        transporter.close(); // drop stale pooled socket, force fresh connection
+        await new Promise((r) => setTimeout(r, 2000));
+        continue;
+      }
+      return false;
+    }
   }
 }
 
