@@ -1,7 +1,8 @@
 /**
- * Mailer — Gmail SMTP (creds from env, no hardcoded secrets).
+ * Mailer — Brevo HTTPS API (if BREVO_API_KEY is set) with Gmail SMTP fallback
+ * (creds from env, no hardcoded secrets).
  * SMTP_PASS = Gmail "App Password" (requires 2FA, 16-char).
- * If SMTP is not configured → DEV fallback: OTP is logged to the server console.
+ * If neither is configured → DEV fallback: OTP is logged to the server console.
  */
 const nodemailer = require('nodemailer');
 
@@ -41,6 +42,37 @@ const transports = (SMTP_USER && SMTP_PASS)
       { tr: makeTransport(fallbackPort, fallbackPort === 465), label: `smtp:${fallbackPort}` },
     ]
   : [];
+
+// Brevo HTTPS API transport — runs over port 443, immune to SMTP-port/IP
+// throttling that cloud egress IPs (Render free tier) suffer from Gmail.
+// Sender must be a verified sender in the Brevo account (SMTP_USER).
+const BREVO_API_KEY = process.env.BREVO_API_KEY || '';
+
+async function sendViaBrevo({ to, subject, text, html }) {
+  const body = JSON.stringify({
+    sender: { name: 'Portfolio Admin', email: SMTP_USER },
+    to: [{ email: to }],
+    subject,
+    textContent: text,
+    htmlContent: html,
+  });
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const r = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: { 'api-key': BREVO_API_KEY, 'content-type': 'application/json', accept: 'application/json' },
+        body,
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (r.status === 201) return true;
+      console.error(`Brevo API error (attempt ${attempt}/2): HTTP ${r.status}`, (await r.text()).slice(0, 200));
+    } catch (e) {
+      console.error(`Brevo API error (attempt ${attempt}/2):`, e.message);
+    }
+    if (attempt === 1) await new Promise((r) => setTimeout(r, 1500));
+  }
+  return false;
+}
 
 /**
  * Professional OTP email — shared by signup verification and password reset.
@@ -87,9 +119,12 @@ function otpTemplate({ heading, intro, otp, validityMins, name }) {
 }
 
 async function sendMail({ to, subject, text, html }) {
+  if (BREVO_API_KEY && (await sendViaBrevo({ to, subject, text, html }))) return true;
   if (!transports.length) {
-    console.warn('⚠️  SMTP not configured (set SMTP_PASS in .env) — DEV fallback, email was NOT sent:');
-    console.warn(`   to=${to} subject=${subject}`);
+    if (!BREVO_API_KEY) {
+      console.warn('⚠️  SMTP not configured (set SMTP_PASS in .env) — DEV fallback, email was NOT sent:');
+      console.warn(`   to=${to} subject=${subject}`);
+    }
     return false;
   }
   const mail = { from: `"Portfolio Admin" <${SMTP_USER}>`, to, subject, text, html };
@@ -104,4 +139,4 @@ async function sendMail({ to, subject, text, html }) {
   return false;
 }
 
-module.exports = { sendMail, otpTemplate, mailReady: () => transports.length > 0 };
+module.exports = { sendMail, otpTemplate, mailReady: () => transports.length > 0 || !!BREVO_API_KEY };
