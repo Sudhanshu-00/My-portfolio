@@ -4,9 +4,9 @@ const multer = require('multer');
 const { AdminUser, Project, Skill, Message, SiteSetting, Tool, PageView, Service, Testimonial, Experience, Lab, Feedback } = require('../models');
 const { sendMail } = require('../services/mailer');
 
-// Secret admin path (must match the secret-mount in server.js).
-// go() builds secret-path-aware redirects and normalizes legacy '/admin/...' args.
-const ADMIN_PATH = process.env.ADMIN_PATH || 'admin';
+// Secret admin path — single source of truth in ../adminPath.js (fail-closed:
+// guessable 'admin' fallback is impossible).
+const ADMIN_PATH = require('../adminPath');
 const go = (p) => '/' + ADMIN_PATH + String(p || '/').replace(/^\/admin(?=\/|\?|$)/, '');
 
 // URL hardening: only http(s) allowed — javascript:/data: href XSS blocked.

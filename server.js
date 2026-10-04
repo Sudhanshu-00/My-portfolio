@@ -9,9 +9,10 @@ const { SiteSetting, PageView } = require('./models');
 const publicRoutes = require('./routes/public');
 const adminRoutes = require('./routes/admin');
 
-// Secret admin entrance — /admin always returns 404 publicly; the real panel
-// only opens on ADMIN_PATH (env, set in .env). The path is never exposed in HTML/JS.
-const ADMIN_PATH = process.env.ADMIN_PATH || 'admin';
+// Secret admin entrance — the real panel only opens on ADMIN_PATH.
+// Path resolution (with fail-closed random fallback) lives in ./adminPath.js —
+// single source of truth shared with routes/admin.js. Never exposed in HTML/JS.
+const ADMIN_PATH = require('./adminPath');
 const SECRET_MOUNT = '/' + ADMIN_PATH;
 
 async function main() {
