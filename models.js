@@ -14,6 +14,7 @@ const SiteSettingSchema = new mongoose.Schema({
   location: { type: String, default: '' },
   profilePhoto: { type: String, default: '' }, // stored as data URL
   github: { type: String, default: '' },
+  githubUsername: { type: String, default: 'Sudhanshu-00' }, // for live GitHub intel
   linkedin: { type: String, default: '' },
   twitter: { type: String, default: '' },
   instagram: { type: String, default: '' },

@@ -78,6 +78,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 50);
   }
 
+  // ---- Colored tech chips (GitHub language colors) ----
+  const TECH_COLORS = {
+    python: '#3572A5', javascript: '#f1e05a', typescript: '#3178c6', html: '#e34c26',
+    css: '#563d7c', ejs: '#a91e50', react: '#61dafb', node: '#3c873a', 'node.js': '#3c873a',
+    express: '#444', mongodb: '#4db33d', mysql: '#00758f', sql: '#e38c00', 'sql server': '#a91e11',
+    'c#': '#178600', '.net': '#512bd4', microservices: '#7c3aed', api: '#00b8d9', rest: '#00b8d9',
+    cisco: '#1ba0d7', networking: '#1ba0d7', ccna: '#1ba0d7', linux: '#fcc624', bash: '#4eaa25',
+    burp: '#ff6633', nmap: '#4682b4', osint: '#00c853', recon: '#00e5ff', payloads: '#ff2d55',
+    'blue team': '#2196f3', 'red team': '#ff1744', pentesting: '#00ff41', security: '#00ff41',
+    docker: '#2496ed', git: '#f05032', bootstrap: '#7952b3', tailwind: '#38bdf8',
+  };
+  const hashColor = (s) => {
+    let h = 0;
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    const hues = [0, 120, 210, 280, 45, 160];
+    return `hsl(${hues[h % hues.length]}, 70%, 55%)`;
+  };
+  document.querySelectorAll('.chip').forEach((c) => {
+    const key = c.textContent.trim().toLowerCase();
+    const color = TECH_COLORS[key] || hashColor(key);
+    c.style.borderColor = color;
+    c.style.color = color;
+    c.style.boxShadow = `0 0 8px ${color}33`;
+  });
+
   // ---- Auto-fit grids: cards shrink/expand with item count ----
   // 3 items → 3 bade columns; 5+ items → 4 chhote columns, baaki niche rows me
   function autoGrids() {

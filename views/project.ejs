@@ -23,6 +23,67 @@
     <% if (project.githubUrl) { %><a class="btn ghost" href="<%= project.githubUrl %>" target="_blank">[ SOURCE ]</a><% } %>
     <a class="link" href="/projects">← all operations</a>
   </div>
+
+  <% if (gh.ok) { %>
+  <section class="section">
+    <h2><span class="sec-tag">&gt;_</span> LIVE_REPO <span class="muted" style="font-size:0.9rem">[ pulled from github ]</span></h2>
+
+    <div class="gh-stats">
+      <a class="gh-stat" href="<%= gh.meta.url %>" target="_blank"><span class="stat-num">⭐ <%= gh.meta.stars %></span><span class="stat-label">Stars</span></a>
+      <a class="gh-stat" href="<%= gh.meta.url %>/forks" target="_blank"><span class="stat-num">🍴 <%= gh.meta.forks %></span><span class="stat-label">Forks</span></a>
+      <div class="gh-stat"><span class="stat-num"><span class="lang-dot" style="background:<%= gh.meta.languageColor %>"></span> <%= gh.meta.primaryLanguage || '—' %></span><span class="stat-label">Main Language</span></div>
+      <div class="gh-stat"><span class="stat-num"><%= gh.meta.size %></span><span class="stat-label">Repo Size</span></div>
+      <div class="gh-stat"><span class="stat-num sm"><%= gh.meta.pushedAt %></span><span class="stat-label">Last Push</span></div>
+      <div class="gh-stat"><span class="stat-num sm"><%= gh.meta.createdAt %></span><span class="stat-label">Created</span></div>
+    </div>
+
+    <% if (gh.meta.topics.length) { %>
+      <div class="chips">
+        <% gh.meta.topics.forEach(t => { %><span class="chip">#<%= t %></span><% }) %>
+      </div>
+    <% } %>
+
+    <% if (gh.languages.length) { %>
+    <div class="panel">
+      <h2>📚 Languages</h2>
+      <div class="lang-bar-track">
+        <% gh.languages.forEach(l => { %><div class="lang-bar" style="width:<%= l.pct %>%; background:<%= l.color %>" title="<%= l.name %> <%= l.pct %>%"></div><% }) %>
+      </div>
+      <div class="lang-legend">
+        <% gh.languages.forEach(l => { %>
+          <span class="lang-item"><span class="lang-dot" style="background:<%= l.color %>"></span> <%= l.name %> <small class="muted"><%= l.pct %>%</small></span>
+        <% }) %>
+      </div>
+    </div>
+    <% } %>
+
+    <div class="two-col">
+      <div class="panel">
+        <h2>🗂 Root Files <small class="muted">(<%= gh.meta.defaultBranch %>)</small></h2>
+        <div class="filetree">
+          <% gh.files.forEach(f => { %>
+            <div class="file-row">
+              <span class="file-ico"><%= f.type === 'dir' ? '📁' : '📄' %></span>
+              <span class="mono"><%= f.name %></span>
+              <span class="muted file-size"><%= f.size %></span>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>📖 README.md</h2>
+        <% if (readmeHtml) { %>
+          <div class="readme"><%= readmeHtml %></div>
+        <% } else { %>
+          <p class="muted">No README in this repo.</p>
+        <% } %>
+      </div>
+    </div>
+  </section>
+  <% } else if (gh.reason === 'rate-limited') { %>
+    <p class="muted">⏳ GitHub live-data rate-limited — thodi der baad refresh karo.</p>
+  <% } %>
 </article>
 
 <%- include('partials/footer') %>

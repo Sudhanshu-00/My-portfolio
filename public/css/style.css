@@ -504,3 +504,42 @@ body.admin {
 @media (max-width: 900px) {
   [data-autogrid] { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
 }
+
+/* ---------- GitHub live data (project detail + about) ---------- */
+.gh-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.8rem; margin: 1rem 0; }
+.gh-stat {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  padding: 1rem; text-align: center; color: var(--text); text-decoration: none;
+  transition: border-color 0.15s, box-shadow 0.15s; display: block;
+}
+.gh-stat:hover { border-color: var(--accent); box-shadow: 0 0 16px rgba(0, 255, 65, 0.12); }
+.gh-stat .stat-num { font-size: 1.5rem; }
+.gh-stat .stat-num.sm { font-size: 1.05rem; }
+.gh-profile { display: flex; gap: 1.2rem; align-items: center; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 1.2rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.gh-avatar { width: 84px; height: 84px; border-radius: 50%; border: 2px solid var(--accent); box-shadow: 0 0 24px rgba(0, 255, 65, 0.3); }
+.gh-pinfo h3 { margin-bottom: 0.3rem; font-size: 1.2rem; }
+.gh-pinfo .small { font-size: 0.82rem; }
+
+.lang-bar-track { display: flex; height: 12px; border-radius: 99px; overflow: hidden; background: #020603; border: 1px solid var(--border); margin: 0.8rem 0 0.6rem; }
+.lang-bar { min-width: 6px; }
+.lang-legend { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 0.4rem; }
+.lang-item { font-size: 0.88rem; color: var(--text); }
+.lang-dot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; box-shadow: 0 0 6px currentColor; }
+
+.filetree { max-height: 460px; overflow: auto; }
+.file-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.42rem 0.3rem; border-bottom: 1px dashed rgba(26, 61, 34, 0.5); font-size: 0.88rem; }
+.file-row:hover { background: rgba(0, 255, 65, 0.05); }
+.file-size { margin-left: auto; font-size: 0.78rem; }
+
+.readme { max-height: 460px; overflow: auto; font-size: 0.9rem; line-height: 1.65; color: var(--text); }
+.readme .md-h { color: var(--accent); margin: 1rem 0 0.4rem; text-shadow: 0 0 8px rgba(0, 255, 65, 0.25); border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; }
+.readme .md-h1 { font-size: 1.3rem; } .readme .md-h2 { font-size: 1.15rem; } .readme .md-h3 { font-size: 1rem; }
+.readme .md-p { margin: 0.45rem 0; }
+.readme .md-ul { margin: 0.4rem 0 0.4rem 1.2rem; }
+.readme .md-ul li { list-style: '▸ '; padding: 0.12rem 0; color: var(--muted); }
+.readme .md-code { background: #020603; border: 1px solid var(--border); border-radius: 8px; padding: 0.8rem 1rem; overflow: auto; font-size: 0.82rem; margin: 0.6rem 0; color: var(--accent); }
+.readme .md-inline { background: rgba(0, 255, 65, 0.08); color: var(--accent); padding: 0.05rem 0.35rem; border-radius: 4px; font-size: 0.84em; }
+.readme .md-link { color: var(--cyan); text-decoration: underline; }
+.readme .md-hr { border: none; border-top: 1px dashed var(--border); margin: 0.8rem 0; }
+.readme .md-row { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--muted); padding: 0.1rem 0; }
+.readme .md-img { color: var(--muted); font-size: 0.82rem; }

@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const { Project, Skill, Message, Tool, Service, Testimonial, SiteSetting } = require('../models');
+const { getRepoDetails, getProfile, mdToHtml } = require('../services/github');
 
 router.get('/', async (req, res) => {
   const [projects, skills, tools, services, testimonials] = await Promise.all([
@@ -28,7 +29,10 @@ router.get('/resume', async (req, res) => {
   }
 });
 
-router.get('/about', (req, res) => res.render('about'));
+router.get('/about', async (req, res) => {
+  const gh = await getProfile(res.locals.settings.githubUsername || 'Sudhanshu-00').catch(() => ({ ok: false }));
+  res.render('about', { gh });
+});
 
 router.get('/tools', async (req, res) => {
   const tools = await Tool.find().sort({ featured: -1, createdAt: -1 });
@@ -54,7 +58,8 @@ router.get('/projects/:id', async (req, res) => {
   try {
     const project = await Project.findById(req.params.id);
     if (!project) return res.status(404).render('404');
-    res.render('project', { project });
+    const gh = project.githubUrl ? await getRepoDetails(project.githubUrl) : { ok: false, reason: 'no-github-url' };
+    res.render('project', { project, gh, readmeHtml: gh.ok ? mdToHtml(gh.readme) : '' });
   } catch {
     res.status(404).render('404');
   }

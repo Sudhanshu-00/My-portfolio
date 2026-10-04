@@ -28,4 +28,34 @@
   </div>
 </section>
 
+<% if (typeof gh !== 'undefined' && gh.ok) { %>
+<section class="section">
+  <h1><span class="sec-tag">&gt;_</span> GITHUB_INTEL <span class="muted" style="font-size:0.9rem">[ live @ <%= gh.profile.username %> ]</span></h1>
+  <div class="gh-profile">
+    <img class="gh-avatar" src="<%= gh.profile.avatar %>" alt="<%= gh.profile.name %>">
+    <div class="gh-pinfo">
+      <h3 class="mono"><%= gh.profile.name %></h3>
+      <p class="muted"><%= gh.profile.bio %></p>
+      <p class="muted small">member since <%= gh.profile.createdAt %> · <a class="link" href="<%= gh.profile.url %>" target="_blank">github.com/<%= gh.profile.username %> →</a></p>
+    </div>
+  </div>
+  <div class="gh-stats">
+    <a class="gh-stat" href="<%= gh.profile.url %>?tab=repositories" target="_blank"><span class="stat-num"><%= gh.profile.publicRepos %></span><span class="stat-label">Public Repos</span></a>
+    <div class="gh-stat"><span class="stat-num">⭐ <%= gh.totalStars %></span><span class="stat-label">Total Stars</span></div>
+    <div class="gh-stat"><span class="stat-num"><%= gh.profile.followers %></span><span class="stat-label">Followers</span></div>
+    <div class="gh-stat"><span class="stat-num"><%= gh.profile.following %></span><span class="stat-label">Following</span></div>
+  </div>
+  <% if (gh.topLanguages.length) { %>
+  <div class="panel">
+    <h2>🧰 Most Used Languages</h2>
+    <div class="lang-legend">
+      <% gh.topLanguages.forEach(l => { %>
+        <span class="lang-item"><span class="lang-dot" style="background:<%= l.color %>"></span> <%= l.name %> <small class="muted">×<%= l.count %></small></span>
+      <% }) %>
+    </div>
+  </div>
+  <% } %>
+</section>
+<% } %>
+
 <%- include('partials/footer') %>
