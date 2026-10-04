@@ -367,7 +367,8 @@ router.get('/forgot', (req, res) => {
 
 router.post('/forgot', async (req, res) => {
   const u = String(req.body.username || '').trim().toLowerCase().slice(0, 40);
-  if (!otpRate(`${req.ip}|${u}`, 3, 15 * 60 * 1000)) {
+  // separate bucket from /forgot/verify — verify attempts must not eat the request budget
+  if (!otpRate(`${req.ip}|forgot|${u}`, 3, 15 * 60 * 1000)) {
     return res.render('admin/forgot', { step: 'request', error: 'Too many requests — try again after 15 minutes.', info: null, username: '' });
   }
   await new Promise((r) => setTimeout(r, 300)); // slow account enumeration
@@ -394,7 +395,7 @@ router.post('/forgot', async (req, res) => {
 router.post('/forgot/verify', async (req, res) => {
   const u = String(req.body.username || '').trim().toLowerCase().slice(0, 40);
   const otp = String(req.body.otp || '').replace(/\D/g, '').slice(0, 6);
-  if (!otpRate(`${req.ip}|${u}`, 10, 15 * 60 * 1000)) {
+  if (!otpRate(`${req.ip}|verify|${u}`, 10, 15 * 60 * 1000)) {
     return res.render('admin/forgot', { step: 'otp', error: 'Too many attempts — try again in a few minutes.', info: null, username: u });
   }
   const user = await AdminUser.findOne({ username: u }).catch(() => null);
