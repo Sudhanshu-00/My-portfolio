@@ -12,31 +12,31 @@
     <span class="stat-num"><%= stats.totalViews %></span>
     <span class="stat-label">Total Page Views</span>
   </div>
-  <a class="stat-card" href="/admin/tools">
+  <a class="stat-card" href="<%= adminBase %>/tools">
     <span class="stat-num"><%= counts.tools %></span>
     <span class="stat-label">Tools (For Sale)</span>
   </a>
-  <a class="stat-card" href="/admin/projects">
+  <a class="stat-card" href="<%= adminBase %>/projects">
     <span class="stat-num"><%= counts.projects %></span>
     <span class="stat-label">Projects</span>
   </a>
-  <a class="stat-card" href="/admin/skills">
+  <a class="stat-card" href="<%= adminBase %>/skills">
     <span class="stat-num"><%= counts.skills %></span>
     <span class="stat-label">Skills</span>
   </a>
-  <a class="stat-card" href="/admin/services">
+  <a class="stat-card" href="<%= adminBase %>/services">
     <span class="stat-num"><%= counts.services %></span>
     <span class="stat-label">Services (Hire Me)</span>
   </a>
-  <a class="stat-card" href="/admin/testimonials">
+  <a class="stat-card" href="<%= adminBase %>/testimonials">
     <span class="stat-num"><%= counts.testimonials %></span>
     <span class="stat-label">Testimonials</span>
   </a>
-  <a class="stat-card" href="/admin/labs">
+  <a class="stat-card" href="<%= adminBase %>/labs">
     <span class="stat-num"><%= counts.labs %></span>
     <span class="stat-label">Labs Solved</span>
   </a>
-  <a class="stat-card" href="/admin/messages">
+  <a class="stat-card" href="<%= adminBase %>/messages">
     <span class="stat-num"><%= counts.unread %></span>
     <span class="stat-label">Unread Messages</span>
   </a>
@@ -46,9 +46,9 @@
   <div class="row-between">
     <h2>📈 Traffic — <%= range === '1y' ? 'Last 12 Months' : 'Last ' + (range === '7d' ? '7' : '30') + ' Days' %></h2>
     <div class="range-tabs">
-      <a class="btn small <%= range === '7d' ? '' : 'ghost' %>" href="/admin?range=7d">7D</a>
-      <a class="btn small <%= range === '30d' ? '' : 'ghost' %>" href="/admin?range=30d">30D</a>
-      <a class="btn small <%= range === '1y' ? '' : 'ghost' %>" href="/admin?range=1y">1 YEAR</a>
+      <a class="btn small <%= range === '7d' ? '' : 'ghost' %>" href="<%= adminBase %>?range=7d">7D</a>
+      <a class="btn small <%= range === '30d' ? '' : 'ghost' %>" href="<%= adminBase %>?range=30d">30D</a>
+      <a class="btn small <%= range === '1y' ? '' : 'ghost' %>" href="<%= adminBase %>?range=1y">1 YEAR</a>
     </div>
   </div>
   <p class="muted" style="margin-bottom:0.5rem">👁 <%= stats.rangeViews %> views in this range</p>
@@ -86,26 +86,27 @@
         <span class="muted">— <%= m.message.slice(0, 60) %><%= m.message.length > 60 ? '…' : '' %></span>
       </div>
     <% }) %>
-    <a class="link" href="/admin/messages">all messages →</a>
+    <a class="link" href="<%= adminBase %>/messages">all messages →</a>
   </div>
 </div>
 
 <div class="section">
   <h2>⚡ Quick Actions — har page yahan se edit hota hai</h2>
   <div class="qa-grid">
-    <a class="qa-card" href="/admin/settings"><span>🏠</span><strong>Home / Hero</strong><small>title, subtitle, photo</small></a>
-    <a class="qa-card" href="/admin/settings"><span>👤</span><strong>About Page</strong><small>text, contact info</small></a>
-    <a class="qa-card" href="/admin/settings"><span>🔗</span><strong>Social Links</strong><small>github, linkedin, custom</small></a>
-    <a class="qa-card" href="/admin/tools/new"><span>🛠️</span><strong>Add Tool</strong><small>bechne ke liye</small></a>
-    <a class="qa-card" href="/admin/projects/new"><span>📂</span><strong>Add Project</strong><small>case file</small></a>
-    <a class="qa-card" href="/admin/skills"><span>⚡</span><strong>Manage Skills</strong><small>add / delete</small></a>
-    <a class="qa-card" href="/admin/services"><span>💼</span><strong>Services</strong><small>hire me / pricing</small></a>
-    <a class="qa-card" href="/admin/testimonials"><span>🗣</span><strong>Testimonials</strong><small>client feedback</small></a>
-    <a class="qa-card" href="/admin/experience"><span>🏢</span><strong>Work Experience</strong><small>company / role</small></a>
-    <a class="qa-card" href="/admin/labs"><span>🎯</span><strong>Labs</strong><small>THM / PortSwigger</small></a>
-    <a class="qa-card" href="/admin/settings#resume"><span>📄</span><strong>Upload Resume</strong><small>CV / PDF</small></a>
-    <a class="qa-card" href="/admin/messages"><span>📩</span><strong>Messages</strong><small>inbox</small></a>
-    <a class="qa-card" href="/admin/password"><span>🔑</span><strong>Password</strong><small>security</small></a>
+    <a class="qa-card" href="<%= adminBase %>/settings"><span>🏠</span><strong>Home / Hero</strong><small>title, subtitle, photo</small></a>
+    <a class="qa-card" href="<%= adminBase %>/settings"><span>👤</span><strong>About Page</strong><small>text, contact info</small></a>
+    <a class="qa-card" href="<%= adminBase %>/settings"><span>🔗</span><strong>Social Links</strong><small>github, linkedin, custom</small></a>
+    <a class="qa-card" href="<%= adminBase %>/tools/new"><span>🛠️</span><strong>Add Tool</strong><small>bechne ke liye</small></a>
+    <a class="qa-card" href="<%= adminBase %>/projects/new"><span>📂</span><strong>Add Project</strong><small>case file</small></a>
+    <a class="qa-card" href="<%= adminBase %>/skills"><span>⚡</span><strong>Manage Skills</strong><small>add / delete</small></a>
+    <a class="qa-card" href="<%= adminBase %>/services"><span>💼</span><strong>Services</strong><small>hire me / pricing</small></a>
+    <a class="qa-card" href="<%= adminBase %>/testimonials"><span>🗣</span><strong>Testimonials</strong><small>client feedback</small></a>
+    <a class="qa-card" href="<%= adminBase %>/experience"><span>🏢</span><strong>Work Experience</strong><small>company / role</small></a>
+    <a class="qa-card" href="<%= adminBase %>/labs"><span>🎯</span><strong>Labs</strong><small>THM / PortSwigger</small></a>
+    <a class="qa-card" href="<%= adminBase %>/feedback"><span>💬</span><strong>Feedback</strong><small>moderate + reply</small></a>
+    <a class="qa-card" href="<%= adminBase %>/settings#resume"><span>📄</span><strong>Upload Resume</strong><small>CV / PDF</small></a>
+    <a class="qa-card" href="<%= adminBase %>/messages"><span>📩</span><strong>Messages</strong><small>inbox</small></a>
+    <a class="qa-card" href="<%= adminBase %>/password"><span>🔑</span><strong>Password</strong><small>security</small></a>
   </div>
 </div>
 

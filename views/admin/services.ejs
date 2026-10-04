@@ -18,7 +18,7 @@
       <textarea name="description" rows="3" placeholder="Kya milega is service me?"><%= editService ? editService.description : '' %></textarea>
     </label>
     <button type="submit" class="btn"><%= editService ? '💾 Update Service' : '➕ Add Service' %></button>
-    <% if (editService) { %><a class="btn ghost" href="/admin/services">Cancel</a><% } %>
+    <% if (editService) { %><a class="btn ghost" href="<%= adminBase %>/services">Cancel</a><% } %>
   </form>
 </div>
 
@@ -33,8 +33,8 @@
       <td class="muted"><%= (s.description || '').slice(0, 80) %><%= (s.description || '').length > 80 ? '…' : '' %></td>
       <td>
         <div class="actions">
-          <a class="btn small ghost" href="/admin/services?edit=<%= s._id %>">✏️ Edit</a>
-          <form method="POST" action="/admin/services/<%= s._id %>/delete" class="inline" onsubmit="return confirm('Delete this service?')">
+          <a class="btn small ghost" href="<%= adminBase %>/services?edit=<%= s._id %>">✏️ Edit</a>
+          <form method="POST" action="<%= adminBase %>/services/<%= s._id %>/delete" class="inline" onsubmit="return confirm('Delete this service?')">
             <button type="submit" class="btn small danger">🗑 Delete</button>
           </form>
         </div>

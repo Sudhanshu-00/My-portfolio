@@ -15,7 +15,9 @@
       <% if (query.sent) { %>
         <div class="alert success">&gt;&gt; TRANSMISSION COMPLETE. Jaldi reply milega.</div>
       <% } %>
-      <% if (query.error) { %>
+      <% if (query.error === 'rate') { %>
+        <div class="alert error">&gt;&gt; Ek message de chuke ho — 2 minute baad try karo.</div>
+      <% } else if (query.error) { %>
         <div class="alert error">&gt;&gt; ERROR: sab fields bharo + valid email do.</div>
       <% } %>
 

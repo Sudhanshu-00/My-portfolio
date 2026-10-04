@@ -1,0 +1,74 @@
+<%- include('partials/header', { title: 'Feedback' }) %>
+
+<section class="section">
+  <h1><span class="sec-tag">&gt;_</span> FEEDBACK <span class="muted" style="font-size:0.9rem">[ visitor wall ]</span></h1>
+  <p class="muted">Mere kaam, tools ya website pe feedback do — admin approval ke baad tumhara feedback yahan live dikhega.</p>
+
+  <% if (query.sent) { %><div class="alert success">✅ Feedback mil gaya! Approval ke baad live ho jayega.</div><% } %>
+  <% if (query.error === '1') { %><div class="alert error">❌ Name aur message dono required hain.</div><% } %>
+  <% if (query.error === 'rate') { %><div class="alert error">⏳ Ek feedback de chuke ho — 2 minute baad try karo.</div><% } %>
+
+  <div class="two-col">
+    <!-- Form -->
+    <div class="panel">
+      <h2>💬 Give Feedback</h2>
+      <form method="POST" action="/feedback" class="form">
+        <div class="row-form">
+          <label>Your Name *
+            <input type="text" name="name" maxlength="60" required placeholder="e.g. Rahul">
+          </label>
+          <label>Rating
+            <select name="rating">
+              <option value="5">⭐⭐⭐⭐⭐ (5)</option>
+              <option value="4">⭐⭐⭐⭐ (4)</option>
+              <option value="3">⭐⭐⭐ (3)</option>
+              <option value="2">⭐⭐ (2)</option>
+              <option value="1">⭐ (1)</option>
+            </select>
+          </label>
+        </div>
+        <label>Email (optional — reply ke liye)
+          <input type="text" name="email" maxlength="100" placeholder="you@example.com">
+        </label>
+        <label>Your Feedback *
+          <textarea name="message" rows="4" maxlength="1000" required placeholder="Kaisa laga portfolio? Tools kaise lage?"></textarea>
+        </label>
+        <!-- honeypot (invisible to humans) -->
+        <input type="text" name="website" value="" style="position:absolute; left:-9999px" tabindex="-1" autocomplete="off">
+        <button type="submit" class="btn">📨 Submit Feedback</button>
+      </form>
+    </div>
+
+    <!-- Approved feedback -->
+    <div>
+      <h2 style="margin-bottom:0.6rem">📢 Live Feedback (<%= approved.length %>)</h2>
+      <% if (!approved.length) { %>
+        <div class="panel"><p class="muted">Abhi tak koi feedback live nahi hua — pehla tum bhejo! 😄</p></div>
+      <% } %>
+      <% approved.forEach(f => { %>
+        <div class="fb-card">
+          <div class="row-between">
+            <div class="t-author" style="margin:0">
+              <span class="t-avatar"><%= f.name.charAt(0).toUpperCase() %></span>
+              <div>
+                <strong><%= f.name %></strong>
+                <small class="muted" style="display:block"><%= new Date(f.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) %></small>
+              </div>
+            </div>
+            <span class="stars" title="<%= f.rating %>/5"><%= '★'.repeat(f.rating) + '☆'.repeat(5 - f.rating) %></span>
+          </div>
+          <p class="t-text" style="margin-top:0.6rem"><%= f.message %></p>
+          <% if (f.reply && f.reply.text) { %>
+            <div class="fb-reply">
+              <span class="sec-tag">&gt;_</span> <strong>reply from owner</strong>
+              <p><%= f.reply.text %></p>
+              <% if (f.reply.at) { %><small class="muted">— <%= new Date(f.reply.at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) %></small><% } %>
+            </div>
+          <% } %>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

@@ -25,7 +25,7 @@
       <textarea name="text" rows="3" placeholder="What did the client say?" required><%= editTestimonial ? editTestimonial.text : '' %></textarea>
     </label>
     <button type="submit" class="btn"><%= editTestimonial ? '💾 Update Testimonial' : '➕ Add Testimonial' %></button>
-    <% if (editTestimonial) { %><a class="btn ghost" href="/admin/testimonials">Cancel</a><% } %>
+    <% if (editTestimonial) { %><a class="btn ghost" href="<%= adminBase %>/testimonials">Cancel</a><% } %>
   </form>
 </div>
 
@@ -40,8 +40,8 @@
       <td class="muted"><%= t.text.slice(0, 80) %><%= t.text.length > 80 ? '…' : '' %></td>
       <td>
         <div class="actions">
-          <a class="btn small ghost" href="/admin/testimonials?edit=<%= t._id %>">✏️ Edit</a>
-          <form method="POST" action="/admin/testimonials/<%= t._id %>/delete" class="inline" onsubmit="return confirm('Delete this testimonial?')">
+          <a class="btn small ghost" href="<%= adminBase %>/testimonials?edit=<%= t._id %>">✏️ Edit</a>
+          <form method="POST" action="<%= adminBase %>/testimonials/<%= t._id %>/delete" class="inline" onsubmit="return confirm('Delete this testimonial?')">
             <button type="submit" class="btn small danger">🗑 Delete</button>
           </form>
         </div>

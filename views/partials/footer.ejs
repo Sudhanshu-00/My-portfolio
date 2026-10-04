@@ -7,9 +7,10 @@
         <span class="pulse-dot">●</span> [ VISITORS: <span class="ok"><%= visits.total.toLocaleString('en-IN') %></span> ] · [ TODAY: <span class="ok"><%= visits.today %></span> ]
       </p>
     <% } %>
-    <p><a href="/admin" class="link">./admin_access</a></p>
+    <p class="muted" style="font-size:0.75rem">© <%= new Date().getFullYear() %> — built with ♥ &amp; caffeine</p>
   </div>
 </footer>
 <script src="/js/hacker.js"></script>
+<script src="/js/guard.js"></script>
 </body>
 </html>

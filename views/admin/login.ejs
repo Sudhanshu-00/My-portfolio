@@ -11,7 +11,7 @@
     <h1>&gt;_ AUTH REQUIRED</h1>
     <p class="muted">Restricted area — admin only 🔒</p>
     <% if (error) { %><div class="alert error"><%= error %></div><% } %>
-    <form method="POST" action="/admin/login" class="form">
+    <form method="POST" action="<%= adminBase %>/login" class="form">
       <label>Username
         <input type="text" name="username" required autofocus>
       </label>

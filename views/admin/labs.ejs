@@ -37,7 +37,7 @@
       <input type="text" name="url" placeholder="https://tryhackme.com/room/... or https://portswigger.net/web-security/..." value="<%= editLab ? editLab.url : '' %>">
     </label>
     <button type="submit" class="btn"><%= editLab ? '💾 Update Lab' : '➕ Add Lab' %></button>
-    <% if (editLab) { %><a class="btn ghost" href="/admin/labs">Cancel</a><% } %>
+    <% if (editLab) { %><a class="btn ghost" href="<%= adminBase %>/labs">Cancel</a><% } %>
   </form>
 </div>
 
@@ -54,8 +54,8 @@
       <td class="muted"><%= l.solvedAt ? new Date(l.solvedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—' %></td>
       <td>
         <div class="actions" style="justify-content:flex-end">
-          <a class="btn small ghost" href="/admin/labs?edit=<%= l._id %>">✏️ Edit</a>
-          <form method="POST" action="/admin/labs/<%= l._id %>/delete" class="inline" onsubmit="return confirm('Delete this lab?')">
+          <a class="btn small ghost" href="<%= adminBase %>/labs?edit=<%= l._id %>">✏️ Edit</a>
+          <form method="POST" action="<%= adminBase %>/labs/<%= l._id %>/delete" class="inline" onsubmit="return confirm('Delete this lab?')">
             <button type="submit" class="btn small danger">🗑 Delete</button>
           </form>
         </div>

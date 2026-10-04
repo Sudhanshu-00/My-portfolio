@@ -607,3 +607,11 @@ body.admin {
 .chart-wide { grid-template-columns: repeat(auto-fit, minmax(22px, 1fr)) !important; }
 .chart-wide .chart-col small { font-size: 0.6rem; transform: rotate(0); }
 .chart-wide .chart-col { min-width: 0; }
+
+/* ---- feedback (public wall + admin moderation) ---- */
+.actions { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+.badge.warn { background: #ffb703; color: #000; }
+.badge.dim { background: #2a2a2a; color: #999; }
+.fb-card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.1rem; margin: 0.8rem 0; }
+.fb-reply { margin-top: 0.7rem; padding: 0.7rem 0.95rem; border-left: 3px solid var(--accent); background: rgba(0, 255, 65, 0.06); border-radius: 0 8px 8px 0; font-size: 0.92rem; }
+.fb-reply p { margin: 0.3rem 0 0.15rem; }

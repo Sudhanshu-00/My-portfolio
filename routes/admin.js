@@ -1,7 +1,11 @@
 const router = require('express').Router();
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
-const { AdminUser, Project, Skill, Message, SiteSetting, Tool, PageView, Service, Testimonial, Experience, Lab } = require('../models');
+const { AdminUser, Project, Skill, Message, SiteSetting, Tool, PageView, Service, Testimonial, Experience, Lab, Feedback } = require('../models');
+
+// Secret admin path (server.js ke secret-mount se match hona chahiye)
+const ADMIN_PATH = process.env.ADMIN_PATH || 'admin';
+const go = (p) => '/' + ADMIN_PATH + p; // redirects secret-path aware
 
 // ---------- photo upload helper ----------
 const upload = multer({
@@ -22,26 +26,49 @@ const resumeUpload = multer({
 const requireAuth = async (req, res, next) => {
   if (req.session.admin) {
     res.locals.admin = req.session.admin; // username for views
-    res.locals.path = req.path; // active sidebar highlight
+    res.locals.path = '/admin' + req.path; // sidebar active-state (router prefix-stripped path deta hai)
     res.locals.unread = await Message.countDocuments({ read: false });
+    res.locals.pendingFeedback = await Feedback.countDocuments({ status: 'pending' });
     return next();
   }
-  res.redirect('/admin/login');
+  res.redirect(go('/login'));
 };
 
-router.get('/login', (req, res) => (req.session.admin ? res.redirect('/admin') : res.render('admin/login', { error: null })));
+router.get('/login', (req, res) => (req.session.admin ? res.redirect(go('/admin')) : res.render('admin/login', { error: null })));
+
+// ---------- brute-force lock (login) ----------
+// 5 failed attempts (IP+username) → 15 min lock. In-memory, restart pe reset.
+const loginAttempts = new Map();
+setInterval(() => loginAttempts.clear(), 60 * 60 * 1000).unref(); // ghante me ek sweep
 
 router.post('/login', async (req, res) => {
+  const key = `${req.ip}|${String(req.body.username || '').toLowerCase().slice(0, 40)}`;
+  const rec = loginAttempts.get(key) || { fails: 0, lockUntil: 0 };
+  if (rec.lockUntil > Date.now()) {
+    const mins = Math.ceil((rec.lockUntil - Date.now()) / 60000);
+    return res.status(429).render('admin/login', { error: `Too many failed attempts — ${mins} min baad try karo.` });
+  }
   const { username, password } = req.body;
   const user = await AdminUser.findOne({ username });
   if (user && (await bcrypt.compare(password || '', user.passwordHash))) {
-    req.session.admin = user.username;
-    return res.redirect('/admin');
+    loginAttempts.delete(key);
+    // session fixation fix — login pe fresh session id
+    return req.session.regenerate(() => {
+      req.session.admin = user.username;
+      res.redirect(go('/'));
+    });
   }
+  rec.fails++;
+  if (rec.fails >= 5) {
+    rec.lockUntil = Date.now() + 15 * 60 * 1000;
+    rec.fails = 0;
+  }
+  loginAttempts.set(key, rec);
+  await new Promise((r) => setTimeout(r, 400)); // online brute-force slow
   res.status(401).render('admin/login', { error: 'Invalid username or password' });
 });
 
-router.post('/logout', (req, res) => req.session.destroy(() => res.redirect('/admin/login')));
+router.post('/logout', (req, res) => req.session.destroy(() => res.redirect(go('/login'))));
 
 // everything below requires login
 router.use(requireAuth);
@@ -135,17 +162,17 @@ router.post('/settings', upload.single('photo'), async (req, res) => {
     .filter((l) => l.label && l.url);
 
   await s.save();
-  res.redirect('/admin/settings?saved=1');
+  res.redirect(go('/admin/settings?saved=1'));
 });
 
 // ---------- resume / CV upload ----------
 router.post('/resume', resumeUpload.single('resume'), async (req, res) => {
-  if (!req.file) return res.redirect('/admin/settings?resume_error=1');
+  if (!req.file) return res.redirect(go('/admin/settings?resume_error=1'));
   const s = await SiteSetting.get();
   s.resumeFile = `data:application/pdf;base64,${req.file.buffer.toString('base64')}`;
   s.resumeName = req.file.originalname.endsWith('.pdf') ? req.file.originalname : req.file.originalname + '.pdf';
   await s.save();
-  res.redirect('/admin/settings?resume=1');
+  res.redirect(go('/admin/settings?resume=1'));
 });
 
 router.post('/resume/delete', async (req, res) => {
@@ -153,7 +180,7 @@ router.post('/resume/delete', async (req, res) => {
   s.resumeFile = '';
   s.resumeName = 'resume.pdf';
   await s.save();
-  res.redirect('/admin/settings?resume_deleted=1');
+  res.redirect(go('/admin/settings?resume_deleted=1'));
 });
 
 // ---------- services (hire me) ----------
@@ -165,7 +192,7 @@ router.get('/services', async (req, res) => {
 router.post('/services', async (req, res) => {
   const { title, description, price } = req.body;
   if (title && title.trim()) await Service.create({ title: title.trim(), description, price });
-  res.redirect('/admin/services');
+  res.redirect(go('/admin/services'));
 });
 
 router.post('/services/:id/update', async (req, res) => {
@@ -173,12 +200,12 @@ router.post('/services/:id/update', async (req, res) => {
   if (title && title.trim()) {
     await Service.findByIdAndUpdate(req.params.id, { title: title.trim(), description, price }).catch(() => {});
   }
-  res.redirect('/admin/services');
+  res.redirect(go('/admin/services'));
 });
 
 router.post('/services/:id/delete', async (req, res) => {
   await Service.findByIdAndDelete(req.params.id).catch(() => {});
-  res.redirect('/admin/services');
+  res.redirect(go('/admin/services'));
 });
 
 // ---------- testimonials ----------
@@ -197,7 +224,7 @@ router.post('/testimonials', async (req, res) => {
       rating: Math.min(5, Math.max(1, parseInt(rating, 10) || 5)),
     });
   }
-  res.redirect('/admin/testimonials');
+  res.redirect(go('/admin/testimonials'));
 });
 
 router.post('/testimonials/:id/update', async (req, res) => {
@@ -210,12 +237,12 @@ router.post('/testimonials/:id/update', async (req, res) => {
       rating: Math.min(5, Math.max(1, parseInt(rating, 10) || 5)),
     }).catch(() => {});
   }
-  res.redirect('/admin/testimonials');
+  res.redirect(go('/admin/testimonials'));
 });
 
 router.post('/testimonials/:id/delete', async (req, res) => {
   await Testimonial.findByIdAndDelete(req.params.id).catch(() => {});
-  res.redirect('/admin/testimonials');
+  res.redirect(go('/admin/testimonials'));
 });
 
 // ---------- experience (work history) ----------
@@ -236,7 +263,7 @@ router.post('/experience', async (req, res) => {
       order: parseInt(order, 10) || 0,
     });
   }
-  res.redirect('/admin/experience');
+  res.redirect(go('/admin/experience'));
 });
 
 router.post('/experience/:id/update', async (req, res) => {
@@ -251,12 +278,12 @@ router.post('/experience/:id/update', async (req, res) => {
       order: parseInt(order, 10) || 0,
     }).catch(() => {});
   }
-  res.redirect('/admin/experience');
+  res.redirect(go('/admin/experience'));
 });
 
 router.post('/experience/:id/delete', async (req, res) => {
   await Experience.findByIdAndDelete(req.params.id).catch(() => {});
-  res.redirect('/admin/experience');
+  res.redirect(go('/admin/experience'));
 });
 
 // ---------- labs (TryHackMe / PortSwigger) ----------
@@ -277,7 +304,7 @@ router.post('/labs', async (req, res) => {
       solvedAt: solvedAt ? new Date(solvedAt) : undefined,
     });
   }
-  res.redirect('/admin/labs');
+  res.redirect(go('/admin/labs'));
 });
 
 router.post('/labs/:id/update', async (req, res) => {
@@ -292,12 +319,54 @@ router.post('/labs/:id/update', async (req, res) => {
       solvedAt: solvedAt ? new Date(solvedAt) : undefined,
     }).catch(() => {});
   }
-  res.redirect('/admin/labs');
+  res.redirect(go('/admin/labs'));
 });
 
 router.post('/labs/:id/delete', async (req, res) => {
   await Lab.findByIdAndDelete(req.params.id).catch(() => {});
-  res.redirect('/admin/labs');
+  res.redirect(go('/admin/labs'));
+});
+
+// ---------- feedback (public submissions → moderate → live) ----------
+router.get('/feedback', async (req, res) => {
+  const show = ['pending', 'approved', 'hidden', 'all'].includes(req.query.show) ? req.query.show : 'pending';
+  const filter = show === 'all' ? {} : { status: show };
+  // BUGFIX: Mongo alphabetical sort status:1 se approved pehle aata tha — pending first chahiye
+  const list = await Feedback.find(filter).sort({ createdAt: -1 }).lean();
+  const order = { pending: 0, approved: 1, hidden: 2 };
+  list.sort((a, b) => order[a.status] - order[b.status] || new Date(b.createdAt) - new Date(a.createdAt));
+  res.render('admin/feedback', {
+    feedbacks: list,
+    counts: {
+      pending: await Feedback.countDocuments({ status: 'pending' }),
+      approved: await Feedback.countDocuments({ status: 'approved' }),
+      hidden: await Feedback.countDocuments({ status: 'hidden' }),
+    },
+    show: req.query.show || 'inbox',
+  });
+});
+
+router.post('/feedback/:id/approve', async (req, res) => {
+  await Feedback.findByIdAndUpdate(req.params.id, { status: 'approved' }).catch(() => {});
+  res.redirect(go('/admin/feedback'));
+});
+
+router.post('/feedback/:id/hide', async (req, res) => {
+  await Feedback.findByIdAndUpdate(req.params.id, { status: 'hidden' }).catch(() => {});
+  res.redirect(go('/admin/feedback'));
+});
+
+router.post('/feedback/:id/reply', async (req, res) => {
+  const text = String(req.body.reply || '').trim().slice(0, 1000);
+  // reply set karo; khaali submit = reply clear (taaki galti se reply hata sake)
+  const update = text ? { reply: { text, at: new Date() } } : { $unset: { reply: '' } };
+  await Feedback.findByIdAndUpdate(req.params.id, update).catch(() => {});
+  res.redirect(go('/admin/feedback'));
+});
+
+router.post('/feedback/:id/delete', async (req, res) => {
+  await Feedback.findByIdAndDelete(req.params.id).catch(() => {});
+  res.redirect(go('/admin/feedback'));
 });
 
 // ---------- skills ----------
@@ -315,7 +384,7 @@ router.post('/skills', async (req, res) => {
       category: (category || 'General').trim(),
     });
   }
-  res.redirect('/admin/skills');
+  res.redirect(go('/admin/skills'));
 });
 
 router.post('/skills/:id/update', async (req, res) => {
@@ -327,12 +396,12 @@ router.post('/skills/:id/update', async (req, res) => {
       category: (category || 'General').trim(),
     }).catch(() => {});
   }
-  res.redirect('/admin/skills');
+  res.redirect(go('/admin/skills'));
 });
 
 router.post('/skills/:id/delete', async (req, res) => {
   await Skill.findByIdAndDelete(req.params.id).catch(() => {});
-  res.redirect('/admin/skills');
+  res.redirect(go('/admin/skills'));
 });
 
 // ---------- projects ----------
@@ -355,18 +424,18 @@ router.post('/projects', upload.single('image'), async (req, res) => {
       image: toDataUrl(req.file),
     });
   }
-  res.redirect('/admin/projects');
+  res.redirect(go('/admin/projects'));
 });
 
 router.get('/projects/:id/edit', async (req, res) => {
   const project = await Project.findById(req.params.id);
-  if (!project) return res.redirect('/admin/projects');
+  if (!project) return res.redirect(go('/admin/projects'));
   res.render('admin/project_form', { project });
 });
 
 router.post('/projects/:id', upload.single('image'), async (req, res) => {
   const p = await Project.findById(req.params.id);
-  if (!p) return res.redirect('/admin/projects');
+  if (!p) return res.redirect(go('/admin/projects'));
   Object.assign(p, {
     title: req.body.title,
     description: req.body.description,
@@ -377,12 +446,12 @@ router.post('/projects/:id', upload.single('image'), async (req, res) => {
   });
   if (req.file) p.image = toDataUrl(req.file);
   await p.save();
-  res.redirect('/admin/projects');
+  res.redirect(go('/admin/projects'));
 });
 
 router.post('/projects/:id/delete', async (req, res) => {
   await Project.findByIdAndDelete(req.params.id).catch(() => {});
-  res.redirect('/admin/projects');
+  res.redirect(go('/admin/projects'));
 });
 
 // ---------- tools (for sale) ----------
@@ -406,18 +475,18 @@ router.post('/tools', upload.single('image'), async (req, res) => {
       image: toDataUrl(req.file),
     });
   }
-  res.redirect('/admin/tools');
+  res.redirect(go('/admin/tools'));
 });
 
 router.get('/tools/:id/edit', async (req, res) => {
   const tool = await Tool.findById(req.params.id);
-  if (!tool) return res.redirect('/admin/tools');
+  if (!tool) return res.redirect(go('/admin/tools'));
   res.render('admin/tool_form', { tool });
 });
 
 router.post('/tools/:id', upload.single('image'), async (req, res) => {
   const t = await Tool.findById(req.params.id);
-  if (!t) return res.redirect('/admin/tools');
+  if (!t) return res.redirect(go('/admin/tools'));
   Object.assign(t, {
     name: req.body.name,
     description: req.body.description,
@@ -429,12 +498,12 @@ router.post('/tools/:id', upload.single('image'), async (req, res) => {
   });
   if (req.file) t.image = toDataUrl(req.file);
   await t.save();
-  res.redirect('/admin/tools');
+  res.redirect(go('/admin/tools'));
 });
 
 router.post('/tools/:id/delete', async (req, res) => {
   await Tool.findByIdAndDelete(req.params.id).catch(() => {});
-  res.redirect('/admin/tools');
+  res.redirect(go('/admin/tools'));
 });
 
 // ---------- messages ----------
@@ -444,12 +513,12 @@ router.get('/messages', async (req, res) => {
 
 router.post('/messages/:id/read', async (req, res) => {
   await Message.findByIdAndUpdate(req.params.id, { read: true }).catch(() => {});
-  res.redirect('/admin/messages');
+  res.redirect(go('/admin/messages'));
 });
 
 router.post('/messages/:id/delete', async (req, res) => {
   await Message.findByIdAndDelete(req.params.id).catch(() => {});
-  res.redirect('/admin/messages');
+  res.redirect(go('/admin/messages'));
 });
 
 // ---------- change password ----------

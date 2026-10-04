@@ -30,7 +30,7 @@
       🟢 Currently working here
     </label>
     <button type="submit" class="btn"><%= editExp ? '💾 Update Experience' : '➕ Add Experience' %></button>
-    <% if (editExp) { %><a class="btn ghost" href="/admin/experience">Cancel</a><% } %>
+    <% if (editExp) { %><a class="btn ghost" href="<%= adminBase %>/experience">Cancel</a><% } %>
   </form>
 </div>
 
@@ -46,8 +46,8 @@
       <td><%= e.order %></td>
       <td>
         <div class="actions" style="justify-content:flex-end">
-          <a class="btn small ghost" href="/admin/experience?edit=<%= e._id %>">✏️ Edit</a>
-          <form method="POST" action="/admin/experience/<%= e._id %>/delete" class="inline" onsubmit="return confirm('Delete this experience?')">
+          <a class="btn small ghost" href="<%= adminBase %>/experience?edit=<%= e._id %>">✏️ Edit</a>
+          <form method="POST" action="<%= adminBase %>/experience/<%= e._id %>/delete" class="inline" onsubmit="return confirm('Delete this experience?')">
             <button type="submit" class="btn small danger">🗑 Delete</button>
           </form>
         </div>

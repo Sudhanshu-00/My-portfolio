@@ -1,0 +1,67 @@
+<%- include('../partials/admin_head') %>
+
+<h1>💬 Feedback <span class="badge warn">PENDING <%= counts.pending %></span></h1>
+<p class="muted">Public <a class="link" href="/feedback" target="_blank">/feedback</a> form ki submissions yahan aati hain. <strong>Approve</strong> karne pe hi wo site pe live dikhte hain. Reply karo to wo bhi feedback ke neeche public dikhega.</p>
+
+<div class="row-form" style="margin: 1rem 0;">
+  <a class="btn small <%= show === 'pending' ? '' : 'outline' %>" href="<%= adminBase %>/feedback?show=pending">⏳ Pending (<%= counts.pending %>)</a>
+  <a class="btn small <%= show === 'approved' ? '' : 'outline' %>" href="<%= adminBase %>/feedback?show=approved">✅ Approved (<%= counts.approved %>)</a>
+  <a class="btn small <%= show === 'hidden' ? '' : 'outline' %>" href="<%= adminBase %>/feedback?show=hidden">🙈 Hidden (<%= counts.hidden %>)</a>
+  <a class="btn small <%= show === 'all' ? '' : 'outline' %>" href="<%= adminBase %>/feedback?show=all">📥 All</a>
+</div>
+
+<% if (!feedbacks.length) { %>
+  <p class="muted">Is filter me koi feedback nahi hai.</p>
+<% } %>
+
+<% feedbacks.forEach(f => { %>
+  <div class="msg-card <%= f.status === 'pending' ? 'unread' : '' %>">
+    <div class="row-between">
+      <div>
+        <strong><%= f.name %></strong>
+        <% if (f.email) { %><a href="mailto:<%= f.email %>" class="link">&lt;<%= f.email %>&gt;</a><% } %>
+        <% if (f.status === 'pending') { %><span class="badge warn">PENDING</span>
+        <% } else if (f.status === 'approved') { %><span class="badge">LIVE</span>
+        <% } else { %><span class="badge dim">HIDDEN</span><% } %>
+      </div>
+      <div>
+        <span class="stars-sm"><%= '★'.repeat(Math.max(1, Math.min(5, f.rating || 5))) + '☆'.repeat(5 - Math.max(1, Math.min(5, f.rating || 5))) %></span>
+        <small class="muted"> <%= new Date(f.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) %></small>
+      </div>
+    </div>
+    <p style="white-space: pre-line;"><%= f.message %></p>
+    <small class="muted">ip: <%= f.ip %></small>
+
+    <% if (f.reply && f.reply.text) { %>
+      <div class="fb-reply">
+        <strong><span class="sec-tag">&gt;_</span> your reply (live)</strong>
+        <p style="white-space: pre-line;"><%= f.reply.text %></p>
+      </div>
+    <% } %>
+
+    <div class="actions" style="margin-top: 0.7rem;">
+      <% if (f.status !== 'approved') { %>
+        <form method="POST" action="<%= adminBase %>/feedback/<%= f._id %>/approve" class="inline">
+          <button type="submit" class="btn small">✅ Approve & Live</button>
+        </form>
+      <% } %>
+      <% if (f.status !== 'hidden') { %>
+        <form method="POST" action="<%= adminBase %>/feedback/<%= f._id %>/hide" class="inline">
+          <button type="submit" class="btn small outline">🙈 Hide</button>
+        </form>
+      <% } %>
+      <form method="POST" action="<%= adminBase %>/feedback/<%= f._id %>/delete" class="inline">
+        <button type="submit" class="btn small danger">🗑 Delete</button>
+      </form>
+    </div>
+
+    <form method="POST" action="<%= adminBase %>/feedback/<%= f._id %>/reply" class="row-form" style="margin-top: 0.6rem;">
+      <label style="flex: 1;">Reply (public dikhega — khaali submit karne se reply delete ho jata hai)
+        <textarea name="reply" rows="2" maxlength="1000" placeholder="Thanks for the feedback! 🙌"><%= (f.reply && f.reply.text) || '' %></textarea>
+      </label>
+      <button type="submit" class="btn small">↩ Reply</button>
+    </form>
+  </div>
+<% }) %>
+
+<%- include('../partials/admin_foot') %>

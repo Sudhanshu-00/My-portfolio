@@ -71,8 +71,9 @@ const MessageSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
     email: { type: String, required: true, trim: true },
-    message: { type: String, required: true },
+    message: { type: String, required: true, maxlength: 2000 },
     read: { type: Boolean, default: false },
+    ip: { type: String, default: '' }, // contact-form rate limit
   },
   { timestamps: true }
 );
@@ -132,6 +133,23 @@ const LabSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+const FeedbackSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true, trim: true, maxlength: 60 },
+    email: { type: String, default: '', trim: true },
+    rating: { type: Number, default: 5, min: 1, max: 5 },
+    message: { type: String, required: true, trim: true, maxlength: 1000 },
+    status: { type: String, enum: ['pending', 'approved', 'hidden'], default: 'pending' },
+    ip: { type: String, default: '' }, // rate-limit ke liye
+    reply: {
+      text: { type: String, default: '' },
+      at: { type: Date },
+    },
+  },
+  { timestamps: true }
+);
+FeedbackSchema.index({ ip: 1, createdAt: -1 }); // per-IP rate-limit query fast
+
 module.exports = {
   SiteSetting: mongoose.model('SiteSetting', SiteSettingSchema),
   Project: mongoose.model('Project', ProjectSchema),
@@ -144,4 +162,5 @@ module.exports = {
   Testimonial: mongoose.model('Testimonial', TestimonialSchema),
   Experience: mongoose.model('Experience', ExperienceSchema),
   Lab: mongoose.model('Lab', LabSchema),
+  Feedback: mongoose.model('Feedback', FeedbackSchema),
 };

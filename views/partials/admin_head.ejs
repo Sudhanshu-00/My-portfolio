@@ -9,25 +9,28 @@
 <body class="admin">
 <div class="admin-shell">
   <aside class="admin-side">
-    <a href="/admin" class="side-brand">root@panel<span class="p">:~$</span><span class="cursor">▊</span></a>
+    <a href="<%= adminBase %>" class="side-brand">root@panel<span class="p">:~$</span><span class="cursor">▊</span></a>
     <nav class="side-nav">
-      <a href="/admin" class="<%= path === '/admin' ? 'active' : '' %>"><span>📊</span> Dashboard</a>
-      <a href="/admin/tools" class="<%= String(path).startsWith('/admin/tools') ? 'active' : '' %>"><span>🛠️</span> Tools <small class="muted">(sell)</small></a>
-      <a href="/admin/projects" class="<%= String(path).startsWith('/admin/projects') ? 'active' : '' %>"><span>📂</span> Projects</a>
-      <a href="/admin/skills" class="<%= String(path).startsWith('/admin/skills') ? 'active' : '' %>"><span>⚡</span> Skills</a>
-      <a href="/admin/services" class="<%= String(path).startsWith('/admin/services') ? 'active' : '' %>"><span>💼</span> Services</a>
-      <a href="/admin/testimonials" class="<%= String(path).startsWith('/admin/testimonials') ? 'active' : '' %>"><span>🗣</span> Testimonials</a>
-      <a href="/admin/experience" class="<%= String(path).startsWith('/admin/experience') ? 'active' : '' %>"><span>🏢</span> Experience</a>
-      <a href="/admin/labs" class="<%= String(path).startsWith('/admin/labs') ? 'active' : '' %>"><span>🎯</span> Labs</a>
-      <a href="/admin/messages" class="<%= String(path).startsWith('/admin/messages') ? 'active' : '' %>"><span>📩</span> Messages
+      <a href="<%= adminBase %>" class="<%= path === '/admin' ? 'active' : '' %>"><span>📊</span> Dashboard</a>
+      <a href="<%= adminBase %>/tools" class="<%= String(path).startsWith('/admin/tools') ? 'active' : '' %>"><span>🛠️</span> Tools <small class="muted">(sell)</small></a>
+      <a href="<%= adminBase %>/projects" class="<%= String(path).startsWith('/admin/projects') ? 'active' : '' %>"><span>📂</span> Projects</a>
+      <a href="<%= adminBase %>/skills" class="<%= String(path).startsWith('/admin/skills') ? 'active' : '' %>"><span>⚡</span> Skills</a>
+      <a href="<%= adminBase %>/services" class="<%= String(path).startsWith('/admin/services') ? 'active' : '' %>"><span>💼</span> Services</a>
+      <a href="<%= adminBase %>/testimonials" class="<%= String(path).startsWith('/admin/testimonials') ? 'active' : '' %>"><span>🗣</span> Testimonials</a>
+      <a href="<%= adminBase %>/experience" class="<%= String(path).startsWith('/admin/experience') ? 'active' : '' %>"><span>🏢</span> Experience</a>
+      <a href="<%= adminBase %>/labs" class="<%= String(path).startsWith('/admin/labs') ? 'active' : '' %>"><span>🎯</span> Labs</a>
+      <a href="<%= adminBase %>/messages" class="<%= String(path).startsWith('/admin/messages') ? 'active' : '' %>"><span>📩</span> Messages
         <% if (typeof unread !== 'undefined' && unread > 0) { %><b class="side-badge"><%= unread %></b><% } %>
       </a>
+      <a href="<%= adminBase %>/feedback" class="<%= String(path).startsWith('/admin/feedback') ? 'active' : '' %>"><span>💬</span> Feedback
+        <% if (typeof pendingFeedback !== 'undefined' && pendingFeedback > 0) { %><b class="side-badge"><%= pendingFeedback %></b><% } %>
+      </a>
       <div class="side-sep"></div>
-      <a href="/admin/settings" class="<%= String(path).startsWith('/admin/settings') ? 'active' : '' %>"><span>⚙️</span> Site Settings</a>
-      <a href="/admin/password" class="<%= String(path).startsWith('/admin/password') ? 'active' : '' %>"><span>🔑</span> Change Password</a>
+      <a href="<%= adminBase %>/settings" class="<%= String(path).startsWith('/admin/settings') ? 'active' : '' %>"><span>⚙️</span> Site Settings</a>
+      <a href="<%= adminBase %>/password" class="<%= String(path).startsWith('/admin/password') ? 'active' : '' %>"><span>🔑</span> Change Password</a>
       <div class="side-sep"></div>
       <a href="/" target="_blank"><span>🌐</span> View Site ↗</a>
-      <form method="POST" action="/admin/logout"><button type="submit"><span>🚪</span> Logout</button></form>
+      <form method="POST" action="<%= adminBase %>/logout"><button type="submit"><span>🚪</span> Logout</button></form>
     </nav>
     <div class="side-foot"><span class="ok">●</span> <%= admin %> · v2.0</div>
   </aside>

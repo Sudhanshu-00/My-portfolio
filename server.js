@@ -9,19 +9,55 @@ const { SiteSetting, PageView } = require('./models');
 const publicRoutes = require('./routes/public');
 const adminRoutes = require('./routes/admin');
 
+// Secret admin entrance — /admin publicly 404 dega, asli panel sirf
+// ADMIN_PATH (env, .env me) se khulega. Path kisi HTML/JS me expose nahi hota.
+const ADMIN_PATH = process.env.ADMIN_PATH || 'admin';
+const SECRET_MOUNT = '/' + ADMIN_PATH;
+
 async function main() {
   await initDB();
 
   const app = express();
+  app.disable('x-powered-by'); // fingerprinting kam
   app.set('trust proxy', 1);
   app.set('view engine', 'ejs');
   app.set('views', path.join(__dirname, 'views'));
+
+  // ---------- security headers ----------
+  app.use((req, res, next) => {
+    res.set({
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
+      'Referrer-Policy': 'no-referrer',
+      'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+      'Cross-Origin-Opener-Policy': 'same-origin',
+    });
+    // CSP — admin pages me inline script (settings helper) hai, public me nahi
+    const isAdmin = req.path === SECRET_MOUNT || req.path.startsWith(SECRET_MOUNT + '/');
+    res.set(
+      'Content-Security-Policy',
+      [
+        "default-src 'self'",
+        `script-src 'self'${isAdmin ? " 'unsafe-inline'" : ''}`,
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src 'self' data: https://fonts.gstatic.com",
+        "img-src 'self' data: https:",
+        "connect-src 'self'",
+        "object-src 'none'",
+        "base-uri 'self'",
+        "form-action 'self'",
+        "frame-ancestors 'none'",
+      ].join('; ')
+    );
+    next();
+  });
 
   app.use(express.urlencoded({ extended: true }));
   app.use(express.static(path.join(__dirname, 'public')));
 
   app.use(
     session({
+      name: 'hsid', // default connect.sid fingerprint hatao
       secret: process.env.SESSION_SECRET || 'dev-secret-change-me',
       resave: false,
       saveUninitialized: false,
@@ -49,7 +85,19 @@ async function main() {
     next();
   });
 
-  // Page view analytics (public pages only)
+  // ---------- secret admin mount ----------
+  // /x<secret>/... ka prefix strip karke adminRoutes chalate hain (router ko relative path milta hai).
+  // Direct /admin/* kisi router se match nahi hota → 404 (panel ka existence pata hi nahi chalta).
+  app.use((req, res, next) => {
+    res.locals.adminBase = SECRET_MOUNT; // views me saare admin links isse bante hain
+    if (req.url === SECRET_MOUNT || req.url.startsWith(SECRET_MOUNT + '/')) {
+      req.url = req.url.slice(SECRET_MOUNT.length) || '/';
+      return adminRoutes(req, res, next);
+    }
+    next();
+  });
+
+  // Page view analytics (public pages only — admin rewrite ho chuka hai, /admin skip works)
   app.use((req, res, next) => {
     if (req.method === 'GET' && !req.path.startsWith('/admin')) {
       PageView.create({ path: req.path }).catch(() => {});
@@ -76,12 +124,11 @@ async function main() {
   });
 
   app.use('/', publicRoutes);
-  app.use('/admin', adminRoutes);
 
   // 404
   app.use((req, res) => res.status(404).render('404'));
 
-  // Error handler
+  // Error handler — stack leak nahi
   app.use((err, req, res, next) => {
     console.error(err);
     res.status(500).send('Something went wrong. Please try again.');

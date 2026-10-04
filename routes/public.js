@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { Project, Skill, Message, Tool, Service, Testimonial, Experience, Lab, SiteSetting } = require('../models');
+const { Project, Skill, Message, Tool, Service, Testimonial, Experience, Lab, Feedback, SiteSetting } = require('../models');
 const { getRepoDetails, getProfile, mdToHtml } = require('../services/github');
 
 router.get('/', async (req, res) => {
@@ -74,6 +74,36 @@ router.get('/labs', async (req, res) => {
   res.render('labs', { labs });
 });
 
+// ---- Feedback (public) ----
+router.get('/feedback', async (req, res) => {
+  const approved = await Feedback.find({ status: 'approved' }).sort({ createdAt: -1 }).limit(50);
+  res.render('feedback', { approved, query: req.query });
+});
+
+router.post('/feedback', async (req, res) => {
+  // honeypot: bots 'website' field fill karte hain → chupchaap success dikhao
+  if (req.body.website) return res.redirect('/feedback?sent=1');
+
+  const { name, email, rating, message } = req.body;
+  const cleanName = String(name || '').trim().slice(0, 60);
+  const cleanMsg = String(message || '').trim().slice(0, 1000);
+  const rate = Math.min(5, Math.max(1, parseInt(rating, 10) || 5));
+
+  if (!cleanName || !cleanMsg) return res.redirect('/feedback?error=1');
+
+  // BUGFIX: trust proxy=1 hai to X-Forwarded-For spoof karke IP-limit bypass ho sakta hai —
+  // global flood-cap bhi lagao (10 min me max 20 submissions site-wide)
+  const flood = await Feedback.countDocuments({ createdAt: { $gte: new Date(Date.now() - 10 * 60 * 1000) } }).catch(() => 0);
+  if (flood >= 20) return res.redirect('/feedback?error=rate');
+
+  // rate limit: same IP se 2 min me ek hi feedback
+  const recent = await Feedback.countDocuments({ ip: req.ip, createdAt: { $gte: new Date(Date.now() - 2 * 60 * 1000) } }).catch(() => 0);
+  if (recent > 0) return res.redirect('/feedback?error=rate');
+
+  await Feedback.create({ name: cleanName, email: String(email || '').trim().slice(0, 100), rating: rate, message: cleanMsg, ip: req.ip }).catch(() => {});
+  res.redirect('/feedback?sent=1');
+});
+
 router.get('/contact', (req, res) => res.render('contact', { query: req.query }));
 
 router.post('/contact', async (req, res) => {
@@ -81,7 +111,15 @@ router.post('/contact', async (req, res) => {
   if (!name || !email || !message || !/\S+@\S+\.\S+/.test(email)) {
     return res.redirect('/contact?error=1');
   }
-  await Message.create({ name, email, message });
+  // rate limit: same IP se 2 min me ek hi message (spam hone se bachne ke liye)
+  const recent = await Message.countDocuments({ ip: req.ip, createdAt: { $gte: new Date(Date.now() - 2 * 60 * 1000) } }).catch(() => 0);
+  if (recent > 0) return res.redirect('/contact?error=rate');
+  await Message.create({
+    name: String(name).trim().slice(0, 60),
+    email: String(email).trim().slice(0, 100),
+    message: String(message).trim().slice(0, 2000),
+    ip: req.ip,
+  });
   res.redirect('/contact?sent=1');
 });
 

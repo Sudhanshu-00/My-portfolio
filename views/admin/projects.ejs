@@ -2,7 +2,7 @@
 
 <div class="row-between">
   <h1>Projects</h1>
-  <a class="btn" href="/admin/projects/new">＋ Add Project</a>
+  <a class="btn" href="<%= adminBase %>/projects/new">＋ Add Project</a>
 </div>
 
 <table class="table">
@@ -16,8 +16,8 @@
       <td><strong><%= p.title %></strong></td>
       <td><%= p.featured ? '⭐ Yes' : '—' %></td>
       <td class="actions">
-        <a class="btn small outline" href="/admin/projects/<%= p._id %>/edit">Edit</a>
-        <form method="POST" action="/admin/projects/<%= p._id %>/delete" class="inline">
+        <a class="btn small outline" href="<%= adminBase %>/projects/<%= p._id %>/edit">Edit</a>
+        <form method="POST" action="<%= adminBase %>/projects/<%= p._id %>/delete" class="inline">
           <button type="submit" class="btn small danger">Delete</button>
         </form>
       </td>
