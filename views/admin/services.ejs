@@ -4,20 +4,21 @@
 <p class="muted">Jo services bechta ho (pentest packages etc.) — ye Home page ke <strong>HIRE_ME</strong> section me price ke saath dikhengi.</p>
 
 <div class="panel">
-  <h2>➕ Add New Service</h2>
-  <form method="POST" action="/admin/services" class="form">
+  <h2><%= editService ? '✏️ Edit Service: ' + editService.title : '➕ Add New Service' %></h2>
+  <form method="POST" action="<%= editService ? '/admin/services/' + editService._id + '/update' : '/admin/services' %>" class="form">
     <div class="row-form">
       <label>Service Title
-        <input type="text" name="title" placeholder="e.g. Web App Penetration Test" required>
+        <input type="text" name="title" placeholder="e.g. Web App Penetration Test" required value="<%= editService ? editService.title : '' %>">
       </label>
       <label>Price
-        <input type="text" name="price" placeholder="e.g. ₹4,999 or Custom">
+        <input type="text" name="price" placeholder="e.g. ₹4,999 or Custom" value="<%= editService ? editService.price : '' %>">
       </label>
     </div>
     <label>Description
-      <textarea name="description" rows="3" placeholder="Kya milega is service me?"></textarea>
+      <textarea name="description" rows="3" placeholder="Kya milega is service me?"><%= editService ? editService.description : '' %></textarea>
     </label>
-    <button type="submit" class="btn">➕ Add Service</button>
+    <button type="submit" class="btn"><%= editService ? '💾 Update Service' : '➕ Add Service' %></button>
+    <% if (editService) { %><a class="btn ghost" href="/admin/services">Cancel</a><% } %>
   </form>
 </div>
 
@@ -31,9 +32,12 @@
       <td class="mono"><%= s.price || '—' %></td>
       <td class="muted"><%= (s.description || '').slice(0, 80) %><%= (s.description || '').length > 80 ? '…' : '' %></td>
       <td>
-        <form method="POST" action="/admin/services/<%= s._id %>/delete" class="inline" onsubmit="return confirm('Delete this service?')">
-          <button type="submit" class="btn small danger">🗑 Delete</button>
-        </form>
+        <div class="actions">
+          <a class="btn small ghost" href="/admin/services?edit=<%= s._id %>">✏️ Edit</a>
+          <form method="POST" action="/admin/services/<%= s._id %>/delete" class="inline" onsubmit="return confirm('Delete this service?')">
+            <button type="submit" class="btn small danger">🗑 Delete</button>
+          </form>
+        </div>
       </td>
     </tr>
   <% }) %>

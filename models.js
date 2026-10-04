@@ -107,6 +107,18 @@ const TestimonialSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+const ExperienceSchema = new mongoose.Schema(
+  {
+    company: { type: String, required: true, trim: true },
+    role: { type: String, required: true, trim: true },
+    duration: { type: String, default: '' }, // e.g. "Jan 2024 – Present"
+    description: { type: String, default: '' },
+    current: { type: Boolean, default: false },
+    order: { type: Number, default: 0 }, // lower = upar dikhega
+  },
+  { timestamps: true }
+);
+
 module.exports = {
   SiteSetting: mongoose.model('SiteSetting', SiteSettingSchema),
   Project: mongoose.model('Project', ProjectSchema),
@@ -117,4 +129,5 @@ module.exports = {
   PageView: mongoose.model('PageView', PageViewSchema),
   Service: mongoose.model('Service', ServiceSchema),
   Testimonial: mongoose.model('Testimonial', TestimonialSchema),
+  Experience: mongoose.model('Experience', ExperienceSchema),
 };

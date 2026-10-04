@@ -1,0 +1,59 @@
+<%- include('../partials/admin_head') %>
+
+<h1>🏢 Work Experience</h1>
+<p class="muted">Kis company me kaam karte ho, kis role pe, kab se — ye About page ke <strong>WORK_HISTORY</strong> section me timeline ke roop me dikhega.</p>
+
+<div class="panel">
+  <h2><%= editExp ? '✏️ Edit: ' + editExp.role + ' @ ' + editExp.company : '➕ Add Experience' %></h2>
+  <form method="POST" action="<%= editExp ? '/admin/experience/' + editExp._id + '/update' : '/admin/experience' %>" class="form">
+    <div class="row-form">
+      <label>Company Name
+        <input type="text" name="company" placeholder="e.g. CyberShield Solutions" required value="<%= editExp ? editExp.company : '' %>">
+      </label>
+      <label>Your Role
+        <input type="text" name="role" placeholder="e.g. Security Analyst" required value="<%= editExp ? editExp.role : '' %>">
+      </label>
+    </div>
+    <div class="row-form">
+      <label>Duration
+        <input type="text" name="duration" placeholder="e.g. Jan 2024 – Present" value="<%= editExp ? editExp.duration : '' %>">
+      </label>
+      <label>Order (lower = upar)
+        <input type="number" name="order" value="<%= editExp ? editExp.order : 0 %>">
+      </label>
+    </div>
+    <label>Description (kya kaam karte ho wahan — responsibilities, achievements)
+      <textarea name="description" rows="4" placeholder="e.g. Performing VAPT on client web & Android apps, preparing reports, working with dev teams on fixes..."><%= editExp ? editExp.description : '' %></textarea>
+    </label>
+    <label style="display:flex; align-items:center; gap:0.5rem; font-weight:normal">
+      <input type="checkbox" name="current" <%= editExp && editExp.current ? 'checked' : '' %> style="width:auto">
+      🟢 Currently working here
+    </label>
+    <button type="submit" class="btn"><%= editExp ? '💾 Update Experience' : '➕ Add Experience' %></button>
+    <% if (editExp) { %><a class="btn ghost" href="/admin/experience">Cancel</a><% } %>
+  </form>
+</div>
+
+<h2>Current Entries (<%= experience.length %>)</h2>
+<% if (!experience.length) { %><p class="muted">No experience added yet — upar se apni company add karo.</p><% } %>
+<table class="table">
+  <tr><th>Role @ Company</th><th>Duration</th><th>Status</th><th>Order</th><th style="text-align:right">Actions</th></tr>
+  <% experience.forEach(e => { %>
+    <tr>
+      <td><strong><%= e.role %></strong><br><small class="muted"><%= e.company %></small></td>
+      <td class="mono"><%= e.duration || '—' %></td>
+      <td><%- e.current ? '<span class="ok">● CURRENT</span>' : '<span class="muted">past</span>' %></td>
+      <td><%= e.order %></td>
+      <td>
+        <div class="actions" style="justify-content:flex-end">
+          <a class="btn small ghost" href="/admin/experience?edit=<%= e._id %>">✏️ Edit</a>
+          <form method="POST" action="/admin/experience/<%= e._id %>/delete" class="inline" onsubmit="return confirm('Delete this experience?')">
+            <button type="submit" class="btn small danger">🗑 Delete</button>
+          </form>
+        </div>
+      </td>
+    </tr>
+  <% }) %>
+</table>
+
+<%- include('../partials/admin_foot') %>

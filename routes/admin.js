@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
-const { AdminUser, Project, Skill, Message, SiteSetting, Tool, PageView, Service, Testimonial } = require('../models');
+const { AdminUser, Project, Skill, Message, SiteSetting, Tool, PageView, Service, Testimonial, Experience } = require('../models');
 
 // ---------- photo upload helper ----------
 const upload = multer({
@@ -95,7 +95,7 @@ router.get('/settings', (req, res) => res.render('admin/settings'));
 
 router.post('/settings', upload.single('photo'), async (req, res) => {
   const s = await SiteSetting.get();
-  ['siteName', 'heroTitle', 'heroSubtitle', 'aboutText', 'email', 'phone', 'location', 'github', 'linkedin', 'twitter', 'instagram', 'whatsapp', 'telegram'].forEach(
+  ['siteName', 'heroTitle', 'heroSubtitle', 'aboutText', 'email', 'phone', 'location', 'github', 'linkedin', 'twitter', 'instagram', 'whatsapp', 'telegram', 'githubUsername'].forEach(
     (f) => {
       if (req.body[f] !== undefined) s[f] = req.body[f];
     }
@@ -133,12 +133,21 @@ router.post('/resume/delete', async (req, res) => {
 
 // ---------- services (hire me) ----------
 router.get('/services', async (req, res) => {
-  res.render('admin/services', { services: await Service.find().sort({ createdAt: 1 }) });
+  const editService = req.query.edit ? await Service.findById(req.query.edit).catch(() => null) : null;
+  res.render('admin/services', { services: await Service.find().sort({ createdAt: 1 }), editService });
 });
 
 router.post('/services', async (req, res) => {
   const { title, description, price } = req.body;
   if (title && title.trim()) await Service.create({ title: title.trim(), description, price });
+  res.redirect('/admin/services');
+});
+
+router.post('/services/:id/update', async (req, res) => {
+  const { title, description, price } = req.body;
+  if (title && title.trim()) {
+    await Service.findByIdAndUpdate(req.params.id, { title: title.trim(), description, price }).catch(() => {});
+  }
   res.redirect('/admin/services');
 });
 
@@ -149,7 +158,8 @@ router.post('/services/:id/delete', async (req, res) => {
 
 // ---------- testimonials ----------
 router.get('/testimonials', async (req, res) => {
-  res.render('admin/testimonials', { testimonials: await Testimonial.find().sort({ createdAt: -1 }) });
+  const editTestimonial = req.query.edit ? await Testimonial.findById(req.query.edit).catch(() => null) : null;
+  res.render('admin/testimonials', { testimonials: await Testimonial.find().sort({ createdAt: -1 }), editTestimonial });
 });
 
 router.post('/testimonials', async (req, res) => {
@@ -165,14 +175,69 @@ router.post('/testimonials', async (req, res) => {
   res.redirect('/admin/testimonials');
 });
 
+router.post('/testimonials/:id/update', async (req, res) => {
+  const { name, company, text, rating } = req.body;
+  if (name && name.trim() && text && text.trim()) {
+    await Testimonial.findByIdAndUpdate(req.params.id, {
+      name: name.trim(),
+      company: company || '',
+      text: text.trim(),
+      rating: Math.min(5, Math.max(1, parseInt(rating, 10) || 5)),
+    }).catch(() => {});
+  }
+  res.redirect('/admin/testimonials');
+});
+
 router.post('/testimonials/:id/delete', async (req, res) => {
   await Testimonial.findByIdAndDelete(req.params.id).catch(() => {});
   res.redirect('/admin/testimonials');
 });
 
+// ---------- experience (work history) ----------
+router.get('/experience', async (req, res) => {
+  const editExp = req.query.edit ? await Experience.findById(req.query.edit).catch(() => null) : null;
+  res.render('admin/experience', { experience: await Experience.find().sort({ current: -1, order: 1, createdAt: -1 }), editExp });
+});
+
+router.post('/experience', async (req, res) => {
+  const { company, role, duration, description, order } = req.body;
+  if (company && company.trim() && role && role.trim()) {
+    await Experience.create({
+      company: company.trim(),
+      role: role.trim(),
+      duration: duration || '',
+      description: description || '',
+      current: req.body.current === 'on',
+      order: parseInt(order, 10) || 0,
+    });
+  }
+  res.redirect('/admin/experience');
+});
+
+router.post('/experience/:id/update', async (req, res) => {
+  const { company, role, duration, description, order } = req.body;
+  if (company && company.trim() && role && role.trim()) {
+    await Experience.findByIdAndUpdate(req.params.id, {
+      company: company.trim(),
+      role: role.trim(),
+      duration: duration || '',
+      description: description || '',
+      current: req.body.current === 'on',
+      order: parseInt(order, 10) || 0,
+    }).catch(() => {});
+  }
+  res.redirect('/admin/experience');
+});
+
+router.post('/experience/:id/delete', async (req, res) => {
+  await Experience.findByIdAndDelete(req.params.id).catch(() => {});
+  res.redirect('/admin/experience');
+});
+
 // ---------- skills ----------
 router.get('/skills', async (req, res) => {
-  res.render('admin/skills', { skills: await Skill.find().sort({ category: 1, level: -1 }) });
+  const editSkill = req.query.edit ? await Skill.findById(req.query.edit).catch(() => null) : null;
+  res.render('admin/skills', { skills: await Skill.find().sort({ category: 1, level: -1 }), editSkill });
 });
 
 router.post('/skills', async (req, res) => {
@@ -183,6 +248,18 @@ router.post('/skills', async (req, res) => {
       level: Math.min(100, Math.max(0, parseInt(level, 10) || 80)),
       category: (category || 'General').trim(),
     });
+  }
+  res.redirect('/admin/skills');
+});
+
+router.post('/skills/:id/update', async (req, res) => {
+  const { name, level, category } = req.body;
+  if (name && name.trim()) {
+    await Skill.findByIdAndUpdate(req.params.id, {
+      name: name.trim(),
+      level: Math.min(100, Math.max(0, parseInt(level, 10) || 80)),
+      category: (category || 'General').trim(),
+    }).catch(() => {});
   }
   res.redirect('/admin/skills');
 });

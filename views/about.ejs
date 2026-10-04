@@ -28,6 +28,27 @@
   </div>
 </section>
 
+<% if (typeof experience !== 'undefined' && experience.length) { %>
+<section class="section">
+  <h2><span class="sec-tag">&gt;_</span> WORK_HISTORY <span class="muted" style="font-size:0.9rem">[ experience ]</span></h2>
+  <div class="timeline">
+    <% experience.forEach(e => { %>
+      <div class="timeline-item">
+        <div class="tl-dot <%= e.current ? 'live' : '' %>"></div>
+        <div class="tl-card">
+          <div class="row-between">
+            <h3><%= e.role %> <span class="p">@</span> <span class="ok"><%= e.company %></span></h3>
+            <% if (e.current) { %><span class="tl-badge">● CURRENT</span><% } %>
+          </div>
+          <% if (e.duration) { %><p class="mono muted tl-duration"><%= e.duration %></p><% } %>
+          <% if (e.description) { %><p class="muted" style="white-space: pre-line;"><%= e.description %></p><% } %>
+        </div>
+      </div>
+    <% }) %>
+  </div>
+</section>
+<% } %>
+
 <% if (typeof gh !== 'undefined' && gh.ok) { %>
 <section class="section">
   <h1><span class="sec-tag">&gt;_</span> GITHUB_INTEL <span class="muted" style="font-size:0.9rem">[ live @ <%= gh.profile.username %> ]</span></h1>

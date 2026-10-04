@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { Project, Skill, Message, Tool, Service, Testimonial, SiteSetting } = require('../models');
+const { Project, Skill, Message, Tool, Service, Testimonial, Experience, SiteSetting } = require('../models');
 const { getRepoDetails, getProfile, mdToHtml } = require('../services/github');
 
 router.get('/', async (req, res) => {
@@ -30,8 +30,11 @@ router.get('/resume', async (req, res) => {
 });
 
 router.get('/about', async (req, res) => {
-  const gh = await getProfile(res.locals.settings.githubUsername || 'Sudhanshu-00').catch(() => ({ ok: false }));
-  res.render('about', { gh });
+  const [gh, experience] = await Promise.all([
+    getProfile(res.locals.settings.githubUsername || 'Sudhanshu-00').catch(() => ({ ok: false })),
+    Experience.find().sort({ current: -1, order: 1, createdAt: -1 }),
+  ]);
+  res.render('about', { gh, experience });
 });
 
 router.get('/tools', async (req, res) => {

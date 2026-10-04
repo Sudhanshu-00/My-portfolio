@@ -36,6 +36,7 @@
 
   <h2 style="margin-top: 1.5rem;">Direct Channels</h2>
   <div class="btn-row">
+    <% if (settings.linkedin) { %><a class="btn ghost" href="<%= settings.linkedin %>" target="_blank" rel="noopener">[ LINKEDIN ]</a><% } %>
     <% if (settings.whatsapp) { %><a class="btn ghost" href="https://wa.me/<%= settings.whatsapp.replace(/\D/g, '') %>" target="_blank">[ WHATSAPP ]</a><% } %>
     <% if (settings.telegram) { %><a class="btn ghost" href="https://t.me/<%= settings.telegram.replace(/@/, '') %>" target="_blank">[ TELEGRAM ]</a><% } %>
     <% if (settings.email) { %><a class="btn ghost" href="mailto:<%= settings.email %>">[ EMAIL ]</a><% } %>

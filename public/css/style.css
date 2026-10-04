@@ -543,3 +543,35 @@ body.admin {
 .readme .md-hr { border: none; border-top: 1px dashed var(--border); margin: 0.8rem 0; }
 .readme .md-row { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--muted); padding: 0.1rem 0; }
 .readme .md-img { color: var(--muted); font-size: 0.82rem; }
+
+/* ---------- Work experience timeline ---------- */
+.timeline { position: relative; padding-left: 2rem; }
+.timeline::before {
+  content: ''; position: absolute; left: 8px; top: 6px; bottom: 6px;
+  width: 2px; background: linear-gradient(180deg, var(--accent), var(--border));
+  box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+}
+.timeline-item { position: relative; margin-bottom: 1.4rem; }
+.tl-dot {
+  position: absolute; left: -2rem; top: 8px;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--bg2); border: 2px solid var(--accent-dim);
+}
+.tl-dot.live {
+  border-color: var(--accent); background: var(--accent);
+  box-shadow: 0 0 12px rgba(0, 255, 65, 0.7);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+.tl-card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  padding: 1rem 1.2rem; transition: border-color 0.15s;
+}
+.tl-card:hover { border-color: var(--accent); box-shadow: 0 0 18px rgba(0, 255, 65, 0.1); }
+.tl-card h3 { margin-bottom: 0.2rem; }
+.tl-card .p { color: var(--muted); }
+.tl-duration { font-size: 0.82rem; margin-bottom: 0.4rem; }
+.tl-badge {
+  background: rgba(0, 255, 65, 0.12); color: var(--accent);
+  border: 1px solid var(--accent-dim); border-radius: 99px;
+  font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.7rem; white-space: nowrap;
+}

@@ -3,18 +3,19 @@
 <h1>Skills</h1>
 
 <div class="panel">
-  <h2>＋ Add Skill</h2>
-  <form method="POST" action="/admin/skills" class="form row-form">
+  <h2><%= editSkill ? '✏️ Edit Skill: ' + editSkill.name : '＋ Add Skill' %></h2>
+  <form method="POST" action="<%= editSkill ? '/admin/skills/' + editSkill._id + '/update' : '/admin/skills' %>" class="form row-form">
     <label>Name
-      <input type="text" name="name" required placeholder="e.g. React">
+      <input type="text" name="name" required placeholder="e.g. React" value="<%= editSkill ? editSkill.name : '' %>">
     </label>
     <label>Level (0-100)
-      <input type="number" name="level" min="0" max="100" value="80">
+      <input type="number" name="level" min="0" max="100" value="<%= editSkill ? editSkill.level : 80 %>">
     </label>
     <label>Category
-      <input type="text" name="category" placeholder="e.g. Frontend">
+      <input type="text" name="category" placeholder="e.g. Frontend" value="<%= editSkill ? editSkill.category : '' %>">
     </label>
-    <button type="submit" class="btn">Add</button>
+    <button type="submit" class="btn"><%= editSkill ? '💾 Update' : 'Add' %></button>
+    <% if (editSkill) { %><a class="btn ghost" href="/admin/skills">Cancel</a><% } %>
   </form>
 </div>
 
@@ -30,9 +31,12 @@
       </td>
       <td><%= s.category %></td>
       <td>
-        <form method="POST" action="/admin/skills/<%= s._id %>/delete" class="inline">
-          <button type="submit" class="btn small danger">Delete</button>
-        </form>
+        <div class="actions">
+          <a class="btn small ghost" href="/admin/skills?edit=<%= s._id %>">✏️ Edit</a>
+          <form method="POST" action="/admin/skills/<%= s._id %>/delete" class="inline">
+            <button type="submit" class="btn small danger">Delete</button>
+          </form>
+        </div>
       </td>
     </tr>
   <% }) %>
