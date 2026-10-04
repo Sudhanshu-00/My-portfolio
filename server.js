@@ -68,10 +68,9 @@ async function main() {
   // ---------- health endpoint (uptime monitor pings this; excluded from all logs) ----------
   app.get('/healthz', (req, res) => res.json({ ok: true, uptime: Math.round(process.uptime()) }));
 
-  // ---------- security guard + recorder (blocked IPs, visitor/tester logs) ----------
-  // guard: 403 for blocked IPs (before anything else). recorder: logs every
-  // non-static request → Admin → Security (IP, device, location, path, status).
-  app.use(security.guard);
+  // ---------- security recorder (visitor/tester logs) ----------
+  // logs every non-static request → Admin → Security (IP, device, location, path, status).
+  // (guard for blocked IPs runs after session — see below — so an admin is never locked out)
   app.use(security.recorder);
   app.use((req, res, next) => { uptime.touch(); next(); }); // last-activity tracking for idle alerts
 
@@ -149,6 +148,14 @@ async function main() {
       if (req.session.admin) res.locals.sessionAdmin = req.session.admin;
     }
     next();
+  });
+
+  // ---------- security guard (blocked IPs → 403) ----------
+  // placed AFTER session so a logged-in admin is exempt — apni testing se khud
+  // block ho jao to panel phir bhi khulega (unblock Admin → Security se).
+  app.use((req, res, next) => {
+    if (req.session && req.session.admin) return next();
+    security.guard(req, res, next);
   });
 
   // Settings + query available in every view
