@@ -1,0 +1,36 @@
+<%- include('partials/header', { title: tool.name }) %>
+
+<article class="project-detail section">
+  <% if (tool.image) { %><img class="detail-img" src="<%= tool.image %>" alt="<%= tool.name %>"><% } %>
+
+  <div class="row-between">
+    <h1><span class="sec-tag">&gt;_</span> <%= tool.name %></h1>
+    <span class="cat cat-<%= tool.category.toLowerCase() %>"><%= tool.category.toUpperCase() %></span>
+  </div>
+
+  <div class="terminal small" style="margin: 1.2rem 0;">
+    <div class="term-bar">
+      <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+      <span class="term-title">readme.md — <%= tool.name.toLowerCase() %></span>
+    </div>
+    <div class="term-body">
+      <p class="term-line"><span class="p">➜</span> <span class="cmd">cat README.md</span></p>
+      <p style="white-space: pre-line;"><%= tool.description %></p>
+      <p class="term-line"><span class="p">➜</span> <span class="cmd">echo $PRICE</span></p>
+      <p class="price" style="font-size: 1.8rem;"><%= tool.price %></p>
+    </div>
+  </div>
+
+  <%
+    const buy = tool.buyUrl || (settings.whatsapp
+      ? 'https://wa.me/' + settings.whatsapp.replace(/\D/g, '') + '?text=' + encodeURIComponent('Hi! I want to buy: ' + tool.name + ' (' + (tool.price || 'price on request') + ')')
+      : '');
+  %>
+  <div class="btn-row">
+    <% if (buy) { %><a class="btn" href="<%= buy %>" target="_blank">[ BUY NOW ]</a><% } %>
+    <% if (tool.demoUrl) { %><a class="btn ghost" href="<%= tool.demoUrl %>" target="_blank">[ DEMO / VIDEO ]</a><% } %>
+    <a class="link" href="/tools">← back to arsenal</a>
+  </div>
+</article>
+
+<%- include('partials/footer') %>

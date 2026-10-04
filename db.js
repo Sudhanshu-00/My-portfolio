@@ -16,8 +16,14 @@ async function initDB() {
   await seed();
 }
 
+const svg = (t, c1, c2) =>
+  'data:image/svg+xml;base64,' +
+  Buffer.from(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs><rect width="800" height="500" fill="url(#g)"/><text x="400" y="260" font-family="monospace" font-size="40" fill="#fff" text-anchor="middle">${t}</text></svg>`
+  ).toString('base64');
+
 async function seed() {
-  const { AdminUser, SiteSetting, Skill, Project } = require('./models');
+  const { AdminUser, SiteSetting, Skill, Project, Tool } = require('./models');
 
   // Default admin user
   if ((await AdminUser.countDocuments()) === 0) {
@@ -33,34 +39,56 @@ async function seed() {
   // Sample content (only on first run, admin can delete later)
   if ((await Skill.countDocuments()) === 0) {
     await Skill.create([
-      { name: 'HTML', level: 90, category: 'Frontend' },
-      { name: 'CSS', level: 85, category: 'Frontend' },
-      { name: 'JavaScript', level: 80, category: 'Frontend' },
-      { name: 'Node.js', level: 70, category: 'Backend' },
+      { name: 'Penetration Testing', level: 90, category: 'Offensive' },
+      { name: 'Android Pentesting', level: 85, category: 'Offensive' },
+      { name: 'Web App Hacking', level: 88, category: 'Offensive' },
+      { name: 'Python / Bash', level: 80, category: 'Automation' },
     ]);
   }
 
   if ((await Project.countDocuments()) === 0) {
-    const svg = (t, c1, c2) =>
-      'data:image/svg+xml;base64,' +
-      Buffer.from(
-        `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs><rect width="800" height="500" fill="url(#g)"/><text x="400" y="260" font-family="Arial" font-size="40" fill="#fff" text-anchor="middle">${t}</text></svg>`
-      ).toString('base64');
-
     await Project.create([
       {
-        title: 'Portfolio Website',
-        description: 'My personal portfolio website built with HTML, CSS and JavaScript. Fully responsive design.',
-        techStack: 'HTML, CSS, JavaScript',
-        image: svg('Portfolio Website', '#6366f1', '#38bdf8'),
+        title: 'E-commerce Pentest',
+        description: 'Full black-box penetration test of an e-commerce platform — found SQLi, IDOR & payment logic flaws. Clean report delivered.',
+        techStack: 'Burp Suite, SQLMap, Nmap',
+        image: svg('E-commerce Pentest', '#0f5132', '#00ff41'),
         featured: true,
       },
       {
-        title: 'Todo App',
-        description: 'A simple todo application with add, edit, delete and mark-complete features.',
-        techStack: 'React, Node.js, MongoDB',
-        image: svg('Todo App', '#f59e0b', '#ef4444'),
+        title: 'Android APK Audit',
+        description: 'Reverse-engineered and audited a fintech APK — hardcoded secrets, insecure storage & weak SSL pinning bypass.',
+        techStack: 'MobSF, Frida, jadx',
+        image: svg('Android APK Audit', '#3b0764', '#00e5ff'),
         featured: true,
+      },
+    ]);
+  }
+
+  if ((await Tool.countDocuments()) === 0) {
+    await Tool.create([
+      {
+        name: 'APKSentinel',
+        category: 'Android',
+        price: '₹1,999',
+        description: 'Automated Android app pentesting toolkit — decompile APK, static analysis, hardcoded secrets, insecure exports & SSL pinning checks in one command.',
+        image: svg('APKSentinel', '#0f5132', '#00ff41'),
+        featured: true,
+      },
+      {
+        name: 'WebVulnX',
+        category: 'Web',
+        price: '₹1,499',
+        description: 'Web application vulnerability scanner — SQLi, XSS, IDOR & 30+ security checks with clean PDF report output.',
+        image: svg('WebVulnX', '#3b0764', '#00e5ff'),
+        featured: true,
+      },
+      {
+        name: 'NetSweep',
+        category: 'Network',
+        price: '₹999',
+        description: 'Fast network reconnaissance toolkit — host discovery, port scanning & service fingerprinting in seconds.',
+        image: svg('NetSweep', '#450a0a', '#ffd60a'),
       },
     ]);
   }

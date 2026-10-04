@@ -1,0 +1,41 @@
+<%- include('partials/header', { title: 'Tools' }) %>
+
+<section class="section">
+  <h1><span class="sec-tag">&gt;_</span> ARSENAL</h1>
+  <p class="muted">Professional security tools — built, battle-tested aur ready to deploy. Buy karne ke liye BUY dabao, direct WhatsApp pe baat hogi.</p>
+
+  <div class="filter-row" id="filters">
+    <button class="btn small active" data-filter="all">ALL</button>
+    <button class="btn small ghost" data-filter="android">ANDROID</button>
+    <button class="btn small ghost" data-filter="web">WEB</button>
+    <button class="btn small ghost" data-filter="network">NETWORK</button>
+    <button class="btn small ghost" data-filter="other">OTHER</button>
+  </div>
+
+  <div class="card-grid" id="tools-grid">
+  <% if (!tools.length) { %>
+    <p class="muted">No tools listed yet. Aa rahe hain jaldi... ⏳</p>
+  <% } %>
+  <% tools.forEach(t => { const buy = t.buyUrl || (settings.whatsapp ? 'https://wa.me/' + settings.whatsapp.replace(/\D/g, '') + '?text=' + encodeURIComponent('Hi! I want to buy: ' + t.name + ' (' + (t.price || 'price on request') + ')') : ''); %>
+    <div class="card" data-cat="<%= t.category.toLowerCase() %>">
+      <% if (t.image) { %><img class="card-img" src="<%= t.image %>" alt="<%= t.name %>"><% } %>
+      <div class="card-body">
+        <div class="row-between">
+          <h3>&lt;<%= t.name %>&gt;</h3>
+          <span class="cat cat-<%= t.category.toLowerCase() %>"><%= t.category.toUpperCase() %></span>
+        </div>
+        <p class="muted clamp2"><%= t.description %></p>
+        <div class="row-between">
+          <span class="price"><%= t.price %></span>
+          <span class="actions">
+            <a class="btn small ghost" href="/tools/<%= t._id %>">Info</a>
+            <% if (buy) { %><a class="btn small buy" href="<%= buy %>" target="_blank">BUY</a><% } %>
+          </span>
+        </div>
+      </div>
+    </div>
+  <% }) %>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

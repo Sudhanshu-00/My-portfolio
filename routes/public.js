@@ -1,15 +1,31 @@
 const router = require('express').Router();
-const { Project, Skill, Message } = require('../models');
+const { Project, Skill, Message, Tool } = require('../models');
 
 router.get('/', async (req, res) => {
-  const [projects, skills] = await Promise.all([
-    Project.find().sort({ featured: -1, createdAt: -1 }).limit(6),
+  const [projects, skills, tools] = await Promise.all([
+    Project.find().sort({ featured: -1, createdAt: -1 }).limit(3),
     Skill.find().sort({ level: -1 }).limit(8),
+    Tool.find({ featured: true }).limit(3),
   ]);
-  res.render('home', { projects, skills });
+  res.render('home', { projects, skills, tools });
 });
 
 router.get('/about', (req, res) => res.render('about'));
+
+router.get('/tools', async (req, res) => {
+  const tools = await Tool.find().sort({ featured: -1, createdAt: -1 });
+  res.render('tools', { tools });
+});
+
+router.get('/tools/:id', async (req, res) => {
+  try {
+    const tool = await Tool.findById(req.params.id);
+    if (!tool) return res.status(404).render('404');
+    res.render('tool', { tool });
+  } catch {
+    res.status(404).render('404');
+  }
+});
 
 router.get('/projects', async (req, res) => {
   const projects = await Project.find().sort({ createdAt: -1 });

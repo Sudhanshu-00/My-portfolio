@@ -1,38 +1,81 @@
 <%- include('partials/header', { title: 'Home' }) %>
 
 <section class="hero">
-  <div class="hero-text">
-    <h1><%= settings.heroTitle %></h1>
-    <p class="muted"><%= settings.heroSubtitle %></p>
-    <div class="btn-row">
-      <a class="btn" href="/projects">View Projects</a>
-      <a class="btn outline" href="/contact">Contact Me</a>
+  <canvas id="matrix" class="matrix-canvas"></canvas>
+  <div class="hero-grid">
+    <div class="terminal">
+      <div class="term-bar">
+        <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+        <span class="term-title">sudhanshu@kali: ~</span>
+      </div>
+      <div class="term-body">
+        <p class="term-line"><span class="p">➜</span> <span class="cmd">whoami</span></p>
+        <h1 class="glitch" data-text="<%= settings.heroTitle %>"><%= settings.heroTitle %></h1>
+        <p class="term-line"><span class="p">➜</span> <span class="cmd">cat role.txt</span></p>
+        <p class="term-line typed-line"><span id="typed"></span><span class="cursor">▊</span></p>
+        <p class="muted"><%= settings.heroSubtitle %></p>
+        <p class="term-line"><span class="p">➜</span> <span class="cmd">./deploy --skills --tools</span></p>
+        <div class="btn-row">
+          <a class="btn" href="/tools">[ VIEW TOOLS ]</a>
+          <a class="btn ghost" href="/projects">[ PROJECTS ]</a>
+        </div>
+      </div>
     </div>
-  </div>
-  <div class="hero-photo">
-    <% if (settings.profilePhoto) { %>
-      <img src="<%= settings.profilePhoto %>" alt="Profile photo">
-    <% } else { %>
-      <div class="avatar-fallback"><%= (settings.siteName || 'P').charAt(0).toUpperCase() %></div>
-    <% } %>
+    <div class="hero-side">
+      <div class="avatar-wrap">
+        <% if (settings.profilePhoto) { %>
+          <img src="<%= settings.profilePhoto %>" alt="profile">
+        <% } else { %>
+          <div class="avatar-fallback"><%= (settings.siteName || 'H').charAt(0).toUpperCase() %></div>
+        <% } %>
+        <span class="status">● ONLINE</span>
+      </div>
+      <div class="mini-stats">
+        <div><span class="ok">▸</span> Web Application Pentesting</div>
+        <div><span class="ok">▸</span> Android App Pentesting</div>
+        <div><span class="ok">▸</span> Security Tool Development</div>
+      </div>
+    </div>
   </div>
 </section>
 
+<% if (tools.length) { %>
 <section class="section">
-  <h2>About Me</h2>
-  <p class="muted"><%= settings.aboutText.slice(0, 250) %><%= settings.aboutText.length > 250 ? '…' : '' %></p>
-  <a href="/about" class="link">Read more →</a>
+  <h2><span class="sec-tag">&gt;_</span> ARSENAL <span class="muted" style="font-size:0.9rem">[ tools for sale ]</span></h2>
+  <div class="card-grid">
+    <% tools.forEach(t => { const buy = t.buyUrl || (settings.whatsapp ? 'https://wa.me/' + settings.whatsapp.replace(/\D/g, '') + '?text=' + encodeURIComponent('Hi! I want to buy: ' + t.name) : ''); %>
+      <div class="card">
+        <% if (t.image) { %><img class="card-img" src="<%= t.image %>" alt="<%= t.name %>"><% } %>
+        <div class="card-body">
+          <div class="row-between">
+            <h3>&lt;<%= t.name %>&gt;</h3>
+            <span class="cat cat-<%= t.category.toLowerCase() %>"><%= t.category.toUpperCase() %></span>
+          </div>
+          <p class="muted clamp"><%= t.description %></p>
+          <div class="row-between">
+            <span class="price"><%= t.price %></span>
+            <span class="actions">
+              <a class="btn small ghost" href="/tools/<%= t._id %>">Info</a>
+              <% if (buy) { %><a class="btn small buy" href="<%= buy %>" target="_blank">BUY</a><% } %>
+            </span>
+          </div>
+        </div>
+      </div>
+    <% }) %>
+  </div>
+  <a href="/tools" class="link">&gt; see full arsenal →</a>
 </section>
+<% } %>
 
 <% if (skills.length) { %>
 <section class="section">
-  <h2>Skills</h2>
+  <h2><span class="sec-tag">&gt;_</span> SKILL_SET</h2>
   <div class="skill-grid">
     <% skills.forEach(s => { %>
       <div class="skill-card">
         <strong><%= s.name %></strong>
         <div class="bar"><div class="bar-fill" style="width:<%= s.level %>%"></div></div>
-        <small class="muted"><%= s.level %>% · <%= s.category %></small>
+        <small class="muted">[ <%= s.level %>% · <%= s.category %> ]</small>
       </div>
     <% }) %>
   </div>
@@ -41,19 +84,19 @@
 
 <% if (projects.length) { %>
 <section class="section">
-  <h2>Projects</h2>
+  <h2><span class="sec-tag">&gt;_</span> OPERATIONS <span class="muted" style="font-size:0.9rem">[ case files ]</span></h2>
   <div class="card-grid">
     <% projects.forEach(p => { %>
       <a class="card" href="/projects/<%= p._id %>">
         <% if (p.image) { %><img class="card-img" src="<%= p.image %>" alt="<%= p.title %>"><% } %>
         <div class="card-body">
-          <h3><%= p.title %></h3>
-          <p class="muted"><%= p.description.slice(0, 90) %><%= p.description.length > 90 ? '…' : '' %></p>
+          <h3>[ <%= p.title %> ]</h3>
+          <p class="muted clamp"><%= p.description %></p>
         </div>
       </a>
     <% }) %>
   </div>
-  <a href="/projects" class="link">See all projects →</a>
+  <a href="/projects" class="link">&gt; all operations →</a>
 </section>
 <% } %>
 

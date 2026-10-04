@@ -1,0 +1,28 @@
+<%- include('../partials/admin_head') %>
+
+<div class="row-between">
+  <h1>🛠️ Tools <span class="muted" style="font-size:0.9rem">[ for sale ]</span></h1>
+  <a class="btn" href="/admin/tools/new">＋ Add Tool</a>
+</div>
+
+<table class="table">
+  <tr><th>Photo</th><th>Name</th><th>Category</th><th>Price</th><th>Featured</th><th>Actions</th></tr>
+  <% if (!tools.length) { %><tr><td colspan="6" class="muted">No tools yet. Click "Add Tool" — jo tool bechna hai wo yahan add karo.</td></tr><% } %>
+  <% tools.forEach(t => { %>
+    <tr>
+      <td><% if (t.image) { %><img src="<%= t.image %>" class="thumb" alt=""><% } %></td>
+      <td><strong><%= t.name %></strong></td>
+      <td><span class="cat cat-<%= t.category.toLowerCase() %>"><%= t.category %></span></td>
+      <td><%= t.price %></td>
+      <td><%= t.featured ? '⭐' : '—' %></td>
+      <td class="actions">
+        <a class="btn small ghost" href="/admin/tools/<%= t._id %>/edit">Edit</a>
+        <form method="POST" action="/admin/tools/<%= t._id %>/delete" class="inline">
+          <button type="submit" class="btn small danger">Delete</button>
+        </form>
+      </td>
+    </tr>
+  <% }) %>
+</table>
+
+<%- include('../partials/footer') %>

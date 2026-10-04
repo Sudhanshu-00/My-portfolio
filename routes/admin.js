@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
-const { AdminUser, Project, Skill, Message, SiteSetting } = require('../models');
+const { AdminUser, Project, Skill, Message, SiteSetting, Tool } = require('../models');
 
 // ---------- photo upload helper ----------
 const upload = multer({
@@ -39,12 +39,13 @@ router.use(requireAuth);
 
 // ---------- dashboard ----------
 router.get('/', async (req, res) => {
-  const [projects, skills, unread] = await Promise.all([
+  const [projects, skills, unread, tools] = await Promise.all([
     Project.countDocuments(),
     Skill.countDocuments(),
     Message.countDocuments({ read: false }),
+    Tool.countDocuments(),
   ]);
-  res.render('admin/dashboard', { counts: { projects, skills, unread } });
+  res.render('admin/dashboard', { counts: { projects, skills, unread, tools } });
 });
 
 // ---------- settings ----------
@@ -52,7 +53,7 @@ router.get('/settings', (req, res) => res.render('admin/settings'));
 
 router.post('/settings', upload.single('photo'), async (req, res) => {
   const s = await SiteSetting.get();
-  ['siteName', 'heroTitle', 'heroSubtitle', 'aboutText', 'email', 'phone', 'location', 'github', 'linkedin', 'twitter', 'instagram'].forEach(
+  ['siteName', 'heroTitle', 'heroSubtitle', 'aboutText', 'email', 'phone', 'location', 'github', 'linkedin', 'twitter', 'instagram', 'whatsapp', 'telegram'].forEach(
     (f) => {
       if (req.body[f] !== undefined) s[f] = req.body[f];
     }
@@ -132,6 +133,58 @@ router.post('/projects/:id', upload.single('image'), async (req, res) => {
 router.post('/projects/:id/delete', async (req, res) => {
   await Project.findByIdAndDelete(req.params.id).catch(() => {});
   res.redirect('/admin/projects');
+});
+
+// ---------- tools (for sale) ----------
+router.get('/tools', async (req, res) => {
+  res.render('admin/tools', { tools: await Tool.find().sort({ createdAt: -1 }) });
+});
+
+router.get('/tools/new', (req, res) => res.render('admin/tool_form', { tool: null }));
+
+router.post('/tools', upload.single('image'), async (req, res) => {
+  const { name, description, category, price, demoUrl, buyUrl } = req.body;
+  if (name && name.trim()) {
+    await Tool.create({
+      name: name.trim(),
+      description,
+      category: category || 'Other',
+      price,
+      demoUrl,
+      buyUrl,
+      featured: req.body.featured === 'on',
+      image: toDataUrl(req.file),
+    });
+  }
+  res.redirect('/admin/tools');
+});
+
+router.get('/tools/:id/edit', async (req, res) => {
+  const tool = await Tool.findById(req.params.id);
+  if (!tool) return res.redirect('/admin/tools');
+  res.render('admin/tool_form', { tool });
+});
+
+router.post('/tools/:id', upload.single('image'), async (req, res) => {
+  const t = await Tool.findById(req.params.id);
+  if (!t) return res.redirect('/admin/tools');
+  Object.assign(t, {
+    name: req.body.name,
+    description: req.body.description,
+    category: req.body.category,
+    price: req.body.price,
+    demoUrl: req.body.demoUrl,
+    buyUrl: req.body.buyUrl,
+    featured: req.body.featured === 'on',
+  });
+  if (req.file) t.image = toDataUrl(req.file);
+  await t.save();
+  res.redirect('/admin/tools');
+});
+
+router.post('/tools/:id/delete', async (req, res) => {
+  await Tool.findByIdAndDelete(req.params.id).catch(() => {});
+  res.redirect('/admin/tools');
 });
 
 // ---------- messages ----------

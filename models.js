@@ -17,6 +17,8 @@ const SiteSettingSchema = new mongoose.Schema({
   linkedin: { type: String, default: '' },
   twitter: { type: String, default: '' },
   instagram: { type: String, default: '' },
+  whatsapp: { type: String, default: '' }, // e.g. 919876543210 (tool sales)
+  telegram: { type: String, default: '' }, // e.g. username
 });
 
 // Always returns the single settings document (creates it if missing)
@@ -32,6 +34,20 @@ const ProjectSchema = new mongoose.Schema(
     image: { type: String, default: '' }, // data URL
     liveUrl: { type: String, default: '' },
     githubUrl: { type: String, default: '' },
+    featured: { type: Boolean, default: false },
+  },
+  { timestamps: true }
+);
+
+const ToolSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true, trim: true },
+    description: { type: String, default: '' },
+    category: { type: String, default: 'Other', trim: true }, // Android / Web / Network / Other
+    price: { type: String, default: '' }, // e.g. ₹1,999 or $29
+    image: { type: String, default: '' }, // data URL screenshot
+    demoUrl: { type: String, default: '' },
+    buyUrl: { type: String, default: '' }, // custom buy link; empty = WhatsApp link
     featured: { type: Boolean, default: false },
   },
   { timestamps: true }
@@ -64,6 +80,7 @@ const AdminUserSchema = new mongoose.Schema({
 module.exports = {
   SiteSetting: mongoose.model('SiteSetting', SiteSettingSchema),
   Project: mongoose.model('Project', ProjectSchema),
+  Tool: mongoose.model('Tool', ToolSchema),
   Skill: mongoose.model('Skill', SkillSchema),
   Message: mongoose.model('Message', MessageSchema),
   AdminUser: mongoose.model('AdminUser', AdminUserSchema),

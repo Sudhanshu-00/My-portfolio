@@ -1,9 +1,13 @@
 <%- include('../partials/admin_head') %>
 
 <h1>Dashboard</h1>
-<p class="muted">Welcome back, <strong><%= admin %></strong> 👋</p>
+<p class="muted">Welcome back, <strong><%= admin %></strong> 👋 — system status: <span class="ok">ALL GREEN</span></p>
 
 <div class="stat-grid">
+  <a class="stat-card" href="/admin/tools">
+    <span class="stat-num"><%= counts.tools %></span>
+    <span class="stat-label">Tools (For Sale)</span>
+  </a>
   <a class="stat-card" href="/admin/projects">
     <span class="stat-num"><%= counts.projects %></span>
     <span class="stat-label">Projects</span>
@@ -21,9 +25,10 @@
 <div class="section">
   <h2>Quick Actions</h2>
   <div class="btn-row">
-    <a class="btn" href="/admin/projects/new">＋ Add Project</a>
-    <a class="btn outline" href="/admin/settings">Edit Site Settings</a>
-    <a class="btn outline" href="/admin/password">Change Password</a>
+    <a class="btn" href="/admin/tools/new">＋ Add Tool (Sell)</a>
+    <a class="btn ghost" href="/admin/projects/new">＋ Add Project</a>
+    <a class="btn ghost" href="/admin/settings">Site Settings</a>
+    <a class="btn ghost" href="/admin/password">Change Password</a>
   </div>
 </div>
 

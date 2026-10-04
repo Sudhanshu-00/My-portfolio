@@ -55,6 +55,12 @@
   <label>Instagram URL
     <input type="text" name="instagram" value="<%= settings.instagram %>">
   </label>
+  <label>WhatsApp Number (tool sales ke liye — without +, e.g. 919876543210)
+    <input type="text" name="whatsapp" value="<%= settings.whatsapp || '' %>">
+  </label>
+  <label>Telegram Username (e.g. sudhanshu_h4x)
+    <input type="text" name="telegram" value="<%= settings.telegram || '' %>">
+  </label>
 
   <button type="submit" class="btn">💾 Save Settings</button>
 </form>

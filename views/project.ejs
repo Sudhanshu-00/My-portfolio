@@ -2,18 +2,26 @@
 
 <article class="project-detail section">
   <% if (project.image) { %><img class="detail-img" src="<%= project.image %>" alt="<%= project.title %>"><% } %>
-  <h1><%= project.title %></h1>
+  <h1><span class="sec-tag">&gt;_</span> <%= project.title %></h1>
   <% const techs = project.techStack.split(',').map(t => t.trim()).filter(Boolean); %>
   <% if (techs.length) { %>
     <div class="chips">
       <% techs.forEach(t => { %><span class="chip"><%= t %></span><% }) %>
     </div>
   <% } %>
-  <p style="white-space: pre-line;"><%= project.description %></p>
+  <div class="terminal small" style="margin: 1.2rem 0;">
+    <div class="term-bar">
+      <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+      <span class="term-title">case_file.txt</span>
+    </div>
+    <div class="term-body">
+      <p style="white-space: pre-line;"><%= project.description %></p>
+    </div>
+  </div>
   <div class="btn-row">
-    <% if (project.liveUrl) { %><a class="btn" href="<%= project.liveUrl %>" target="_blank">Live Demo ↗</a><% } %>
-    <% if (project.githubUrl) { %><a class="btn outline" href="<%= project.githubUrl %>" target="_blank">GitHub ↗</a><% } %>
-    <a class="link" href="/projects">← All projects</a>
+    <% if (project.liveUrl) { %><a class="btn" href="<%= project.liveUrl %>" target="_blank">[ LIVE ]</a><% } %>
+    <% if (project.githubUrl) { %><a class="btn ghost" href="<%= project.githubUrl %>" target="_blank">[ SOURCE ]</a><% } %>
+    <a class="link" href="/projects">← all operations</a>
   </div>
 </article>
 
