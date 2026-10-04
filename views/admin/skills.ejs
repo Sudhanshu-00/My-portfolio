@@ -1,0 +1,41 @@
+<%- include('../partials/admin_head') %>
+
+<h1>Skills</h1>
+
+<div class="panel">
+  <h2>＋ Add Skill</h2>
+  <form method="POST" action="/admin/skills" class="form row-form">
+    <label>Name
+      <input type="text" name="name" required placeholder="e.g. React">
+    </label>
+    <label>Level (0-100)
+      <input type="number" name="level" min="0" max="100" value="80">
+    </label>
+    <label>Category
+      <input type="text" name="category" placeholder="e.g. Frontend">
+    </label>
+    <button type="submit" class="btn">Add</button>
+  </form>
+</div>
+
+<table class="table">
+  <tr><th>Skill</th><th>Level</th><th>Category</th><th></th></tr>
+  <% if (!skills.length) { %><tr><td colspan="4" class="muted">No skills yet.</td></tr><% } %>
+  <% skills.forEach(s => { %>
+    <tr>
+      <td><strong><%= s.name %></strong></td>
+      <td style="min-width:140px">
+        <div class="bar"><div class="bar-fill" style="width:<%= s.level %>%"></div></div>
+        <small class="muted"><%= s.level %>%</small>
+      </td>
+      <td><%= s.category %></td>
+      <td>
+        <form method="POST" action="/admin/skills/<%= s._id %>/delete" class="inline">
+          <button type="submit" class="btn small danger">Delete</button>
+        </form>
+      </td>
+    </tr>
+  <% }) %>
+</table>
+
+<%- include('../partials/footer') %>

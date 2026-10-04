@@ -1,0 +1,33 @@
+<%- include('../partials/admin_head') %>
+
+<h1>📩 Messages</h1>
+
+<% if (!messages.length) { %>
+  <p class="muted">No messages yet. Contact form se aane wale messages yahan dikhenge.</p>
+<% } %>
+
+<% messages.forEach(m => { %>
+  <div class="msg-card <%= m.read ? '' : 'unread' %>">
+    <div class="row-between">
+      <div>
+        <strong><%= m.name %></strong>
+        <a href="mailto:<%= m.email %>" class="link">&lt;<%= m.email %>&gt;</a>
+        <% if (!m.read) { %><span class="badge">NEW</span><% } %>
+      </div>
+      <small class="muted"><%= m.createdAt.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) %></small>
+    </div>
+    <p style="white-space: pre-line;"><%= m.message %></p>
+    <div class="actions">
+      <% if (!m.read) { %>
+        <form method="POST" action="/admin/messages/<%= m._id %>/read" class="inline">
+          <button type="submit" class="btn small outline">Mark as Read</button>
+        </form>
+      <% } %>
+      <form method="POST" action="/admin/messages/<%= m._id %>/delete" class="inline">
+        <button type="submit" class="btn small danger">Delete</button>
+      </form>
+    </div>
+  </div>
+<% }) %>
+
+<%- include('../partials/footer') %>

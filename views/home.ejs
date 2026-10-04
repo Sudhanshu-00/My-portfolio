@@ -1,0 +1,60 @@
+<%- include('partials/header', { title: 'Home' }) %>
+
+<section class="hero">
+  <div class="hero-text">
+    <h1><%= settings.heroTitle %></h1>
+    <p class="muted"><%= settings.heroSubtitle %></p>
+    <div class="btn-row">
+      <a class="btn" href="/projects">View Projects</a>
+      <a class="btn outline" href="/contact">Contact Me</a>
+    </div>
+  </div>
+  <div class="hero-photo">
+    <% if (settings.profilePhoto) { %>
+      <img src="<%= settings.profilePhoto %>" alt="Profile photo">
+    <% } else { %>
+      <div class="avatar-fallback"><%= (settings.siteName || 'P').charAt(0).toUpperCase() %></div>
+    <% } %>
+  </div>
+</section>
+
+<section class="section">
+  <h2>About Me</h2>
+  <p class="muted"><%= settings.aboutText.slice(0, 250) %><%= settings.aboutText.length > 250 ? '…' : '' %></p>
+  <a href="/about" class="link">Read more →</a>
+</section>
+
+<% if (skills.length) { %>
+<section class="section">
+  <h2>Skills</h2>
+  <div class="skill-grid">
+    <% skills.forEach(s => { %>
+      <div class="skill-card">
+        <strong><%= s.name %></strong>
+        <div class="bar"><div class="bar-fill" style="width:<%= s.level %>%"></div></div>
+        <small class="muted"><%= s.level %>% · <%= s.category %></small>
+      </div>
+    <% }) %>
+  </div>
+</section>
+<% } %>
+
+<% if (projects.length) { %>
+<section class="section">
+  <h2>Projects</h2>
+  <div class="card-grid">
+    <% projects.forEach(p => { %>
+      <a class="card" href="/projects/<%= p._id %>">
+        <% if (p.image) { %><img class="card-img" src="<%= p.image %>" alt="<%= p.title %>"><% } %>
+        <div class="card-body">
+          <h3><%= p.title %></h3>
+          <p class="muted"><%= p.description.slice(0, 90) %><%= p.description.length > 90 ? '…' : '' %></p>
+        </div>
+      </a>
+    <% }) %>
+  </div>
+  <a href="/projects" class="link">See all projects →</a>
+</section>
+<% } %>
+
+<%- include('partials/footer') %>

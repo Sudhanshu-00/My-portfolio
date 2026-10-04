@@ -1,0 +1,62 @@
+<%- include('../partials/admin_head') %>
+
+<h1>Site Settings</h1>
+<p class="muted">Yahan se puri website ka content change kar sakte ho.</p>
+
+<% if (query.saved) { %><div class="alert success">✅ Settings saved!</div><% } %>
+
+<form method="POST" action="/admin/settings" enctype="multipart/form-data" class="form">
+  <h2>General</h2>
+  <label>Website Name
+    <input type="text" name="siteName" value="<%= settings.siteName %>" required>
+  </label>
+
+  <h2>Home Page (Hero)</h2>
+  <label>Main Title
+    <input type="text" name="heroTitle" value="<%= settings.heroTitle %>">
+  </label>
+  <label>Subtitle
+    <input type="text" name="heroSubtitle" value="<%= settings.heroSubtitle %>">
+  </label>
+  <label>Profile Photo
+    <input type="file" name="photo" accept="image/*">
+  </label>
+  <% if (settings.profilePhoto) { %>
+    <img src="<%= settings.profilePhoto %>" alt="Current photo" class="thumb big">
+    <small class="muted">(New photo upload karne par change hogi)</small>
+  <% } %>
+
+  <h2>About</h2>
+  <label>About Text
+    <textarea name="aboutText" rows="6"><%= settings.aboutText %></textarea>
+  </label>
+
+  <h2>Contact Info</h2>
+  <label>Email
+    <input type="text" name="email" value="<%= settings.email %>">
+  </label>
+  <label>Phone
+    <input type="text" name="phone" value="<%= settings.phone %>">
+  </label>
+  <label>Location
+    <input type="text" name="location" value="<%= settings.location %>">
+  </label>
+
+  <h2>Social Links</h2>
+  <label>GitHub URL
+    <input type="text" name="github" value="<%= settings.github %>" placeholder="https://github.com/username">
+  </label>
+  <label>LinkedIn URL
+    <input type="text" name="linkedin" value="<%= settings.linkedin %>" placeholder="https://linkedin.com/in/username">
+  </label>
+  <label>Twitter / X URL
+    <input type="text" name="twitter" value="<%= settings.twitter %>">
+  </label>
+  <label>Instagram URL
+    <input type="text" name="instagram" value="<%= settings.instagram %>">
+  </label>
+
+  <button type="submit" class="btn">💾 Save Settings</button>
+</form>
+
+<%- include('../partials/footer') %>

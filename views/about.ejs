@@ -1,0 +1,35 @@
+<%- include('partials/header', { title: 'About' }) %>
+
+<section class="hero">
+  <div class="hero-text">
+    <h1>About Me</h1>
+    <p class="muted" style="white-space: pre-line;"><%= settings.aboutText %></p>
+    <div class="btn-row">
+      <a class="btn" href="/contact">Hire Me</a>
+    </div>
+  </div>
+  <div class="hero-photo">
+    <% if (settings.profilePhoto) { %>
+      <img src="<%= settings.profilePhoto %>" alt="Profile photo">
+    <% } else { %>
+      <div class="avatar-fallback"><%= (settings.siteName || 'P').charAt(0).toUpperCase() %></div>
+    <% } %>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Contact Info</h2>
+  <ul class="info-list">
+    <% if (settings.email) { %><li>📧 <%= settings.email %></li><% } %>
+    <% if (settings.phone) { %><li>📱 <%= settings.phone %></li><% } %>
+    <% if (settings.location) { %><li>📍 <%= settings.location %></li><% } %>
+  </ul>
+  <div class="btn-row">
+    <% if (settings.github) { %><a class="btn outline small" href="<%= settings.github %>" target="_blank">GitHub</a><% } %>
+    <% if (settings.linkedin) { %><a class="btn outline small" href="<%= settings.linkedin %>" target="_blank">LinkedIn</a><% } %>
+    <% if (settings.twitter) { %><a class="btn outline small" href="<%= settings.twitter %>" target="_blank">Twitter</a><% } %>
+    <% if (settings.instagram) { %><a class="btn outline small" href="<%= settings.instagram %>" target="_blank">Instagram</a><% } %>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

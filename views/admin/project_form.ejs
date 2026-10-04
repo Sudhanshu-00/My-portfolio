@@ -1,0 +1,39 @@
+<%- include('../partials/admin_head') %>
+
+<h1><%= project ? '✏️ Edit Project' : '＋ Add Project' %></h1>
+
+<form method="POST" enctype="multipart/form-data" class="form"
+      action="<%= project ? '/admin/projects/' + project._id : '/admin/projects' %>">
+  <label>Title
+    <input type="text" name="title" required value="<%= project ? project.title : '' %>">
+  </label>
+  <label>Description
+    <textarea name="description" rows="5"><%= project ? project.description : '' %></textarea>
+  </label>
+  <label>Tech Stack (comma separated)
+    <input type="text" name="techStack" value="<%= project ? project.techStack : '' %>" placeholder="HTML, CSS, JavaScript">
+  </label>
+  <label>Live Demo URL
+    <input type="text" name="liveUrl" value="<%= project ? project.liveUrl : '' %>" placeholder="https://...">
+  </label>
+  <label>GitHub URL
+    <input type="text" name="githubUrl" value="<%= project ? project.githubUrl : '' %>" placeholder="https://github.com/...">
+  </label>
+  <label>Photo
+    <input type="file" name="image" accept="image/*">
+  </label>
+  <% if (project && project.image) { %>
+    <img src="<%= project.image %>" class="thumb big" alt="">
+    <small class="muted">(Naya photo upload nahi karoge to purana rahega)</small>
+  <% } %>
+  <label class="check">
+    <input type="checkbox" name="featured" <%= project && project.featured ? 'checked' : '' %>>
+    ⭐ Featured (home page par dikhega)
+  </label>
+  <div class="btn-row">
+    <button type="submit" class="btn"><%= project ? '💾 Update Project' : '＋ Create Project' %></button>
+    <a class="btn outline" href="/admin/projects">Cancel</a>
+  </div>
+</form>
+
+<%- include('../partials/footer') %>

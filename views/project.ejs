@@ -1,0 +1,20 @@
+<%- include('partials/header', { title: project.title }) %>
+
+<article class="project-detail section">
+  <% if (project.image) { %><img class="detail-img" src="<%= project.image %>" alt="<%= project.title %>"><% } %>
+  <h1><%= project.title %></h1>
+  <% const techs = project.techStack.split(',').map(t => t.trim()).filter(Boolean); %>
+  <% if (techs.length) { %>
+    <div class="chips">
+      <% techs.forEach(t => { %><span class="chip"><%= t %></span><% }) %>
+    </div>
+  <% } %>
+  <p style="white-space: pre-line;"><%= project.description %></p>
+  <div class="btn-row">
+    <% if (project.liveUrl) { %><a class="btn" href="<%= project.liveUrl %>" target="_blank">Live Demo ↗</a><% } %>
+    <% if (project.githubUrl) { %><a class="btn outline" href="<%= project.githubUrl %>" target="_blank">GitHub ↗</a><% } %>
+    <a class="link" href="/projects">← All projects</a>
+  </div>
+</article>
+
+<%- include('partials/footer') %>

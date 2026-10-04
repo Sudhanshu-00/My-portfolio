@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin | <%= settings.siteName %></title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="admin">
+<nav class="nav admin-nav">
+  <div class="container nav-inner">
+    <a href="/admin" class="brand">⚙️ Admin Panel</a>
+    <div class="nav-links">
+      <a href="/admin">Dashboard</a>
+      <a href="/admin/projects">Projects</a>
+      <a href="/admin/skills">Skills</a>
+      <a href="/admin/messages">Messages</a>
+      <a href="/admin/settings">Settings</a>
+      <a href="/" target="_blank">View Site ↗</a>
+      <form method="POST" action="/admin/logout" class="inline">
+        <button type="submit" class="btn small outline">Logout</button>
+      </form>
+    </div>
+  </div>
+</nav>
+<main class="container">

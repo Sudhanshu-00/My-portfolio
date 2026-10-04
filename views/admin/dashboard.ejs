@@ -1,0 +1,30 @@
+<%- include('../partials/admin_head') %>
+
+<h1>Dashboard</h1>
+<p class="muted">Welcome back, <strong><%= admin %></strong> 👋</p>
+
+<div class="stat-grid">
+  <a class="stat-card" href="/admin/projects">
+    <span class="stat-num"><%= counts.projects %></span>
+    <span class="stat-label">Projects</span>
+  </a>
+  <a class="stat-card" href="/admin/skills">
+    <span class="stat-num"><%= counts.skills %></span>
+    <span class="stat-label">Skills</span>
+  </a>
+  <a class="stat-card" href="/admin/messages">
+    <span class="stat-num"><%= counts.unread %></span>
+    <span class="stat-label">Unread Messages</span>
+  </a>
+</div>
+
+<div class="section">
+  <h2>Quick Actions</h2>
+  <div class="btn-row">
+    <a class="btn" href="/admin/projects/new">＋ Add Project</a>
+    <a class="btn outline" href="/admin/settings">Edit Site Settings</a>
+    <a class="btn outline" href="/admin/password">Change Password</a>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

@@ -1,0 +1,27 @@
+<%- include('partials/header', { title: 'Projects' }) %>
+
+<section class="section">
+  <h1>All Projects</h1>
+  <% if (!projects.length) { %>
+    <p class="muted">No projects yet. Add from the admin panel.</p>
+  <% } else { %>
+    <div class="card-grid">
+      <% projects.forEach(p => { %>
+        <a class="card" href="/projects/<%= p._id %>">
+          <% if (p.image) { %><img class="card-img" src="<%= p.image %>" alt="<%= p.title %>"><% } %>
+          <div class="card-body">
+            <h3><%= p.title %></h3>
+            <p class="muted"><%= p.description.slice(0, 100) %><%= p.description.length > 100 ? '…' : '' %></p>
+            <div class="chips">
+              <% p.techStack.split(',').map(t => t.trim()).filter(Boolean).forEach(t => { %>
+                <span class="chip"><%= t %></span>
+              <% }) %>
+            </div>
+          </div>
+        </a>
+      <% }) %>
+    </div>
+  <% } %>
+</section>
+
+<%- include('partials/footer') %>
