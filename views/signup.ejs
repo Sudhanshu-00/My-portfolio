@@ -3,32 +3,97 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sign up</title>
+  <title>Sign up — step <%= step %>/3</title>
   <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .steps { display:flex; gap:0.4rem; margin:0 0 1.2rem; }
+    .step-dot { flex:1; text-align:center; font-size:0.68rem; padding:0.45rem 0.2rem; border-radius:6px; background:rgba(255,255,255,0.05); color:rgba(255,255,255,0.35); border:1px solid rgba(255,255,255,0.08); letter-spacing:0.03em; }
+    .step-dot.active { background:rgba(126,231,135,0.12); color:#7ee787; border-color:rgba(126,231,135,0.4); font-weight:700; }
+    .step-dot.done { color:#79c0ff; border-color:rgba(121,192,255,0.35); }
+    .captcha-row { display:flex; gap:0.6rem; align-items:center; }
+    .captcha-row img { border-radius:8px; border:1px solid rgba(255,255,255,0.15); background:#0d1117; height:46px; cursor:pointer; }
+    .captcha-row input { flex:1; min-width:0; }
+    .hint { font-size:0.72rem; color:rgba(255,255,255,0.45); margin-top:0.25rem; }
+    .otp-input { font-size:1.6rem; letter-spacing:0.6em; text-align:center; font-family:monospace; }
+  </style>
 </head>
 <body class="login-page">
   <div class="login-box">
     <h1>&gt;_ SIGN UP</h1>
-    <p class="muted" style="margin:0.3rem 0 0.8rem;font-size:0.85rem">Apna account banao — phir apni details apne dashboard mein dekh sakte ho. Har account sirf apna data dekhta hai.</p>
+
+    <div class="steps" aria-label="signup steps">
+      <div class="step-dot <%= step === 1 ? 'active' : 'done' %>">1 · DETAILS</div>
+      <div class="step-dot <%= step === 1 ? '' : (step === 2 ? 'active' : 'done') %>">2 · VERIFY OTP</div>
+      <div class="step-dot <%= step === 3 ? 'active' : '' %>">3 · PASSWORD</div>
+    </div>
+
     <% if (error) { %><div class="alert error"><%= error %></div><% } %>
-    <form method="POST" action="/signup" class="form">
-      <label>Name (optional)
-        <input type="text" name="name" maxlength="60" value="<%= values.name || '' %>" autocomplete="name">
-      </label>
-      <label>Username (3-20 chars — a-z, 0-9, _)
-        <input type="text" name="username" required autofocus minlength="3" maxlength="20" pattern="[a-z0-9_]{3,20}" value="<%= values.username || '' %>" autocomplete="off">
-      </label>
-      <label>Email (optional — password recovery ke liye)
-        <input type="email" name="email" maxlength="100" value="<%= values.email || '' %>" autocomplete="email">
-      </label>
-      <label>Password (min 8 chars — letter + number)
-        <input type="password" name="password" required minlength="8" autocomplete="new-password">
-      </label>
-      <label>Confirm password
-        <input type="password" name="confirm" required minlength="8" autocomplete="new-password">
-      </label>
-      <button type="submit" class="btn full">Create account</button>
-    </form>
+    <% if (info) { %><div class="alert success"><%= info %></div><% } %>
+
+    <% if (step === 1) { %>
+      <p class="muted" style="margin:0.3rem 0 0.8rem;font-size:0.85rem">Step 1/3 — apna username aur email daalo. Email par verification OTP aayega.</p>
+      <form method="POST" action="/signup/start" class="form" autocomplete="on">
+        <label>Name (optional)
+          <input type="text" name="name" maxlength="60" value="<%= values.name || '' %>" autocomplete="name">
+        </label>
+        <label>Username (3-20 chars — a-z, 0-9, _)
+          <input type="text" name="username" required autofocus minlength="3" maxlength="20" pattern="[a-z0-9_]{3,20}" value="<%= values.username || '' %>" autocomplete="off">
+        </label>
+        <label>Email (required — OTP verification ke liye)
+          <input type="email" name="email" required maxlength="100" value="<%= values.email || '' %>" autocomplete="email">
+        </label>
+        <button type="submit" class="btn full">Send OTP →</button>
+      </form>
+    <% } else if (step === 2) { %>
+      <p class="muted" style="margin:0.3rem 0 0.8rem;font-size:0.85rem">Step 2/3 — <b><%= values.email || '' %></b> par bheja gaya 6-digit OTP daalo.</p>
+      <form method="POST" action="/signup/verify" class="form">
+        <label>6-digit OTP
+          <input type="text" name="otp" required autofocus inputmode="numeric" pattern="[0-9]{6}" maxlength="6" class="otp-input" placeholder="••••••">
+        </label>
+        <button type="submit" class="btn full">Verify OTP →</button>
+      </form>
+      <form method="POST" action="/signup/resend" style="margin-top:0.7rem">
+        <button type="submit" class="btn full" id="resendBtn" style="background:transparent;border:1px solid rgba(255,255,255,0.2);font-size:0.82rem">Resend OTP</button>
+      </form>
+      <script>
+        // resend 45s tak disable — server bhi enforce karta hai
+        (function () {
+          var btn = document.getElementById('resendBtn');
+          if (!btn) return;
+          var left = 45;
+          btn.disabled = true;
+          var t = setInterval(function () {
+            left -= 1;
+            if (left <= 0) { clearInterval(t); btn.disabled = false; btn.textContent = 'Resend OTP'; }
+            else btn.textContent = 'Resend OTP (' + left + 's)';
+          }, 1000);
+        })();
+      </script>
+    <% } else { %>
+      <p class="muted" style="margin:0.3rem 0 0.8rem;font-size:0.85rem">Step 3/3 — <b><%= values.username || '' %></b>, email verified ✓. Ab strong password set karo.</p>
+      <form method="POST" action="/signup/complete" class="form" autocomplete="off">
+        <label>Password (min 8 chars — letter + number)
+          <input type="password" name="password" required autofocus minlength="8" autocomplete="new-password">
+        </label>
+        <label>Confirm password
+          <input type="password" name="confirm" required minlength="8" autocomplete="new-password">
+        </label>
+        <label>Security captcha
+          <span class="captcha-row">
+            <img src="/signup/captcha.svg?t=<%= Date.now() %>" id="captchaImg" alt="captcha" title="Click for new captcha">
+            <input type="text" name="captcha" required maxlength="10" placeholder="type the text" autocomplete="off">
+          </span>
+          <span class="hint">Upar image mein likhe 5 characters type karo (image par click = naya captcha)</span>
+        </label>
+        <button type="submit" class="btn full">Create account →</button>
+      </form>
+      <script>
+        document.getElementById('captchaImg').addEventListener('click', function () {
+          this.src = '/signup/captcha.svg?t=' + Date.now();
+        });
+      </script>
+    <% } %>
+
     <div class="row-between" style="margin-top:0.8rem">
       <a href="/login" class="link" style="font-size:0.82rem">Already have an account? Login</a>
       <a href="/" class="link" style="font-size:0.82rem">← Website</a>

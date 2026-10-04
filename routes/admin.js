@@ -83,49 +83,196 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const signupRate = new Map(); // ip → [timestamps]
 setInterval(() => signupRate.clear(), 60 * 60 * 1000).unref();
 
+const OTP_VALID_MS = 10 * 60 * 1000; // signup OTP 10 min valid
+const OTP_MAX_ATTEMPTS = 5; // 5 galat attempts → OTP dead
+const OTP_RESEND_MIN_MS = 45 * 1000; // do sends ke beech min gap
+const OTP_MAX_SENDS = 4; // ek signup session mein max 4 OTP
+const genOtp = () => String(require('crypto').randomInt(0, 1e6)).padStart(6, '0');
+
+async function sendSignupOtp(email, username, otp) {
+  const sent = await sendMail({
+    to: email,
+    subject: `Email verification OTP: ${otp} — Portfolio signup`,
+    text: `Hi ${username},\n\nYour Portfolio signup verification OTP: ${otp}\nValid for 10 minutes. If you did not request this, ignore this email.`,
+    html: `<div style="font-family:monospace;background:#0d1117;color:#e6edf3;padding:24px;border-radius:12px"><h2 style="color:#58a6ff">📧 Email Verification</h2><p>Hi <b style="color:#7ee787">${username}</b>, apna email verify karo:</p><p style="font-size:30px;letter-spacing:8px;color:#ffa657;font-weight:bold">${otp}</p><p style="color:#8b949e">Valid for 10 minutes. Agar tumne request nahi ki, is email ko ignore karo.</p></div>`,
+  });
+  if (!sent && process.env.NODE_ENV !== 'production') console.log(`[DEV] signup OTP for ${username}: ${otp}`); // SMTP absent → dev console only
+  return sent;
+}
+
+// captcha SVG — per-char rotation + noise lines/dots, confusing chars removed
+function captchaSvg(text) {
+  const W = 190, H = 62;
+  const palette = ['#7ee787', '#79c0ff', '#ffa657', '#d2a8ff', '#ff7b72'];
+  const glyphs = [...text].map((ch, i) => {
+    const x = 25 + i * 31 + (Math.random() * 8 - 4);
+    const y = 40 + (Math.random() * 10 - 5);
+    const rot = Math.random() * 50 - 25;
+    const fill = palette[Math.floor(Math.random() * palette.length)];
+    const fs = 27 + Math.random() * 8;
+    return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" transform="rotate(${rot.toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)})" fill="${fill}" font-size="${fs.toFixed(1)}" font-family="monospace" font-weight="bold">${ch}</text>`;
+  }).join('');
+  const lines = Array.from({ length: 4 }, () => `<line x1="${(Math.random() * W).toFixed(0)}" y1="${(Math.random() * H).toFixed(0)}" x2="${(Math.random() * W).toFixed(0)}" y2="${(Math.random() * H).toFixed(0)}" stroke="${palette[Math.floor(Math.random() * palette.length)]}" stroke-width="1" opacity="0.5"/>`).join('');
+  const dots = Array.from({ length: 40 }, () => `<circle cx="${(Math.random() * W).toFixed(0)}" cy="${(Math.random() * H).toFixed(0)}" r="1" fill="${palette[Math.floor(Math.random() * palette.length)]}" opacity="0.6"/>`).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><rect width="${W}" height="${H}" fill="#0d1117" rx="8"/>${lines}${dots}${glyphs}</svg>`;
+}
+
+// ---------- 3-step signup wizard: (1) details → (2) email OTP → (3) password+captcha ----------
 router.get('/signup', (req, res) => {
   if (req.session.user) return res.redirect(`/user/${encodeURIComponent(req.session.user)}`);
-  res.render('signup', { error: null, values: {} });
+  const s = req.session.signup;
+  if (s && s.verified) return res.render('signup', { step: 3, error: null, info: null, values: s }); // wizard resume
+  if (s) return res.render('signup', { step: 2, error: null, info: null, values: { username: s.username, email: s.email } });
+  res.render('signup', { step: 1, error: null, info: null, values: {} });
 });
 
-router.post('/signup', async (req, res) => {
+// legacy POST /signup (purana bookmark/form) → wizard ke step 1 pe
+router.post('/signup', (req, res) => res.redirect('/signup'));
+
+// ---- step 1: username + email → OTP bhejo ----
+router.post('/signup/start', async (req, res) => {
+  if (req.session.user) return res.redirect(`/user/${encodeURIComponent(req.session.user)}`);
   const b = req.body || {};
   const values = {
     name: String(b.name || '').trim().slice(0, 60),
     username: String(b.username || '').trim().toLowerCase().slice(0, 20),
     email: String(b.email || '').trim().toLowerCase().slice(0, 100),
   };
-  const back = (error, code = 400) => res.status(code).render('signup', { error, values });
+  const back = (error, code = 400) => res.status(code).render('signup', { step: 1, error, info: null, values });
 
-  // max 5 signups / IP / hour (abuse shield)
+  if (!otpRate(`${req.ip}|signup-start`, 6, 60 * 60 * 1000)) return back('Too many attempts from this network — try again later.', 429);
+  if (!USERNAME_RE.test(values.username)) return back('Username: 3-20 chars, only a-z, 0-9, underscore.');
+  if (RESERVED.has(values.username)) return back('That username is reserved — please choose another.');
+  if (!EMAIL_RE.test(values.email)) return back('Valid email required — verification OTP usi par jayega.');
+
+  if (await AdminUser.findOne({ username: values.username }).catch(() => null)) return back('That username is already taken — please choose another.', 409);
+  if (await AdminUser.findOne({ email: values.email }).catch(() => null)) return back('That email is already registered — login try karo ya doosra email use karo.', 409);
+
+  const otp = genOtp();
+  req.session.signup = {
+    name: values.name, username: values.username, email: values.email,
+    otpHash: await bcrypt.hash(otp, 10), // plain OTP kabhi store nahi hota
+    otpExpiry: Date.now() + OTP_VALID_MS,
+    otpAttempts: 0, verified: false, sends: 1, lastSent: Date.now(),
+  };
+  const sent = await sendSignupOtp(values.email, values.username, otp);
+  security.logEvent(req, { reason: 'signup-otp-sent', severity: 'info', status: 200, path: '/signup/start' });
+  if (!sent) return res.status(500).render('signup', { step: 2, error: 'OTP email send nahi ho paya — thodi der baad "Resend OTP" dabao.', info: null, values });
+  return res.render('signup', { step: 2, error: null, info: `OTP sent to ${values.email} — 10 minutes valid.`, values });
+});
+
+// ---- step 2: OTP verify ----
+router.post('/signup/verify', async (req, res) => {
+  const s = req.session.signup;
+  if (!s) return res.redirect('/signup');
+  if (s.verified) return res.render('signup', { step: 3, error: null, info: null, values: s });
+  const otp = String(req.body.otp || '').replace(/\D/g, '').slice(0, 6);
+  const fail = (error, code = 400) => res.status(code).render('signup', { step: 2, error, info: null, values: { username: s.username, email: s.email } });
+
+  if (Date.now() > s.otpExpiry) { req.session.signup = null; return fail('OTP expire ho gaya — signup dobara start karo.'); }
+  if (s.otpAttempts >= OTP_MAX_ATTEMPTS) { req.session.signup = null; security.logEvent(req, { reason: 'signup-otp-fail', severity: 'medium', status: 200, path: '/signup/verify' }); return fail('Too many wrong attempts — signup dobara start karo.'); }
+
+  s.otpAttempts += 1;
+  if (!(await bcrypt.compare(otp, s.otpHash))) {
+    const left = OTP_MAX_ATTEMPTS - s.otpAttempts;
+    if (left <= 0) { // aakhri attempt bhi galat → signup state hi maar do
+      req.session.signup = null;
+      await new Promise((r) => req.session.save(r));
+      security.logEvent(req, { reason: 'signup-otp-fail', severity: 'medium', status: 200, path: '/signup/verify' });
+      return fail('Too many wrong attempts — signup dobara start karo.');
+    }
+    await new Promise((r) => req.session.save(r)); // attempt count persist
+    security.logEvent(req, { reason: 'signup-otp-fail', severity: 'medium', status: 200, path: '/signup/verify' });
+    return fail(`Wrong OTP — ${left} attempt${left === 1 ? '' : 's'} left.`);
+  }
+  s.verified = true;
+  await new Promise((r) => req.session.save(r));
+  security.logEvent(req, { reason: 'signup-otp-verified', severity: 'info', status: 200, path: '/signup/verify' });
+  return res.render('signup', { step: 3, error: null, info: 'Email verified ✓ — ab password set karo.', values: { username: s.username, email: s.email, name: s.name } });
+});
+
+// ---- step 2: OTP resend (rate-limited) ----
+router.post('/signup/resend', async (req, res) => {
+  const s = req.session.signup;
+  if (!s) return res.redirect('/signup');
+  if (s.verified) return res.render('signup', { step: 3, error: null, info: null, values: s });
+  const values = { username: s.username, email: s.email };
+  const fail = (error, code = 429) => res.status(code).render('signup', { step: 2, error, info: null, values });
+  if (!otpRate(`${req.ip}|signup-resend`, 10, 60 * 60 * 1000)) return fail('Too many requests — thodi der baad try karo.');
+  if (s.sends >= OTP_MAX_SENDS) { req.session.signup = null; return fail('OTP resend limit reached — signup dobara start karo.'); }
+  const waitLeft = OTP_RESEND_MIN_MS - (Date.now() - s.lastSent);
+  if (waitLeft > 0) return fail(`Please wait ${Math.ceil(waitLeft / 1000)}s before requesting a new OTP.`);
+  const otp = genOtp();
+  s.otpHash = await bcrypt.hash(otp, 10);
+  s.otpExpiry = Date.now() + OTP_VALID_MS;
+  s.otpAttempts = 0;
+  s.sends += 1;
+  s.lastSent = Date.now();
+  const sent = await sendSignupOtp(s.email, s.username, otp);
+  if (!sent) return fail('OTP email send nahi ho paya — thodi der baad try karo.', 500);
+  return res.render('signup', { step: 2, error: null, info: `New OTP sent to ${s.email} — 10 minutes valid.`, values });
+});
+
+// ---- captcha image (sirf OTP-verified users ko milti hai) ----
+router.get('/signup/captcha.svg', (req, res) => {
+  const s = req.session.signup;
+  if (!s || !s.verified) return res.status(404).type('text/plain').send('not found');
+  const chars = 'abcdefghjkmnpqrstuvwxyz23456789'; // 0/o, 1/i/l confusion hataya
+  const text = Array.from({ length: 5 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  req.session.captcha = { answer: text, exp: Date.now() + 5 * 60 * 1000 };
+  if (process.env.NODE_ENV !== 'production') console.log(`[DEV] captcha: ${text}`); // automated test ke liye (dev only)
+  res.type('image/svg+xml').set('Cache-Control', 'no-store');
+  res.send(captchaSvg(text));
+});
+
+// ---- step 3: password + confirm + captcha → account create ----
+router.post('/signup/complete', async (req, res) => {
+  const s = req.session.signup;
+  if (!s || !s.verified) return res.redirect('/signup');
+  const values = { username: s.username, email: s.email, name: s.name };
+  const back = (error, code = 400) => res.status(code).render('signup', { step: 3, error, info: null, values });
+
+  const pass = String(req.body.password || '');
+  if (pass.length < 8 || !/[a-zA-Z]/.test(pass) || !/[0-9]/.test(pass)) return back('Password: minimum 8 characters with at least one letter and one number.');
+  if (pass !== String(req.body.confirm || '')) return back('Passwords do not match.');
+
+  // captcha — single-use, 5 min expiry, case-insensitive
+  const cap = req.session.captcha;
+  req.session.captcha = null; // ek captcha sirf ek baar
+  const guess = String(req.body.captcha || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (!cap || Date.now() > cap.exp) return back('Captcha expire ho gaya — naya captcha load ho gaya, dobara type karo.', 429);
+  if (guess !== cap.answer) {
+    security.logEvent(req, { reason: 'signup-captcha-fail', severity: 'low', status: 200, path: '/signup/complete' });
+    return back('Captcha galat hai — naya captcha load ho gaya, dobara try karo.');
+  }
+
+  // max 5 signups / IP / hour (abuse shield — actual creation par)
   const now = Date.now();
   const arr = (signupRate.get(req.ip) || []).filter((t) => now - t < 60 * 60 * 1000);
   if (arr.length >= 5) return back('Too many accounts created from this network — try again later.', 429);
 
-  if (!USERNAME_RE.test(values.username)) return back('Username: 3-20 chars, only a-z, 0-9, underscore.');
-  if (RESERVED.has(values.username)) return back('That username is reserved — please choose another.');
-  if (values.email && !EMAIL_RE.test(values.email)) return back('That email address does not look valid.');
-  const pass = String(b.password || '');
-  if (pass.length < 8 || !/[a-zA-Z]/.test(pass) || !/[0-9]/.test(pass)) return back('Password: minimum 8 characters with at least one letter and one number.');
-  if (pass !== String(b.confirm || '')) return back('Passwords do not match.');
-  if (await AdminUser.findOne({ username: values.username }).catch(() => null)) return back('That username is already taken — please choose another.', 409);
+  // race re-check — OTP verify ke baad koi aur ne le liya ho
+  if (await AdminUser.findOne({ username: s.username }).catch(() => null)) { req.session.signup = null; return back('That username was just taken — doosre username se signup start karo.', 409); }
+  if (await AdminUser.findOne({ email: s.email }).catch(() => null)) { req.session.signup = null; return back('That email was just registered — doosre email se signup start karo.', 409); }
 
   await AdminUser.create({
-    username: values.username,
-    passwordHash: await bcrypt.hash(pass, 10),
+    username: s.username,
+    passwordHash: await bcrypt.hash(pass, 12),
     role: 'user', // public signup = normal user ONLY (never admin)
-    name: values.name,
-    email: values.email,
+    name: s.name,
+    email: s.email,
     lastLoginAt: new Date(),
   });
   arr.push(now);
   signupRate.set(req.ip, arr);
-  security.logEvent(req, { reason: 'signup', severity: 'info', status: 302, path: '/signup' });
+  req.session.signup = null;
+  security.logEvent(req, { reason: 'signup', severity: 'info', status: 302, path: '/signup/complete' });
 
   // auto-login — fresh session id (fixation safe)
+  const uname = s.username;
   return req.session.regenerate(() => {
-    req.session.user = values.username;
-    res.redirect(`/user/${encodeURIComponent(values.username)}`);
+    req.session.user = uname;
+    res.redirect(`/user/${encodeURIComponent(uname)}`);
   });
 });
 

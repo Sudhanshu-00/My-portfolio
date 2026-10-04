@@ -108,7 +108,7 @@
       <label>Reason
         <select name="reason">
           <option value="">all</option>
-          <% ['visit','not-found','suspicious-path','rate-limit','blocked-request','auto-block','manual-block','login-fail','login-success','admin-login','signup','otp-fail','admin-reset-password'].forEach(r => { %>
+          <% ['visit','not-found','suspicious-path','rate-limit','blocked-request','auto-block','manual-block','login-fail','login-success','admin-login','signup','signup-otp-sent','signup-otp-verified','signup-otp-fail','signup-captcha-fail','otp-fail','admin-reset-password'].forEach(r => { %>
             <option value="<%= r %>" <%= filter.reason === r ? 'selected' : '' %>><%= r %></option>
           <% }) %>
         </select>

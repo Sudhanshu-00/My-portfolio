@@ -183,7 +183,8 @@ async function main() {
       req.url = req.url.slice(SECRET_MOUNT.length) || '/';
       return adminRoutes(req, res, next);
     }
-    if (AUTH_PATHS.includes(req.path)) {
+    // '/signup/*' prefix — multi-step wizard ke sub-routes (start/verify/resend/complete/captcha)
+    if (AUTH_PATHS.includes(req.path) || req.path.startsWith('/signup/')) {
       return adminRoutes(req, res, next);
     }
     next();
