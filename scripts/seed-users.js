@@ -11,15 +11,17 @@ const bcrypt = require('bcryptjs');
 const { initDB } = require('../db');
 const { AdminUser } = require('../models');
 
+// ⚠️  Inhe kabhi bhi change karna ho to DB mein bhi update karna hoga (admin panel → Users → 🔑).
+//     Yahan purana password likha rahega to seed run karne par naya password overwrite ho jayega!
 const USERS = [
   {
     username: 'sudhanshu',
-    password: 'Sudhanshu@2025',
+    password: 'Gate@King7959',
     role: 'user',
   },
   {
     username: 'admin',
-    password: 'Sudhanshu@Admin#2025',
+    password: 'Panel@Root7959',
     role: 'admin',
     email: process.env.ADMIN_EMAIL || '',
   },
