@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
-const { AdminUser, Project, Skill, Message, SiteSetting, Tool } = require('../models');
+const { AdminUser, Project, Skill, Message, SiteSetting, Tool, PageView } = require('../models');
 
 // ---------- photo upload helper ----------
 const upload = multer({
@@ -12,9 +12,11 @@ const upload = multer({
 const toDataUrl = (f) => (f ? `data:${f.mimetype};base64,${f.buffer.toString('base64')}` : '');
 
 // ---------- auth ----------
-const requireAuth = (req, res, next) => {
+const requireAuth = async (req, res, next) => {
   if (req.session.admin) {
     res.locals.admin = req.session.admin; // username for views
+    res.locals.path = req.path; // active sidebar highlight
+    res.locals.unread = await Message.countDocuments({ read: false });
     return next();
   }
   res.redirect('/admin/login');
@@ -39,13 +41,44 @@ router.use(requireAuth);
 
 // ---------- dashboard ----------
 router.get('/', async (req, res) => {
-  const [projects, skills, unread, tools] = await Promise.all([
+  const [projects, skills, unread, tools, totalMsgs, totalViews, viewsToday] = await Promise.all([
     Project.countDocuments(),
     Skill.countDocuments(),
     Message.countDocuments({ read: false }),
     Tool.countDocuments(),
+    Message.countDocuments(),
+    PageView.countDocuments(),
+    PageView.countDocuments({ createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) } }),
   ]);
-  res.render('admin/dashboard', { counts: { projects, skills, unread, tools } });
+
+  // 7-day view chart
+  const since7 = new Date(Date.now() - 6 * 864e5);
+  since7.setHours(0, 0, 0, 0);
+  const [dailyRaw, topPages, recent] = await Promise.all([
+    PageView.aggregate([
+      { $match: { createdAt: { $gte: since7 } } },
+      { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, count: { $sum: 1 } } },
+    ]),
+    PageView.aggregate([{ $group: { _id: '$path', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 5 }]),
+    Message.find().sort({ createdAt: -1 }).limit(4),
+  ]);
+  const dayMap = Object.fromEntries(dailyRaw.map((d) => [d._id, d.count]));
+  const chart = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 864e5);
+    const key = d.toISOString().slice(0, 10);
+    chart.push({ label: d.toLocaleDateString('en-IN', { weekday: 'short' }), count: dayMap[key] || 0 });
+  }
+  const maxCount = Math.max(1, ...chart.map((c) => c.count));
+
+  res.render('admin/dashboard', {
+    counts: { projects, skills, unread, tools },
+    stats: { totalMsgs, totalViews, viewsToday },
+    chart,
+    maxCount,
+    topPages,
+    recent,
+  });
 });
 
 // ---------- settings ----------
@@ -59,6 +92,14 @@ router.post('/settings', upload.single('photo'), async (req, res) => {
     }
   );
   if (req.file) s.profilePhoto = toDataUrl(req.file);
+
+  // custom social links (label + url pairs)
+  const labels = [].concat(req.body['custom_label'] || []);
+  const urls = [].concat(req.body['custom_url'] || []);
+  s.customLinks = labels
+    .map((label, i) => ({ label: (label || '').trim(), url: (urls[i] || '').trim() }))
+    .filter((l) => l.label && l.url);
+
   await s.save();
   res.redirect('/admin/settings?saved=1');
 });

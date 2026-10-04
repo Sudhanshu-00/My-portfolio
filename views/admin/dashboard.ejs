@@ -1,9 +1,17 @@
-<%- include('../partials/admin_head') %>
+<%- include('../partials/admin_head', { title: 'Dashboard' }) %>
 
-<h1>Dashboard</h1>
-<p class="muted">Welcome back, <strong><%= admin %></strong> 👋 — system status: <span class="ok">ALL GREEN</span></p>
+<h1>📊 Dashboard</h1>
+<p class="muted">Welcome back, <strong><%= admin %></strong> — system status: <span class="ok">ALL GREEN</span></p>
 
 <div class="stat-grid">
+  <div class="stat-card">
+    <span class="stat-num"><%= stats.viewsToday %></span>
+    <span class="stat-label">Views Today</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-num"><%= stats.totalViews %></span>
+    <span class="stat-label">Total Page Views</span>
+  </div>
   <a class="stat-card" href="/admin/tools">
     <span class="stat-num"><%= counts.tools %></span>
     <span class="stat-label">Tools (For Sale)</span>
@@ -22,14 +30,58 @@
   </a>
 </div>
 
-<div class="section">
-  <h2>Quick Actions</h2>
-  <div class="btn-row">
-    <a class="btn" href="/admin/tools/new">＋ Add Tool (Sell)</a>
-    <a class="btn ghost" href="/admin/projects/new">＋ Add Project</a>
-    <a class="btn ghost" href="/admin/settings">Site Settings</a>
-    <a class="btn ghost" href="/admin/password">Change Password</a>
+<div class="panel">
+  <h2>📈 Traffic — Last 7 Days</h2>
+  <div class="chart">
+    <% chart.forEach(c => { %>
+      <div class="chart-col">
+        <span class="chart-num"><%= c.count %></span>
+        <div class="chart-bar" style="height: <%= Math.round((c.count / maxCount) * 100) %>%"></div>
+        <small><%= c.label %></small>
+      </div>
+    <% }) %>
   </div>
 </div>
 
-<%- include('../partials/footer') %>
+<div class="two-col">
+  <div class="panel">
+    <h2>🔥 Top Pages</h2>
+    <% if (!topPages.length) { %><p class="muted">No traffic data yet.</p><% } %>
+    <table class="table tight">
+      <% topPages.forEach(p => { %>
+        <tr>
+          <td class="mono"><%= p._id %></td>
+          <td style="text-align:right"><span class="ok"><%= p.count %></span> views</td>
+        </tr>
+      <% }) %>
+    </table>
+  </div>
+
+  <div class="panel">
+    <h2>📩 Recent Messages</h2>
+    <% if (!recent.length) { %><p class="muted">No messages yet.</p><% } %>
+    <% recent.forEach(m => { %>
+      <div class="mini-msg <%= m.read ? '' : 'unread' %>">
+        <strong><%= m.name %></strong>
+        <span class="muted">— <%= m.message.slice(0, 60) %><%= m.message.length > 60 ? '…' : '' %></span>
+      </div>
+    <% }) %>
+    <a class="link" href="/admin/messages">all messages →</a>
+  </div>
+</div>
+
+<div class="section">
+  <h2>⚡ Quick Actions — har page yahan se edit hota hai</h2>
+  <div class="qa-grid">
+    <a class="qa-card" href="/admin/settings"><span>🏠</span><strong>Home / Hero</strong><small>title, subtitle, photo</small></a>
+    <a class="qa-card" href="/admin/settings"><span>👤</span><strong>About Page</strong><small>text, contact info</small></a>
+    <a class="qa-card" href="/admin/settings"><span>🔗</span><strong>Social Links</strong><small>github, linkedin, custom</small></a>
+    <a class="qa-card" href="/admin/tools/new"><span>🛠️</span><strong>Add Tool</strong><small>bechne ke liye</small></a>
+    <a class="qa-card" href="/admin/projects/new"><span>📂</span><strong>Add Project</strong><small>case file</small></a>
+    <a class="qa-card" href="/admin/skills"><span>⚡</span><strong>Manage Skills</strong><small>add / delete</small></a>
+    <a class="qa-card" href="/admin/messages"><span>📩</span><strong>Messages</strong><small>inbox</small></a>
+    <a class="qa-card" href="/admin/password"><span>🔑</span><strong>Password</strong><small>security</small></a>
+  </div>
+</div>
+
+<%- include('../partials/admin_foot') %>

@@ -361,3 +361,98 @@ body.admin .scanlines { display: none; }
   .row-form { flex-direction: column; align-items: stretch; }
   .footer-inner { justify-content: center; text-align: center; }
 }
+
+/* ============ ADMIN v2 — BLACK DASHBOARD + SIDEBAR ============ */
+body.admin {
+  background: #030303;
+}
+.admin-shell { display: flex; min-height: 100vh; }
+.admin-side {
+  width: 250px; flex-shrink: 0;
+  background: #0a0a0a;
+  border-right: 1px solid #1c1c1c;
+  display: flex; flex-direction: column;
+  position: sticky; top: 0; height: 100vh;
+}
+.side-brand {
+  font-family: 'Share Tech Mono', monospace;
+  color: var(--accent); font-size: 1.1rem; font-weight: 700;
+  padding: 1.15rem 1.3rem; border-bottom: 1px solid #1c1c1c; display: block;
+  text-shadow: 0 0 12px rgba(0, 255, 65, 0.4);
+}
+.side-brand .p { color: #555; }
+.side-nav { flex: 1; padding: 1rem 0.8rem; display: flex; flex-direction: column; gap: 0.2rem; overflow-y: auto; }
+.side-nav a, .side-nav button {
+  display: flex; align-items: center; gap: 0.65rem;
+  color: #999; padding: 0.6rem 0.85rem; border-radius: 8px;
+  font-size: 0.92rem; font-weight: 600; font-family: inherit;
+  background: none; border: none; cursor: pointer; width: 100%; text-align: left;
+  transition: background 0.15s, color 0.15s;
+}
+.side-nav a:hover, .side-nav button:hover { background: #111; color: var(--text); }
+.side-nav a.active {
+  background: linear-gradient(90deg, rgba(0, 255, 65, 0.12), transparent 70%);
+  color: var(--accent); border-left: 2px solid var(--accent); border-radius: 0 8px 8px 0;
+}
+.side-nav small { color: #666; }
+.side-badge { margin-left: auto; background: var(--red); color: #fff; font-size: 0.68rem; padding: 0.08rem 0.5rem; border-radius: 99px; }
+.side-sep { height: 1px; background: #1c1c1c; margin: 0.55rem 0.2rem; }
+.side-foot { padding: 0.9rem 1.3rem; border-top: 1px solid #1c1c1c; color: var(--muted); font-size: 0.78rem; }
+.admin-content { flex: 1; min-width: 0; padding: 1.8rem 2.2rem 3rem; }
+.admin-main { max-width: 1050px; }
+
+/* chart */
+.chart {
+  display: flex; align-items: flex-end; gap: 10px;
+  height: 175px; margin-top: 0.8rem;
+  background: #050505; border: 1px solid #1c1c1c; border-radius: 10px;
+  padding: 1rem 1.2rem 0.7rem;
+}
+.chart-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 4px; }
+.chart-num { color: var(--accent); font-size: 0.72rem; font-weight: 700; }
+.chart-bar {
+  width: 70%; max-width: 46px; min-height: 4px;
+  background: linear-gradient(180deg, var(--accent), var(--accent-dim));
+  border-radius: 4px 4px 0 0;
+  box-shadow: 0 0 14px rgba(0, 255, 65, 0.25);
+}
+.chart-col small { color: var(--muted); }
+
+/* dashboard extras */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.table.tight td { padding: 0.45rem 0.3rem; }
+.mini-msg { padding: 0.5rem 0.6rem; border-left: 2px solid var(--border); margin-bottom: 0.4rem; font-size: 0.88rem; }
+.mini-msg.unread { border-left-color: var(--accent); background: rgba(0, 255, 65, 0.04); }
+.qa-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.8rem; }
+.qa-card {
+  background: #0a0a0a; border: 1px solid #1c1c1c; border-radius: 10px;
+  padding: 1rem; color: var(--text);
+  display: flex; flex-direction: column; gap: 0.15rem;
+  transition: border-color 0.15s, transform 0.15s;
+}
+.qa-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.qa-card span { font-size: 1.3rem; }
+.qa-card small { color: var(--muted); }
+
+/* custom social links rows */
+.cl-row { display: flex; gap: 0.6rem; margin-bottom: 0.6rem; align-items: center; }
+.cl-row input {
+  flex: 1; background: #050505; color: var(--accent);
+  border: 1px solid #1c1c1c; border-radius: 6px;
+  padding: 0.55rem 0.8rem; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem;
+}
+.cl-row input:focus { outline: none; border-color: var(--accent); }
+
+/* login black */
+.login-box { background: #0a0a0a; border-color: #1c1c1c; box-shadow: 0 0 60px rgba(0, 255, 65, 0.1); }
+
+@media (max-width: 900px) {
+  .admin-shell { flex-direction: column; }
+  .admin-side { width: 100%; height: auto; position: static; flex-direction: row; align-items: center; border-right: none; border-bottom: 1px solid #1c1c1c; }
+  .side-brand { border-bottom: none; padding: 0.8rem 1rem; white-space: nowrap; }
+  .side-nav { flex-direction: row; overflow-x: auto; padding: 0.5rem; }
+  .side-nav a, .side-nav button { white-space: nowrap; width: auto; }
+  .side-foot { display: none; }
+  .admin-content { padding: 1.2rem; }
+  .two-col { grid-template-columns: 1fr; }
+}

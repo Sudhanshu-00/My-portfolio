@@ -3,25 +3,29 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin | <%= settings.siteName %></title>
+  <title><%= typeof title !== 'undefined' && title ? title + ' | ' : '' %>Admin | <%= settings.siteName %></title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body class="admin">
-<nav class="nav admin-nav">
-  <div class="container nav-inner">
-    <a href="/admin" class="brand">root@panel<span class="p">:~$</span></a>
-    <div class="nav-links">
-      <a href="/admin">Dashboard</a>
-      <a href="/admin/tools">Tools</a>
-      <a href="/admin/projects">Projects</a>
-      <a href="/admin/skills">Skills</a>
-      <a href="/admin/messages">Messages</a>
-      <a href="/admin/settings">Settings</a>
-      <a href="/" target="_blank">View Site ↗</a>
-      <form method="POST" action="/admin/logout" class="inline">
-        <button type="submit" class="btn small ghost">Logout</button>
-      </form>
-    </div>
-  </div>
-</nav>
-<main class="container">
+<div class="admin-shell">
+  <aside class="admin-side">
+    <a href="/admin" class="side-brand">root@panel<span class="p">:~$</span><span class="cursor">▊</span></a>
+    <nav class="side-nav">
+      <a href="/admin" class="<%= path === '/admin' ? 'active' : '' %>"><span>📊</span> Dashboard</a>
+      <a href="/admin/tools" class="<%= String(path).startsWith('/admin/tools') ? 'active' : '' %>"><span>🛠️</span> Tools <small class="muted">(sell)</small></a>
+      <a href="/admin/projects" class="<%= String(path).startsWith('/admin/projects') ? 'active' : '' %>"><span>📂</span> Projects</a>
+      <a href="/admin/skills" class="<%= String(path).startsWith('/admin/skills') ? 'active' : '' %>"><span>⚡</span> Skills</a>
+      <a href="/admin/messages" class="<%= String(path).startsWith('/admin/messages') ? 'active' : '' %>"><span>📩</span> Messages
+        <% if (typeof unread !== 'undefined' && unread > 0) { %><b class="side-badge"><%= unread %></b><% } %>
+      </a>
+      <div class="side-sep"></div>
+      <a href="/admin/settings" class="<%= String(path).startsWith('/admin/settings') ? 'active' : '' %>"><span>⚙️</span> Site Settings</a>
+      <a href="/admin/password" class="<%= String(path).startsWith('/admin/password') ? 'active' : '' %>"><span>🔑</span> Change Password</a>
+      <div class="side-sep"></div>
+      <a href="/" target="_blank"><span>🌐</span> View Site ↗</a>
+      <form method="POST" action="/admin/logout"><button type="submit"><span>🚪</span> Logout</button></form>
+    </nav>
+    <div class="side-foot"><span class="ok">●</span> <%= admin %> · v2.0</div>
+  </aside>
+  <div class="admin-content">
+    <main class="admin-main">

@@ -5,7 +5,7 @@ const session = require('express-session');
 const MongoStore = require('connect-mongo');
 
 const { initDB, getActiveUri } = require('./db');
-const { SiteSetting } = require('./models');
+const { SiteSetting, PageView } = require('./models');
 const publicRoutes = require('./routes/public');
 const adminRoutes = require('./routes/admin');
 
@@ -45,6 +45,14 @@ async function main() {
       res.locals.settings = await SiteSetting.get();
     } catch (e) {
       res.locals.settings = {};
+    }
+    next();
+  });
+
+  // Page view analytics (public pages only)
+  app.use((req, res, next) => {
+    if (req.method === 'GET' && !req.path.startsWith('/admin')) {
+      PageView.create({ path: req.path }).catch(() => {});
     }
     next();
   });

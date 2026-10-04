@@ -62,7 +62,38 @@
     <input type="text" name="telegram" value="<%= settings.telegram || '' %>">
   </label>
 
+  <h2>➕ More Social Links (custom)</h2>
+  <p class="muted">LinkedIn/GitHub/Twitter ke alawa jo bhi public URL dena ho (Discord, YouTube, Portfolio, TryHackMe...) — yahan add karo. Ye About aur Contact page pe render honge.</p>
+  <div id="custom-links">
+    <% (settings.customLinks || []).forEach(l => { %>
+      <div class="cl-row">
+        <input type="text" name="custom_label[]" placeholder="Label (e.g. YouTube)" value="<%= l.label %>">
+        <input type="text" name="custom_url[]" placeholder="https://..." value="<%= l.url %>">
+        <button type="button" class="btn small danger cl-del">✕</button>
+      </div>
+    <% }) %>
+  </div>
+  <button type="button" class="btn small ghost" id="cl-add">＋ Add More Link</button>
+
   <button type="submit" class="btn">💾 Save Settings</button>
 </form>
 
-<%- include('../partials/footer') %>
+<script>
+  (function () {
+    const list = document.getElementById('custom-links');
+    document.getElementById('cl-add').addEventListener('click', () => {
+      const row = document.createElement('div');
+      row.className = 'cl-row';
+      row.innerHTML =
+        '<input type="text" name="custom_label[]" placeholder="Label (e.g. YouTube)">' +
+        '<input type="text" name="custom_url[]" placeholder="https://...">' +
+        '<button type="button" class="btn small danger cl-del">✕</button>';
+      list.appendChild(row);
+    });
+    list.addEventListener('click', (e) => {
+      if (e.target.classList.contains('cl-del')) e.target.parentElement.remove();
+    });
+  })();
+</script>
+
+<%- include('../partials/admin_foot') %>

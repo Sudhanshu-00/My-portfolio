@@ -22,6 +22,7 @@
         <% if (settings.linkedin) { %><a class="btn ghost" href="<%= settings.linkedin %>" target="_blank">[ LINKEDIN ]</a><% } %>
         <% if (settings.twitter) { %><a class="btn ghost" href="<%= settings.twitter %>" target="_blank">[ TWITTER/X ]</a><% } %>
         <% if (settings.telegram) { %><a class="btn ghost" href="https://t.me/<%= settings.telegram.replace(/@/, '') %>" target="_blank">[ TELEGRAM ]</a><% } %>
+        <% (settings.customLinks || []).forEach(l => { %><a class="btn ghost" href="<%= l.url %>" target="_blank">[ <%= l.label.toUpperCase() %> ]</a><% }) %>
       </div>
     </div>
   </div>

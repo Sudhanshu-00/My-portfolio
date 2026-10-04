@@ -39,6 +39,7 @@
     <% if (settings.whatsapp) { %><a class="btn ghost" href="https://wa.me/<%= settings.whatsapp.replace(/\D/g, '') %>" target="_blank">[ WHATSAPP ]</a><% } %>
     <% if (settings.telegram) { %><a class="btn ghost" href="https://t.me/<%= settings.telegram.replace(/@/, '') %>" target="_blank">[ TELEGRAM ]</a><% } %>
     <% if (settings.email) { %><a class="btn ghost" href="mailto:<%= settings.email %>">[ EMAIL ]</a><% } %>
+    <% (settings.customLinks || []).forEach(l => { %><a class="btn ghost" href="<%= l.url %>" target="_blank">[ <%= l.label.toUpperCase() %> ]</a><% }) %>
   </div>
 </section>
 

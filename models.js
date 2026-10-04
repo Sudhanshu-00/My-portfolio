@@ -19,6 +19,7 @@ const SiteSettingSchema = new mongoose.Schema({
   instagram: { type: String, default: '' },
   whatsapp: { type: String, default: '' }, // e.g. 919876543210 (tool sales)
   telegram: { type: String, default: '' }, // e.g. username
+  customLinks: { type: [{ label: String, url: String }], default: [] }, // extra social/public URLs
 });
 
 // Always returns the single settings document (creates it if missing)
@@ -77,6 +78,13 @@ const AdminUserSchema = new mongoose.Schema({
   passwordHash: { type: String, required: true },
 });
 
+const PageViewSchema = new mongoose.Schema(
+  {
+    path: { type: String, required: true },
+  },
+  { timestamps: true }
+);
+
 module.exports = {
   SiteSetting: mongoose.model('SiteSetting', SiteSettingSchema),
   Project: mongoose.model('Project', ProjectSchema),
@@ -84,4 +92,5 @@ module.exports = {
   Skill: mongoose.model('Skill', SkillSchema),
   Message: mongoose.model('Message', MessageSchema),
   AdminUser: mongoose.model('AdminUser', AdminUserSchema),
+  PageView: mongoose.model('PageView', PageViewSchema),
 };
