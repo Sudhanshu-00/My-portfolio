@@ -169,8 +169,10 @@ router.post('/:username/admin/login', adminGate, async (req, res) => {
     gateAttempts.delete(key);
     AdminUser.updateOne({ username: admin.username }, { lastLoginAt: new Date() }).catch(() => {});
     security.logEvent(req, { reason: 'admin-login', severity: 'info', status: 302, path: '/user/[user]/admin/login' });
+    const me = req.session.user; // keep the normal-user login alive across the panel login
     return req.session.regenerate(() => {
-      req.session.admin = admin.username; // panel session (fresh session id)
+      req.session.admin = admin.username; // panel session (fresh session id — fixation safe)
+      if (me) req.session.user = me; // dashboard tab keeps working; logging out still ends BOTH
       res.redirect('/' + ADMIN_PATH + '/');
     });
   }

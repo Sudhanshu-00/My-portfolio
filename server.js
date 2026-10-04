@@ -243,6 +243,11 @@ async function main() {
   const port = process.env.PORT || 3000;
   app.listen(port, () => {
     console.log(`[OK] Portfolio running → http://localhost:${port}`);
+    console.log(`[RUN] NODE_ENV=${process.env.NODE_ENV || '(unset — set to production on hosting!)'}`);
+    const { mailReady } = require('./services/mailer');
+    console.log(mailReady()
+      ? `[MAIL] SMTP configured (${process.env.SMTP_HOST || 'smtp.gmail.com'}) → OTP / alert emails will send`
+      : '[MAIL] ⚠️ SMTP NOT configured — set SMTP_USER + SMTP_PASS (Gmail app password) in hosting env, OTP emails will FAIL');
     uptime.start(); // downtime email alerts + Render keep-alive (see services/uptime.js)
   });
 }

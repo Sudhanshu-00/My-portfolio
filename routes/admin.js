@@ -2,7 +2,7 @@ const router = require('express').Router();
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const { AdminUser, Project, Skill, Message, SiteSetting, Tool, PageView, Service, Testimonial, Experience, Lab, Feedback, SecurityEvent, BlockedIp } = require('../models');
-const { sendMail } = require('../services/mailer');
+const { sendMail, otpTemplate, mailReady } = require('../services/mailer');
 const security = require('../services/security');
 
 // Secret admin path — single source of truth in ../adminPath.js (fail-closed:
@@ -60,6 +60,7 @@ const requireAuth = async (req, res, next) => {
     res.locals.admin = req.session.admin; // username for views
     res.locals.path = '/admin' + req.path; // sidebar active-state (router gives prefix-stripped path)
     res.locals.unread = await Message.countDocuments({ read: false });
+    res.locals.mailReady = mailReady(); // sidebar 📧 badge — instantly shows if SMTP env is missing
     res.locals.pendingFeedback = await Feedback.countDocuments({ status: 'pending' });
     return next();
   }
@@ -90,11 +91,18 @@ const OTP_MAX_SENDS = 4; // max 4 OTPs per signup session
 const genOtp = () => String(require('crypto').randomInt(0, 1e6)).padStart(6, '0');
 
 async function sendSignupOtp(email, username, otp) {
+  const { text, html } = otpTemplate({
+    heading: 'Email Verification',
+    intro: `verify your email address to finish your signup. Enter this code on the verification page:`,
+    otp,
+    validityMins: 10,
+    name: username,
+  });
   const sent = await sendMail({
     to: email,
-    subject: `Email verification OTP: ${otp} — Portfolio signup`,
-    text: `Hi ${username},\n\nYour Portfolio signup verification OTP: ${otp}\nValid for 10 minutes. If you did not request this, ignore this email.`,
-    html: `<div style="font-family:monospace;background:#0d1117;color:#e6edf3;padding:24px;border-radius:12px"><h2 style="color:#58a6ff">📧 Email Verification</h2><p>Hi <b style="color:#7ee787">${username}</b>, verify your email address:</p><p style="font-size:30px;letter-spacing:8px;color:#ffa657;font-weight:bold">${otp}</p><p style="color:#8b949e">Valid for 10 minutes. If you did not request this, please ignore this email.</p></div>`,
+    subject: '🔐 Verification code — Portfolio signup', // OTP never in the subject
+    text,
+    html,
   });
   if (!sent && process.env.NODE_ENV !== 'production') console.log(`[DEV] signup OTP for ${username}: ${otp}`); // SMTP absent → dev console only
   return sent;
@@ -344,7 +352,8 @@ router.post('/login', async (req, res) => {
 
 router.post('/logout', (req, res) => {
   const wasAdmin = !!(req.session && req.session.admin);
-  req.session.destroy(() => res.redirect(wasAdmin ? go('/login') : '/'));
+  const fromPanel = String(req.originalUrl || '').startsWith('/' + ADMIN_PATH);
+  req.session.destroy(() => res.redirect(wasAdmin && fromPanel ? go('/login') : '/'));
 });
 
 // ---------- forgot password (email OTP) — self-service recovery ----------
@@ -380,11 +389,18 @@ router.post('/forgot', async (req, res) => {
     user.otpExpiry = new Date(Date.now() + 3 * 60 * 1000); // 3 min
     user.otpAttempts = 0;
     await user.save();
+    const { text, html } = otpTemplate({
+      heading: 'Password Reset',
+      intro: 'use this one-time code to reset your account password:',
+      otp,
+      validityMins: 3,
+      name: u,
+    });
     const sent = await sendMail({
       to: user.email,
-      subject: 'Password Reset OTP — Portfolio Admin',
-      text: `Reset OTP: ${otp}\nExpires in 3 minutes. If you did not request this, ignore this email.`,
-      html: `<p>Reset OTP: <b style="font-size:24px;letter-spacing:4px">${otp}</b></p><p>Expires in 3 minutes. If you did not request this, ignore this email.</p>`,
+      subject: '🔐 Password reset code — Portfolio', // OTP never in the subject
+      text,
+      html,
     });
     if (!sent && process.env.NODE_ENV !== 'production') console.log(`[DEV] OTP for ${u}: ${otp}`); // SMTP not set → dev console only (never in production responses)
   }

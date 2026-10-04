@@ -34,7 +34,7 @@
       <a href="/" target="_blank"><span>🌐</span> View Site ↗</a>
       <form method="POST" action="<%= adminBase %>/logout" class="side-logout"><input type="hidden" name="_csrf" value="<%= csrf %>"><button type="submit"><span>🚪</span> Logout</button></form>
     </nav>
-    <div class="side-foot"><span class="ok">●</span> <%= admin %> · v2.0</div>
+    <div class="side-foot"><span class="ok">●</span> <%= admin %> · v2.0 · 📧 <%= mailReady ? 'mail ready' : 'mail OFF' %></div>
   </aside>
   <div class="admin-content">
     <main class="admin-main">

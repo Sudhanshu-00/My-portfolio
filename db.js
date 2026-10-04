@@ -16,9 +16,12 @@ async function initDB() {
   await seed();
 
   // admin email backfill (forgot-password OTP goes to this address)
+  // updateMany → EVERY account without an email gets it (signup always collects a
+  // verified email, so in practice only seeded accounts are touched — this makes
+  // password recovery work for the owner's user account too, not just 'admin').
   if (process.env.ADMIN_EMAIL) {
     const { AdminUser } = require('./models');
-    await AdminUser.updateOne({ email: { $in: [null, ''] } }, { email: process.env.ADMIN_EMAIL }).catch(() => {});
+    await AdminUser.updateMany({ email: { $in: [null, ''] } }, { email: process.env.ADMIN_EMAIL }).catch(() => {});
   }
 }
 
