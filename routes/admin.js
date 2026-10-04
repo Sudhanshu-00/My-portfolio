@@ -100,19 +100,22 @@ router.post('/login', async (req, res) => {
   }
   const user = await AdminUser.findOne({ username }).catch(() => null);
   if (user && (await bcrypt.compare(password, user.passwordHash))) {
+    // ---- two-tier login ----
+    // Admin credentials are NEVER accepted here — they only work at the gated
+    // /user/sudhanshu/admin/login page. Probing counts as a failed attempt.
+    if (user.role === 'admin') {
+      rec.fails++;
+      if (rec.fails >= 5) { rec.lockUntil = now + 15 * 60 * 1000; rec.fails = 0; }
+      loginAttempts.set(key, rec);
+      await new Promise((r) => setTimeout(r, 400));
+      return res.status(401).render('admin/login', { error: 'Invalid username or password' });
+    }
     loginAttempts.delete(key);
     ipFails.delete(req.ip);
-    // ---- two-tier login ----
-    // 'admin' role ONLY for username 'sudhanshu' — nobody else ever gets panel access.
-    const isAdmin = user.role === 'admin' && user.username === 'sudhanshu';
-    // session fixation fix — fresh session id on login (both tiers)
+    // normal user session — fresh session id (fixation fix), → own dashboard
     return req.session.regenerate(() => {
-      if (isAdmin) {
-        req.session.admin = user.username; // → secret panel dashboard
-        return res.redirect(go('/'));
-      }
-      req.session.user = user.username; // → normal portfolio, naam site pe dikhta hai
-      res.redirect('/');
+      req.session.user = user.username;
+      res.redirect(`/user/${encodeURIComponent(user.username)}`);
     });
   }
   rec.fails++;

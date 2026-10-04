@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="login-page">
+  <div class="login-box">
+    <h1>&gt;_ ADMIN LOGIN</h1>
+    <p class="muted">Elevated access — admin credentials required 🔒</p>
+    <% if (error) { %><div class="alert error"><%= error %></div><% } %>
+    <form method="POST" action="/user/<%= username %>/admin/login" class="form">
+      <input type="hidden" name="_csrf" value="<%= csrf %>">
+      <label>Admin username
+        <input type="text" name="username" required autofocus autocomplete="off">
+      </label>
+      <label>Admin password
+        <input type="password" name="password" required autocomplete="current-password">
+      </label>
+      <button type="submit" class="btn full">Login as Admin</button>
+    </form>
+    <a href="/user/<%= username %>" class="link" style="font-size:0.82rem">← Back to dashboard</a>
+  </div>
+</body>
+</html>

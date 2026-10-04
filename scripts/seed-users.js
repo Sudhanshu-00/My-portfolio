@@ -1,10 +1,10 @@
 /**
  * Seed users — create/update the two login accounts:
- *   1. sudhanshu  → role 'admin'  (panel access ONLY for this username)
- *   2. visitor    → role 'user'   (normal login, naam site pe dikhta hai)
+ *   1. sudhanshu → role 'user'  (normal login at /login → /user/sudhanshu dashboard)
+ *   2. admin     → role 'admin' (gated login at /user/sudhanshu/admin/login → secret panel)
  *
- * Run:  node scripts/seed-users.js
- * Idempotent — safe to run again (updates password + role, keeps email/OTP fields).
+ * Also removes obsolete 'visitor' account.
+ * Run:  node scripts/seed-users.js   (idempotent)
  */
 require('dotenv').config();
 const bcrypt = require('bcryptjs');
@@ -14,15 +14,17 @@ const { AdminUser } = require('../models');
 const USERS = [
   {
     username: 'sudhanshu',
-    password: 'Sudhanshu@Admin#2025',
-    role: 'admin',
-  },
-  {
-    username: 'visitor',
-    password: 'Visitor@2025',
+    password: 'Sudhanshu@2025',
     role: 'user',
   },
+  {
+    username: 'admin',
+    password: 'Sudhanshu@Admin#2025',
+    role: 'admin',
+    email: process.env.ADMIN_EMAIL || '',
+  },
 ];
+const REMOVE = ['visitor']; // obsolete accounts
 
 (async () => {
   await initDB();
@@ -32,6 +34,7 @@ const USERS = [
     if (existing) {
       existing.passwordHash = hash;
       existing.role = u.role;
+      if (u.email) existing.email = u.email;
       await existing.save();
       console.log(`✅ updated: ${u.username} (role=${u.role})`);
     } else {
@@ -39,10 +42,14 @@ const USERS = [
         username: u.username,
         passwordHash: hash,
         role: u.role,
-        email: '',
+        email: u.email || '',
       });
       console.log(`✅ created: ${u.username} (role=${u.role})`);
     }
+  }
+  for (const r of REMOVE) {
+    const out = await AdminUser.deleteOne({ username: r });
+    if (out.deletedCount) console.log(`🗑️  removed obsolete account: ${r}`);
   }
   const all = await AdminUser.find({}, 'username role email').lean();
   console.log('\nCurrent users in DB:');

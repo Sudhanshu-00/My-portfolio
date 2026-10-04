@@ -167,9 +167,12 @@ async function main() {
     next();
   });
 
+  // User-tier routes (normal dashboard, gated admin login)
+  app.use('/user', require('./routes/user'));
+
   // Page view analytics (public pages only — admin requests were rewritten above)
   app.use((req, res, next) => {
-    if (req.method === 'GET' && !req.path.startsWith('/admin')) {
+    if (req.method === 'GET' && !req.path.startsWith('/admin') && !req.path.startsWith('/user')) {
       PageView.create({ path: String(req.path).slice(0, 200) }).catch(() => {});
     }
     next();

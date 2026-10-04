@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard | <%= username %></title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="login-page">
+  <div class="login-box" style="max-width:820px">
+    <h1>&gt;_ USER DASHBOARD</h1>
+    <p class="mono" style="color:var(--green,#00ff41)">[ 👤 <%= username %> ] <span class="muted">— session active</span></p>
+    <% if (saved) { %><div class="alert success">✅ Password changed successfully.</div><% } %>
+    <% if (pwError) { %><div class="alert error"><%= pwError %></div><% } %>
+
+    <!-- ===== Projects (READ ONLY) ===== -->
+    <h2 class="mono" style="font-size:1rem;margin-top:1.2rem">📁 PROJECTS <span class="badge warn" style="font-size:0.7rem">READ-ONLY</span></h2>
+    <p class="muted" style="font-size:0.8rem">You can view projects here — editing is not allowed.</p>
+    <% if (!projects.length) { %>
+      <p class="muted" style="font-size:0.85rem">No projects yet.</p>
+    <% } else { %>
+      <div style="text-align:left">
+        <% projects.forEach((p) => { %>
+          <div class="msg-card" style="margin:0.6rem 0">
+            <div class="row-between">
+              <strong><%= p.title %></strong>
+              <% if (p.featured) { %><span class="badge ok" style="font-size:0.65rem">★ FEATURED</span><% } %>
+            </div>
+            <% if (p.description) { %><p style="font-size:0.85rem;margin:0.3rem 0"><%= String(p.description).slice(0, 180) %><%= String(p.description).length > 180 ? '…' : '' %></p><% } %>
+            <% if (p.techStack) { %><small class="muted mono">tech: <%= p.techStack %></small><% } %>
+            <div style="margin-top:0.4rem">
+              <% if (p.liveUrl) { %><a href="<%= p.liveUrl %>" target="_blank" rel="noopener noreferrer" class="link" style="font-size:0.8rem">[ live ↗ ]</a><% } %>
+              <% if (p.githubUrl) { %><a href="<%= p.githubUrl %>" target="_blank" rel="noopener noreferrer" class="link" style="font-size:0.8rem;margin-left:0.5rem">[ github ↗ ]</a><% } %>
+              <a href="/projects" class="link" style="font-size:0.8rem;margin-left:0.5rem">[ public page ]</a>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
+
+    <!-- ===== Change own password ===== -->
+    <h2 class="mono" style="font-size:1rem;margin-top:1.4rem">🔑 CHANGE MY PASSWORD</h2>
+    <form method="POST" action="/user/<%= username %>/password" class="form">
+      <input type="hidden" name="_csrf" value="<%= csrf %>">
+      <label>Current password
+        <input type="password" name="current" required autocomplete="current-password">
+      </label>
+      <label>New password (min 8 chars)
+        <input type="password" name="next" required minlength="8" autocomplete="new-password">
+      </label>
+      <label>Confirm new password
+        <input type="password" name="confirm" required minlength="8" autocomplete="new-password">
+      </label>
+      <button type="submit" class="btn full">Update password</button>
+    </form>
+
+    <div class="row-between" style="margin-top:1rem">
+      <a href="/" class="link" style="font-size:0.82rem">← Website</a>
+      <form method="POST" action="/logout" class="inline" style="display:inline">
+        <button type="submit" class="link" style="background:none;border:none;cursor:pointer;font-size:0.82rem">Logout</button>
+      </form>
+    </div>
+
+    <% if (adminGate) { %>
+    <!-- ===== Admin option (ONLY for user 'sudhanshu') ===== -->
+    <div class="side-sep" style="margin:1.2rem 0"></div>
+    <p style="text-align:center;margin:0">
+      <a href="/user/<%= username %>/admin/login" class="link" style="font-size:0.85rem;opacity:0.7">⚡ Admin</a>
+    </p>
+    <% } %>
+  </div>
+</body>
+</html>
