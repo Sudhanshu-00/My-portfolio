@@ -9,13 +9,15 @@ const nodemailer = require('nodemailer');
 // Node ≥17 prefers AAAA records — the SMTP connect then silently hangs.
 try { require('dns').setDefaultResultOrder('ipv4first'); } catch (_) { /* older Node */ }
 
-let transporter = null;
-if (process.env.SMTP_USER && process.env.SMTP_PASS) {
-  transporter = nodemailer.createTransport({
+const SMTP_USER = process.env.SMTP_USER;
+const SMTP_PASS = process.env.SMTP_PASS;
+
+function makeTransport(port, secure) {
+  return nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.SMTP_PORT, 10) || 465,
-    secure: (parseInt(process.env.SMTP_PORT, 10) || 465) === 465,
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    port,
+    secure,
+    auth: { user: SMTP_USER, pass: SMTP_PASS },
     // one pooled connection reused across emails — repeated fresh SMTP
     // logins from a datacenter IP get tarpitted by Gmail
     pool: true,
@@ -28,6 +30,17 @@ if (process.env.SMTP_USER && process.env.SMTP_PASS) {
     dnsTimeout: 5_000,
   });
 }
+
+// Gmail accepts both 465 (implicit TLS) and 587 (STARTTLS) — cloud hosts
+// sometimes get one path throttled, so we keep a fallback transport.
+const primaryPort = parseInt(process.env.SMTP_PORT, 10) || 465;
+const fallbackPort = primaryPort === 465 ? 587 : 465;
+const transports = (SMTP_USER && SMTP_PASS)
+  ? [
+      { tr: makeTransport(primaryPort, primaryPort === 465), label: `smtp:${primaryPort}` },
+      { tr: makeTransport(fallbackPort, fallbackPort === 465), label: `smtp:${fallbackPort}` },
+    ]
+  : [];
 
 /**
  * Professional OTP email — shared by signup verification and password reset.
@@ -74,26 +87,21 @@ function otpTemplate({ heading, intro, otp, validityMins, name }) {
 }
 
 async function sendMail({ to, subject, text, html }) {
-  if (!transporter) {
+  if (!transports.length) {
     console.warn('⚠️  SMTP not configured (set SMTP_PASS in .env) — DEV fallback, email was NOT sent:');
     console.warn(`   to=${to} subject=${subject}`);
     return false;
   }
-  const mail = { from: `"Portfolio Admin" <${process.env.SMTP_USER}>`, to, subject, text, html };
-  for (let attempt = 1; attempt <= 2; attempt++) {
+  const mail = { from: `"Portfolio Admin" <${SMTP_USER}>`, to, subject, text, html };
+  for (const { tr, label } of transports) {
     try {
-      await transporter.sendMail(mail);
+      await tr.sendMail(mail);
       return true;
     } catch (e) {
-      console.error(`Mail error (attempt ${attempt}/2):`, e.message);
-      if (attempt === 1) {
-        transporter.close(); // drop stale pooled socket, force fresh connection
-        await new Promise((r) => setTimeout(r, 2000));
-        continue;
-      }
-      return false;
+      console.error(`Mail error via ${label}:`, e.message);
     }
   }
+  return false;
 }
 
-module.exports = { sendMail, otpTemplate, mailReady: () => !!transporter };
+module.exports = { sendMail, otpTemplate, mailReady: () => transports.length > 0 };
