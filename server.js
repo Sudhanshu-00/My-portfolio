@@ -8,6 +8,8 @@ const { initDB, getActiveUri } = require('./db');
 const { SiteSetting, PageView } = require('./models');
 const publicRoutes = require('./routes/public');
 const adminRoutes = require('./routes/admin');
+const security = require('./services/security');
+const uptime = require('./services/uptime');
 
 // Secret admin entrance — the real panel only opens on ADMIN_PATH.
 // Path resolution (with fail-closed random fallback) lives in ./adminPath.js —
@@ -63,6 +65,16 @@ async function main() {
     next();
   });
 
+  // ---------- health endpoint (uptime monitor pings this; excluded from all logs) ----------
+  app.get('/healthz', (req, res) => res.json({ ok: true, uptime: Math.round(process.uptime()) }));
+
+  // ---------- security guard + recorder (blocked IPs, visitor/tester logs) ----------
+  // guard: 403 for blocked IPs (before anything else). recorder: logs every
+  // non-static request → Admin → Security (IP, device, location, path, status).
+  app.use(security.guard);
+  app.use(security.recorder);
+  app.use((req, res, next) => { uptime.touch(); next(); }); // last-activity tracking for idle alerts
+
   // ---------- global rate limit + IP auto-block ----------
   // 300 req/min per IP — exceeding it blocks the IP for 5 min. (DoS / fuzzing shield)
   const RL_LIMIT = 300, RL_WINDOW = 60_000, RL_BLOCK = 5 * 60_000;
@@ -79,6 +91,9 @@ async function main() {
     r.count++;
     if (r.count > RL_LIMIT) {
       r.blockedUntil = now + RL_BLOCK;
+      // persistent block → shows up in Admin → Security (unblockable), survives restarts
+      security.blockIp(req.ip, 'Rate limit exceeded (300 req/min)', RL_BLOCK, true);
+      security.logEvent(req, { reason: 'rate-limit', severity: 'medium', status: 429, path: req.path });
       console.warn(`[BLOCK] IP blocked (rate limit exceeded): ${req.ip}`);
       return res.status(429).send('Too many requests — IP temporarily blocked.');
     }
@@ -170,9 +185,11 @@ async function main() {
   // User-tier routes (normal dashboard, gated admin login)
   app.use('/user', require('./routes/user'));
 
-  // Page view analytics (public pages only — admin requests were rewritten above)
+  // Page view analytics (public pages only — admin requests were rewritten above;
+  // skip our own keep-alive pinger so it never pollutes analytics)
   app.use((req, res, next) => {
-    if (req.method === 'GET' && !req.path.startsWith('/admin') && !req.path.startsWith('/user')) {
+    const ownPing = String(req.headers['user-agent'] || '').includes('Portfolio-KeepAlive');
+    if (req.method === 'GET' && !ownPing && !req.path.startsWith('/admin') && !req.path.startsWith('/user') && req.path !== '/healthz') {
       PageView.create({ path: String(req.path).slice(0, 200) }).catch(() => {});
     }
     next();
@@ -216,7 +233,10 @@ async function main() {
   });
 
   const port = process.env.PORT || 3000;
-  app.listen(port, () => console.log(`[OK] Portfolio running → http://localhost:${port}`));
+  app.listen(port, () => {
+    console.log(`[OK] Portfolio running → http://localhost:${port}`);
+    uptime.start(); // downtime email alerts + Render keep-alive (see services/uptime.js)
+  });
 }
 
 main().catch((e) => {

@@ -25,6 +25,7 @@
       <a href="<%= adminBase %>/feedback" class="<%= String(path).startsWith('/admin/feedback') ? 'active' : '' %>"><span>💬</span> Feedback
         <% if (typeof pendingFeedback !== 'undefined' && pendingFeedback > 0) { %><b class="side-badge"><%= pendingFeedback %></b><% } %>
       </a>
+      <a href="<%= adminBase %>/security" class="<%= String(path).startsWith('/admin/security') ? 'active' : '' %>"><span>🛡</span> Security &amp; Logs</a>
       <div class="side-sep"></div>
       <a href="<%= adminBase %>/settings" class="<%= String(path).startsWith('/admin/settings') ? 'active' : '' %>"><span>⚙️</span> Site Settings</a>
       <a href="<%= adminBase %>/password" class="<%= String(path).startsWith('/admin/password') ? 'active' : '' %>"><span>🔑</span> Change Password</a>

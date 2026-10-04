@@ -1,8 +1,9 @@
 const router = require('express').Router();
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
-const { AdminUser, Project, Skill, Message, SiteSetting, Tool, PageView, Service, Testimonial, Experience, Lab, Feedback } = require('../models');
+const { AdminUser, Project, Skill, Message, SiteSetting, Tool, PageView, Service, Testimonial, Experience, Lab, Feedback, SecurityEvent, BlockedIp } = require('../models');
 const { sendMail } = require('../services/mailer');
+const security = require('../services/security');
 
 // Secret admin path — single source of truth in ../adminPath.js (fail-closed:
 // guessable 'admin' fallback is impossible).
@@ -88,6 +89,7 @@ router.post('/login', async (req, res) => {
   const username = String(body.username || '').toLowerCase().slice(0, 40);
   const password = String(body.password || '');
   if (!username || !password) {
+    security.bump(req, 'loginFail', 401);
     return res.status(401).render('admin/login', { error: 'Invalid username or password' });
   }
   const key = `${req.ip}|${username}`;
@@ -107,11 +109,13 @@ router.post('/login', async (req, res) => {
       rec.fails++;
       if (rec.fails >= 5) { rec.lockUntil = now + 15 * 60 * 1000; rec.fails = 0; }
       loginAttempts.set(key, rec);
+      security.bump(req, 'loginFail', 401); // probing admin creds at public login → counted
       await new Promise((r) => setTimeout(r, 400));
       return res.status(401).render('admin/login', { error: 'Invalid username or password' });
     }
     loginAttempts.delete(key);
     ipFails.delete(req.ip);
+    security.logEvent(req, { reason: 'login-success', severity: 'info', status: 302, path: '/login' });
     // normal user session — fresh session id (fixation fix), → own dashboard
     return req.session.regenerate(() => {
       req.session.user = user.username;
@@ -130,6 +134,7 @@ router.post('/login', async (req, res) => {
     ipRec.fails = 0;
   }
   ipFails.set(req.ip, ipRec);
+  security.bump(req, 'loginFail', 401); // feeds auto-block + security log
   await new Promise((r) => setTimeout(r, 400)); // slow down online brute force
   res.status(401).render('admin/login', { error: 'Invalid username or password' });
 });
@@ -177,7 +182,7 @@ router.post('/forgot', async (req, res) => {
       text: `Reset OTP: ${otp}\nExpires in 3 minutes. If you did not request this, ignore this email.`,
       html: `<p>Reset OTP: <b style="font-size:24px;letter-spacing:4px">${otp}</b></p><p>Expires in 3 minutes. If you did not request this, ignore this email.</p>`,
     });
-    if (!sent) console.log(`[DEV] OTP for ${u}: ${otp}`); // SMTP not set → server console only
+    if (!sent && process.env.NODE_ENV !== 'production') console.log(`[DEV] OTP for ${u}: ${otp}`); // SMTP not set → dev console only (never in production responses)
   }
   // always the same generic answer — nobody learns whether the account exists
   res.render('admin/forgot', { step: 'otp', error: null, info: GENERIC_MSG, username: u });
@@ -199,6 +204,7 @@ router.post('/forgot/verify', async (req, res) => {
       user.otpAttempts += 1; // 5 wrong attempts → OTP dead
       await user.save();
     }
+    security.logEvent(req, { reason: 'otp-fail', severity: 'medium', status: 200, path: '/forgot/verify' });
     return res.render('admin/forgot', { step: 'otp', error: 'OTP is wrong or expired — try again.', info: null, username: u });
   }
   // OTP correct — 5 min reset window (kept in session, never in URLs)
@@ -241,7 +247,7 @@ router.get('/', async (req, res) => {
   const range = ['7d', '30d', '1y'].includes(req.query.range) ? req.query.range : '7d';
   const days = range === '7d' ? 7 : range === '30d' ? 30 : 365;
 
-  const [projects, skills, unread, tools, services, testimonials, totalMsgs, totalViews, viewsToday, labs] = await Promise.all([
+  const [projects, skills, unread, tools, services, testimonials, totalMsgs, totalViews, viewsToday, labs, blockedNow, threatsToday] = await Promise.all([
     Project.countDocuments(),
     Skill.countDocuments(),
     Message.countDocuments({ read: false }),
@@ -252,6 +258,8 @@ router.get('/', async (req, res) => {
     PageView.countDocuments(),
     PageView.countDocuments({ createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) } }),
     Lab.countDocuments(),
+    BlockedIp.countDocuments({ $or: [{ until: null }, { until: { $gt: new Date() } }] }),
+    SecurityEvent.countDocuments({ createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) }, reason: { $ne: 'visit' } }),
   ]);
 
   // chart: daily bars for 7d/30d, monthly for 1y
@@ -295,7 +303,7 @@ router.get('/', async (req, res) => {
   const maxCount = Math.max(1, ...chart.map((c) => c.count));
 
   res.render('admin/dashboard', {
-    counts: { projects, skills, unread, tools, services, testimonials, labs },
+    counts: { projects, skills, unread, tools, services, testimonials, labs, blockedNow, threatsToday },
     stats: { totalMsgs, totalViews, viewsToday, rangeViews },
     chart,
     maxCount,
@@ -303,6 +311,65 @@ router.get('/', async (req, res) => {
     recent,
     range,
   });
+});
+
+// ---------- security & visitors (logs, blocked IPs, unblock) ----------
+router.get('/security', async (req, res) => {
+  const filter = {};
+  if (req.query.ip && security.isIp(req.query.ip)) filter.ip = String(req.query.ip).slice(0, 45);
+  if (['info', 'low', 'medium', 'high'].includes(req.query.sev)) filter.severity = req.query.sev;
+  if (req.query.reason && /^[a-z-]{2,30}$/i.test(req.query.reason)) filter.reason = req.query.reason;
+
+  const page = Math.min(100, Math.max(1, parseInt(req.query.page, 10) || 1));
+  const perPage = 50;
+  const midnight = new Date(new Date().setHours(0, 0, 0, 0));
+  const since30 = new Date(Date.now() - 30 * 864e5);
+
+  const [events, total, blocked, stats] = await Promise.all([
+    SecurityEvent.find(filter).sort({ createdAt: -1 }).skip((page - 1) * perPage).limit(perPage).lean(),
+    SecurityEvent.countDocuments(filter),
+    BlockedIp.find().sort({ createdAt: -1 }).lean(),
+    Promise.all([
+      SecurityEvent.countDocuments({ createdAt: { $gte: midnight }, reason: { $ne: 'visit' } }),
+      SecurityEvent.countDocuments({ createdAt: { $gte: since30 } }),
+      SecurityEvent.countDocuments({ severity: 'high', createdAt: { $gte: since30 } }),
+      BlockedIp.countDocuments({ $or: [{ until: null }, { until: { $gt: new Date() } }] }),
+    ]),
+  ]);
+  // active vs expired split for the UI
+  const now = new Date();
+  const blockedActive = blocked.filter((b) => !b.until || b.until > now);
+  const blockedExpired = blocked.filter((b) => b.until && b.until <= now);
+
+  res.render('admin/security', {
+    events, total, page, perPage,
+    filter: { ip: req.query.ip || '', sev: req.query.sev || '', reason: req.query.reason || '' },
+    stats: { todayThreats: stats[0], total30d: stats[1], high30d: stats[2], activeBlocks: stats[3] },
+    blockedActive, blockedExpired,
+    uptime: require('../services/uptime').status(),
+  });
+});
+
+router.post('/security/block', async (req, res) => {
+  const ip = String(req.body.ip || '').trim().slice(0, 45);
+  const hours = parseInt(req.body.hours, 10);
+  const reason = String(req.body.reason || '').trim().slice(0, 200) || 'Manually blocked by admin';
+  if (!security.isIp(ip) || security.isPrivateIp(ip)) return res.redirect(go('/admin/security?err=badip'));
+  const ms = Number.isFinite(hours) && hours > 0 ? hours * 3600 * 1000 : 0; // 0/blank = permanent
+  await security.blockIp(ip, reason, ms, false);
+  security.logEvent(req, { reason: 'manual-block', severity: 'medium', status: 200, path: '/security' });
+  res.redirect(go('/admin/security?blocked=1'));
+});
+
+router.post('/security/unblock', async (req, res) => {
+  const ip = String(req.body.ip || '').trim().slice(0, 45);
+  if (security.isIp(ip)) await security.unblockIp(ip);
+  res.redirect(go('/admin/security?unblocked=1'));
+});
+
+router.post('/security/clear', async (req, res) => {
+  await SecurityEvent.deleteMany({});
+  res.redirect(go('/admin/security?cleared=1'));
 });
 
 // ---------- settings ----------

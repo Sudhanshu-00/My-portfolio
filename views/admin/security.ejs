@@ -1,0 +1,165 @@
+<%- include('../partials/admin_head', { title: 'Security & Visitors' }) %>
+
+<h1>🛡 Security &amp; Visitors</h1>
+<p class="muted">Har visitor/tester ki details — IP, device, location, kya access kar raha hai. Attack signals par IP khud block hota hai; yahin se unblock bhi kar sakte ho. Logs <strong>30 din baad auto-delete</strong> ho jate hain (TTL).</p>
+
+<% if (filter.ip) { %><p><span class="badge warn">FILTER: <%= filter.ip %></span> <a class="link" href="<%= adminBase %>/security">clear ×</a></p><% } %>
+
+<div class="stat-grid">
+  <div class="stat-card">
+    <span class="stat-num"><%= stats.todayThreats %></span>
+    <span class="stat-label">Threats Today (non-visit)</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-num"><%= stats.total30d %></span>
+    <span class="stat-label">Log Entries (30d)</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-num"><%= stats.high30d %></span>
+    <span class="stat-label">High Severity (30d)</span>
+  </div>
+  <a class="stat-card" href="#blocked">
+    <span class="stat-num"><%= stats.activeBlocks %></span>
+    <span class="stat-label">Blocked IPs (active)</span>
+  </a>
+</div>
+
+<div class="two-col">
+  <div class="panel" id="blocked">
+    <h2>⛔ Blocked IPs <span class="badge <%= blockedActive.length ? 'warn' : 'dim' %>"><%= blockedActive.length %> active</span></h2>
+    <% if (!blockedActive.length) { %><p class="muted">Koi IP blocked nahi hai.</p><% } %>
+    <table class="table tight">
+      <% blockedActive.forEach(b => { %>
+        <tr>
+          <td class="mono"><%= b.ip %></td>
+          <td>
+            <small><%= b.reason %></small><br>
+            <small class="muted"><%= b.auto ? '🤖 auto' : '👤 manual' %> · <%= new Date(b.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) %> · <%= b.until ? 'till ' + new Date(b.until).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : 'PERMANENT' %></small>
+          </td>
+          <td style="text-align:right">
+            <form method="POST" action="<%= adminBase %>/security/unblock" class="inline">
+              <input type="hidden" name="_csrf" value="<%= csrf %>">
+              <input type="hidden" name="ip" value="<%= b.ip %>">
+              <button type="submit" class="btn small">✓ Unblock</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+    </table>
+
+    <h3 style="margin-top:1rem">Manually block an IP</h3>
+    <form method="POST" action="<%= adminBase %>/security/block" class="row-form">
+      <input type="hidden" name="_csrf" value="<%= csrf %>">
+      <label>IP <input name="ip" placeholder="e.g. 45.33.32.156" required maxlength="45"></label>
+      <label>Duration
+        <select name="hours">
+          <option value="1">1 hour</option>
+          <option value="24" selected>24 hours</option>
+          <option value="168">7 days</option>
+          <option value="0">Permanent</option>
+        </select>
+      </label>
+      <label>Reason <input name="reason" placeholder="why?" maxlength="200"></label>
+      <button type="submit" class="btn small danger">⛔ Block</button>
+    </form>
+
+    <% if (blockedExpired.length) { %>
+      <h3 style="margin-top:1rem">Recently expired (auto-unblocked)</h3>
+      <p class="muted" style="margin:0">
+        <% blockedExpired.slice(0, 8).forEach(b => { %><span class="chip"><%= b.ip %></span> <% }) %>
+      </p>
+    <% } %>
+  </div>
+
+  <div class="panel">
+    <h2>📡 Uptime Monitor</h2>
+    <table class="table tight">
+      <tr><td>Status</td><td>
+        <% if (uptime.lastStatus === null) { %><span class="badge dim">unknown</span>
+        <% } else if (uptime.lastStatus) { %><span class="badge">🟢 UP</span>
+        <% } else { %><span class="badge warn">🔴 DOWN</span><% } %>
+      </td></tr>
+      <tr><td>Checking</td><td class="mono" style="word-break:break-all"><%= uptime.target %>/healthz</td></tr>
+      <tr><td>Last check</td><td><%= uptime.lastCheckedAt ? new Date(uptime.lastCheckedAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : '—' %> <%= uptime.lastLatencyMs !== null ? '(' + uptime.lastLatencyMs + 'ms)' : '' %></td></tr>
+      <% if (uptime.lastError) { %><tr><td>Last error</td><td class="mono"><%= uptime.lastError %></td></tr><% } %>
+      <tr><td>Keep-alive (anti-sleep)</td><td><%- uptime.keepAlive ? '<span class="badge">ON — 10 min ping, Render free plan sleep nahi karega</span>' : '<span class="badge warn">OFF — 15 min idle par site spin-down hogi</span>' %></td></tr>
+      <tr><td>Downtime email →</td><td><%= uptime.alertsTo || '<span class="muted">not set (ADMIN_EMAIL/ALERT_EMAIL env)</span>' %> <%= uptime.mailReady ? '' : '<span class="badge warn">SMTP off</span>' %></td></tr>
+    </table>
+    <p class="muted" style="margin-bottom:0">
+      Site DOWN hone par (2 failed checks) turant email aata hai, aur wapas UP hone par recovery email.
+      Memory high hone par bhi pehle warning aati hai — <em>down hone se pehle</em>.
+    </p>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="row-between">
+    <h2>📜 Visitor / Tester Logs <span class="badge dim"><%= total %> entries</span></h2>
+    <form method="GET" action="<%= adminBase %>/security" class="row-form">
+      <label>IP <input name="ip" value="<%= filter.ip %>" placeholder="filter by ip" size="14" maxlength="45"></label>
+      <label>Severity
+        <select name="sev">
+          <option value="">all</option>
+          <% ['info','low','medium','high'].forEach(s => { %>
+            <option value="<%= s %>" <%= filter.sev === s ? 'selected' : '' %>><%= s %></option>
+          <% }) %>
+        </select>
+      </label>
+      <label>Reason
+        <select name="reason">
+          <option value="">all</option>
+          <% ['visit','not-found','suspicious-path','rate-limit','blocked-request','auto-block','manual-block','login-fail','login-success','admin-login','otp-fail'].forEach(r => { %>
+            <option value="<%= r %>" <%= filter.reason === r ? 'selected' : '' %>><%= r %></option>
+          <% }) %>
+        </select>
+      </label>
+      <button type="submit" class="btn small">Filter</button>
+      <a class="btn small ghost" href="<%= adminBase %>/security">Reset</a>
+    </form>
+  </div>
+
+  <% if (!events.length) { %>
+    <p class="muted">No log entries<%= filter.ip || filter.sev || filter.reason ? ' for this filter' : '' %> yet.</p>
+  <% } else { %>
+    <div style="overflow-x:auto">
+    <table class="table tight">
+      <thead>
+        <tr><th>Time</th><th>IP</th><th>Device</th><th>Location</th><th>Request</th><th>Status</th><th>Signal</th></tr>
+      </thead>
+      <tbody>
+        <% events.forEach(e => { %>
+          <tr>
+            <td><small><%= new Date(e.createdAt).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' }) %></small></td>
+            <td>
+              <a class="link mono" href="<%= adminBase %>/security?ip=<%= encodeURIComponent(e.ip) %>"><%= e.ip %></a>
+            </td>
+            <td><small><%= e.device || '—' %></small></td>
+            <td><small><%= [e.city, e.region, e.country].filter(Boolean).join(', ') || '<span class="muted">…</span>' %></small></td>
+            <td class="mono"><small><%= e.method %> <%= e.path.length > 46 ? e.path.slice(0, 46) + '…' : e.path %></small></td>
+            <td><small><%= e.status %></small></td>
+            <td>
+              <span class="badge <%= e.severity === 'high' ? 'warn' : e.severity === 'medium' ? 'warn' : e.severity === 'low' ? 'dim' : '' %>"><%= e.reason %></span>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="row-between" style="margin-top:0.8rem">
+      <div class="row-form">
+        <% const qs = (p) => { const q = new URLSearchParams(); if (filter.ip) q.set('ip', filter.ip); if (filter.sev) q.set('sev', filter.sev); if (filter.reason) q.set('reason', filter.reason); q.set('page', p); return '?' + q.toString(); }; %>
+        <% if (page > 1) { %><a class="btn small ghost" href="<%= adminBase %>/security<%= qs(page - 1) %>">← Newer</a><% } %>
+        <span class="muted">page <%= page %> / <%= Math.max(1, Math.ceil(total / perPage)) %></span>
+        <% if (page * perPage < total) { %><a class="btn small ghost" href="<%= adminBase %>/security<%= qs(page + 1) %>">Older →</a><% } %>
+      </div>
+      <form method="POST" action="<%= adminBase %>/security/clear" class="inline">
+        <input type="hidden" name="_csrf" value="<%= csrf %>">
+        <button type="submit" class="btn small danger">🗑 Clear all logs now</button>
+      </form>
+    </div>
+  <% } %>
+  <p class="muted" style="margin:0.6rem 0 0">Auto-delete: har entry 30 din baad khud remove (MongoDB TTL). Manual clear upar se.</p>
+</div>
+
+<%- include('../partials/admin_foot') %>

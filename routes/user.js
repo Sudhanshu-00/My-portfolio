@@ -10,6 +10,7 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const { AdminUser, Project, Tool, Lab, Experience, Testimonial, Service } = require('../models');
 const ADMIN_PATH = require('../adminPath');
+const security = require('../services/security');
 
 // timing-safe compare (same pattern as admin routes)
 const safeEqual = (a, b) => {
@@ -139,6 +140,7 @@ router.post('/:username/admin/login', adminGate, async (req, res) => {
   const admin = await AdminUser.findOne({ username, role: 'admin' }).catch(() => null);
   if (admin && (await bcrypt.compare(password, admin.passwordHash))) {
     gateAttempts.delete(key);
+    security.logEvent(req, { reason: 'admin-login', severity: 'info', status: 302, path: '/user/[user]/admin/login' });
     return req.session.regenerate(() => {
       req.session.admin = admin.username; // panel session (fresh session id)
       res.redirect('/' + ADMIN_PATH + '/');
@@ -150,6 +152,7 @@ router.post('/:username/admin/login', adminGate, async (req, res) => {
     rec.fails = 0;
   }
   gateAttempts.set(key, rec);
+  security.bump(req, 'loginFail', 401); // failed admin-gate attempt → auto-block counter
   await new Promise((r) => setTimeout(r, 400)); // slow online brute force
   res.status(401).render('user/admin_login', { username: req.params.username, csrf: issueCsrf(req), error: 'Invalid admin credentials' });
 });

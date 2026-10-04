@@ -36,6 +36,14 @@
     <span class="stat-num"><%= counts.labs %></span>
     <span class="stat-label">Labs Solved</span>
   </a>
+  <a class="stat-card" href="<%= adminBase %>/security">
+    <span class="stat-num"><%= counts.threatsToday %></span>
+    <span class="stat-label">Threats Today</span>
+  </a>
+  <a class="stat-card" href="<%= adminBase %>/security#blocked">
+    <span class="stat-num"><%= counts.blockedNow %></span>
+    <span class="stat-label">Blocked IPs</span>
+  </a>
   <a class="stat-card" href="<%= adminBase %>/messages">
     <span class="stat-num"><%= counts.unread %></span>
     <span class="stat-label">Unread Messages</span>

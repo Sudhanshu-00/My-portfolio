@@ -138,6 +138,44 @@ const LabSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// ---------- security log (who visited / tested / attacked) ----------
+// TTL index → MongoDB auto-deletes events 30 days after createdAt (no cron needed).
+const SecurityEventSchema = new mongoose.Schema(
+  {
+    ip: { type: String, required: true, index: true },
+    method: { type: String, default: '' },
+    path: { type: String, default: '' }, // secret admin path is masked as /[panel]
+    status: { type: Number, default: 0 },
+    ua: { type: String, default: '' }, // raw user-agent (truncated)
+    device: { type: String, default: '' }, // "Chrome · Windows · Desktop"
+    browser: { type: String, default: '' },
+    os: { type: String, default: '' },
+    devType: { type: String, default: '' }, // Desktop / Mobile / Bot / Tool
+    city: { type: String, default: '' },
+    region: { type: String, default: '' },
+    country: { type: String, default: '' },
+    reason: { type: String, default: 'visit', index: true },
+    severity: { type: String, enum: ['info', 'low', 'medium', 'high'], default: 'info', index: true },
+  },
+  { timestamps: true }
+);
+// 30 days = 30 * 24 * 60 * 60 s → logs purane apne aap delete (user requirement)
+SecurityEventSchema.index({ createdAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });
+
+// ---------- blocked IPs (visible + unblockable from admin panel) ----------
+// `until: null` → permanent block (TTL skips null dates, never auto-expires).
+// `until: <date>` → TTL index deletes the doc at that moment = automatic unblock.
+const BlockedIpSchema = new mongoose.Schema(
+  {
+    ip: { type: String, required: true, unique: true },
+    reason: { type: String, default: '' },
+    until: { type: Date, default: null },
+    auto: { type: Boolean, default: false }, // true = blocked by auto-defence
+  },
+  { timestamps: true }
+);
+BlockedIpSchema.index({ until: 1 }, { expireAfterSeconds: 0 });
+
 const FeedbackSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true, maxlength: 60 },
@@ -168,4 +206,6 @@ module.exports = {
   Experience: mongoose.model('Experience', ExperienceSchema),
   Lab: mongoose.model('Lab', LabSchema),
   Feedback: mongoose.model('Feedback', FeedbackSchema),
+  SecurityEvent: mongoose.model('SecurityEvent', SecurityEventSchema),
+  BlockedIp: mongoose.model('BlockedIp', BlockedIpSchema),
 };

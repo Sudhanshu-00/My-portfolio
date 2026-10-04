@@ -11,6 +11,8 @@ Fully dynamic portfolio website with admin panel. Everything runs from the datab
 - Public feedback wall (admin-moderated)
 - Contact form → admin inbox
 - Full admin panel: content, uploads (photo/resume), messages, settings
+- 🛡 **Security & Visitors panel** — every visitor/tester logged with IP, device (browser/OS/tool), and location; auto-blocks scanners (404 fuzzing, sensitive-path probing, brute force); blocked IPs visible + unblockable; logs auto-delete after 30 days
+- 📡 **Uptime monitor** — health check every 5 min, email on DOWN/recovery, Render keep-alive ping (no free-plan sleep), memory warning before crash
 
 ## 💻 Run Locally
 
