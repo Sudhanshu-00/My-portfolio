@@ -72,7 +72,7 @@ router.post('/login', async (req, res) => {
 router.post('/logout', (req, res) => req.session.destroy(() => res.redirect(go('/login'))));
 
 // ---------- forgot password (email OTP) — self-service recovery ----------
-const GENERIC_MSG = 'Agar ye details admin account se match hui, OTP email pe chala gaya hai (10 min valid).';
+const GENERIC_MSG = 'Agar ye details admin account se match hui, OTP email pe chala gaya hai (3 min valid).';
 const otpRequests = new Map(); // ip|username → [timestamps]
 setInterval(() => otpRequests.clear(), 60 * 60 * 1000).unref();
 
@@ -100,14 +100,14 @@ router.post('/forgot', async (req, res) => {
   if (user && user.email && email === user.email) {
     const otp = String(require('crypto').randomInt(0, 1e6)).padStart(6, '0');
     user.otpHash = await bcrypt.hash(otp, 10); // plain OTP kabhi store nahi
-    user.otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+    user.otpExpiry = new Date(Date.now() + 3 * 60 * 1000); // 3 min
     user.otpAttempts = 0;
     await user.save();
     const sent = await sendMail({
       to: user.email,
       subject: 'Password Reset OTP — Portfolio Admin',
-      text: `Reset OTP: ${otp}\n10 minute me expire. Agar tumne request nahi ki, ignore karo.`,
-      html: `<p>Reset OTP: <b style="font-size:24px;letter-spacing:4px">${otp}</b></p><p>10 minute me expire. Agar tumne ye request nahi ki, email ignore karo.</p>`,
+      text: `Reset OTP: ${otp}\n3 minute me expire. Agar tumne request nahi ki, ignore karo.`,
+      html: `<p>Reset OTP: <b style="font-size:24px;letter-spacing:4px">${otp}</b></p><p>3 minute me expire. Agar tumne ye request nahi ki, email ignore karo.</p>`,
     });
     if (!sent) console.log(`[DEV] OTP for ${u}: ${otp}`); // SMTP set nahi → sirf server console
   }
@@ -133,8 +133,8 @@ router.post('/forgot/verify', async (req, res) => {
     }
     return res.render('admin/forgot', { step: 'otp', error: 'OTP galat ya expire — dobara try karo.', info: null, username: u });
   }
-  // OTP sahi — 10 min ka reset window (session me, URL me token nahi)
-  req.session.resetAuth = { user: u, exp: Date.now() + 10 * 60 * 1000 };
+  // OTP sahi — 5 min ka reset window (session me, URL me token nahi)
+  req.session.resetAuth = { user: u, exp: Date.now() + 5 * 60 * 1000 };
   res.redirect('/reset');
 });
 
