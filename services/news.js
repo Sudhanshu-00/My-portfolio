@@ -85,6 +85,8 @@ const SOURCES = [
     key: 'nvd',
     label: 'NVD (New CVEs)',
     kind: 'cve',
+    // NOTE: fetchNvd() har refresh par pubStartDate fresh inject karta hai (last 48h) —
+    // bina date ke NVD 1988 ke sabse-purane CVEs deta hai, newest nahi.
     url: 'https://services.nvd.nist.gov/rest/json/cves/2.0?resultsPerPage=40',
     type: 'json',
   },
@@ -238,7 +240,13 @@ async function fetchCisaKev(s) {
 const cvssSeverity = (score) => (score >= 9 ? 'critical' : score >= 7 ? 'high' : score >= 4 ? 'medium' : 'low');
 
 async function fetchNvd(s) {
-  const data = JSON.parse(await fetchUrl(s.url));
+  // NVD 2.0 API: pubStartDate + pubEndDate DONO required (akele start → 404).
+  // Window = last 48h (120-day max rule ke andar). Fresh dates har call par.
+  const start = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString().replace(/\.\d{3}Z$/, '.000Z');
+  const end = new Date().toISOString().replace(/\.\d{3}Z$/, '.000Z');
+  const data = JSON.parse(await fetchUrl(
+    s.url + '&pubStartDate=' + encodeURIComponent(start) + '&pubEndDate=' + encodeURIComponent(end)
+  ));
   const vulns = (data && data.vulnerabilities) || [];
   const cutoff = Date.now() - 3 * 24 * 60 * 60 * 1000; // sirf last 3 din ke CVEs
   const out = [];

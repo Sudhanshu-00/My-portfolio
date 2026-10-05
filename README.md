@@ -14,6 +14,7 @@ Fully dynamic portfolio website with admin panel. Everything runs from the datab
 - Full admin panel: content, uploads (photo/resume), messages, settings
 - 🛡 **Security & Visitors panel** — every visitor/tester logged with IP, device (browser/OS/tool), and location; auto-blocks scanners (404 fuzzing, sensitive-path probing, brute force); blocked IPs visible + unblockable; logs auto-delete after 30 days
 - 📡 **Uptime monitor** — health check every 5 min, email on DOWN/recovery, Render keep-alive ping (no free-plan sleep), memory warning before crash
+- 📰 **Live Threat Feed blog (`/blog`)** — auto-fetches latest exploits, new CVEs & cyber-attacks from 7 sources (The Hacker News, BleepingComputer, KrebsOnSecurity, Dark Reading, Zero Day Initiative, CISA KEV, NVD); auto-refresh every 30 min; old items auto-delete after 10 days; kind/keyword filters, severity badges (CVSS), NEW markers, live "new items" bar; admin panel → 📡 Threat Feed for stats, per-source health, manual refresh & delete
 
 ## 💻 Run Locally
 
