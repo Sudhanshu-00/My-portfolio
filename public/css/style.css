@@ -734,3 +734,54 @@ body.admin {
 .page-img { display: block; max-width: 100%; max-height: 560px; border-radius: 10px; border: 1px solid var(--border); margin: 1.1rem 0; }
 .footer-links a { opacity: 0.8; }
 .footer-links a:hover { opacity: 1; }
+
+/* ============ THREAT FEED (live blog) ============ */
+.live-dot {
+  display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+  background: var(--accent); margin-left: 6px; vertical-align: middle;
+  animation: pulse-dot 1.6s ease-in-out infinite;
+  box-shadow: 0 0 8px rgba(0, 255, 65, 0.8);
+}
+@keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+.feed-toolbar { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; justify-content: space-between; margin: 0.8rem 0 0.4rem; }
+.feed-search {
+  flex: 1; min-width: 220px; max-width: 380px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); font-family: inherit; font-size: 0.85rem; padding: 0.55rem 0.8rem;
+  outline: none; transition: border-color 0.2s;
+}
+.feed-search:focus { border-color: var(--accent); box-shadow: 0 0 12px rgba(0, 255, 65, 0.15); }
+.feed-search::placeholder { color: var(--muted); opacity: 0.7; }
+
+.feed-meta { font-size: 0.78rem; margin-bottom: 0.6rem; }
+.feed-newbar {
+  background: rgba(0, 229, 255, 0.08); border: 1px dashed var(--cyan); border-radius: 8px;
+  padding: 0.6rem 1rem; margin-bottom: 0.8rem; color: var(--cyan); font-size: 0.9rem;
+}
+.feed-newbar .link { cursor: pointer; background: none; border: none; font-family: inherit; font-size: inherit; padding: 0; }
+
+.feed-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
+.feed-card { display: flex; flex-direction: column; transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s; }
+.feed-card:hover { border-color: var(--accent); box-shadow: 0 0 18px rgba(0, 255, 65, 0.12); transform: translateY(-2px); }
+.feed-card .card-body { display: flex; flex-direction: column; gap: 0.55rem; }
+.feed-title { margin: 0; font-size: 1rem; line-height: 1.4; }
+.feed-title a { color: var(--text); text-decoration: none; }
+.feed-title a:hover { color: var(--accent); text-decoration: underline; }
+.feed-summary { font-size: 0.8rem; margin: 0; flex: 1; }
+.feed-foot { border-top: 1px solid var(--border); padding-top: 0.5rem; }
+
+.chip.kind-news { color: var(--cyan); border-color: rgba(0, 229, 255, 0.4); }
+.chip.kind-cve { color: var(--yellow); border-color: rgba(255, 214, 10, 0.4); }
+.chip.kind-exploit { color: var(--red); border-color: rgba(255, 45, 85, 0.5); }
+.chip.src { color: var(--muted); }
+.chip.sev-critical { color: #ff2d55; border-color: #ff2d55; background: rgba(255, 45, 85, 0.1); }
+.chip.sev-high { color: #ff9f0a; border-color: rgba(255, 159, 10, 0.5); }
+.chip.sev-medium { color: var(--yellow); border-color: rgba(255, 214, 10, 0.4); }
+.chip.sev-low { color: var(--muted); border-color: var(--border); }
+
+.new-badge {
+  background: var(--red); color: #fff; font-size: 0.62rem; font-weight: 800;
+  letter-spacing: 1px; padding: 2px 7px; border-radius: 4px;
+  animation: pulse-dot 1.4s ease-in-out infinite; align-self: center;
+}

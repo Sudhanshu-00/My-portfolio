@@ -1,0 +1,82 @@
+<%- include('partials/header', { title: 'Threat Feed' }) %>
+
+<section class="section">
+  <h1>
+    <span class="sec-tag">&gt;_</span> THREAT_FEED
+    <span class="live-dot" title="live — auto-refresh every 30 min"></span>
+    <span class="muted" style="font-size:0.9rem">[ live intel · exploits · CVEs ]</span>
+  </h1>
+  <p class="muted">
+    Auto-aggregated from The Hacker News, BleepingComputer, KrebsOnSecurity, Dark Reading,
+    Zero Day Initiative, CISA KEV & NVD — naya exploit / CVE / breach apne aap yahan aata hai.
+    Purani entries 10 din baad auto-purge ho jaati hain.
+    <% if (st.lastError) { %>⚠️ kuch sources unreachable the — partial data dikha hai.<% } %>
+  </p>
+
+  <div class="gh-stats">
+    <div class="gh-stat"><span class="stat-num"><%= counts.all %></span><span class="stat-label">Total Intel</span></div>
+    <div class="gh-stat"><span class="stat-num" style="color:var(--cyan,#00e5ff)"><%= counts.news %></span><span class="stat-label">News</span></div>
+    <div class="gh-stat"><span class="stat-num" style="color:var(--yellow,#ffd60a)"><%= counts.cve %></span><span class="stat-label">CVEs</span></div>
+    <div class="gh-stat"><span class="stat-num" style="color:#ff2d55"><%= counts.exploit %></span><span class="stat-label">Exploits</span></div>
+  </div>
+
+  <% const srcState = st.sources || []; %>
+  <% if (srcState.length) { %>
+  <p class="muted" style="font-size:0.78rem;margin-bottom:0.6rem">
+    <% srcState.forEach((s, ix) => { const ps = (st.perSource || {})[s.key]; %><% if (ix) { %> · <% } %>[ <%= s.label %> <span style="color:<%= ps && ps.ok ? '#00ff41' : '#ff2d55' %>"><%= ps && ps.ok ? '✓' : (st.fetching ? '…' : '✗') %></span> ]<% }) %>
+  </p>
+  <% } %>
+
+  <div class="feed-toolbar">
+    <div class="chips" id="feed-tabs" style="margin:0">
+      <button type="button" class="chip" data-kind="all">ALL [ <%= counts.all %> ]</button>
+      <button type="button" class="chip ghost kind-news" data-kind="news">NEWS [ <%= counts.news %> ]</button>
+      <button type="button" class="chip ghost kind-cve" data-kind="cve">CVE [ <%= counts.cve %> ]</button>
+      <button type="button" class="chip ghost kind-exploit" data-kind="exploit">EXPLOITS [ <%= counts.exploit %> ]</button>
+    </div>
+    <input id="feed-search" class="feed-search" type="search" placeholder="grep intel… (title / CVE / source)" autocomplete="off" aria-label="Feed search">
+  </div>
+
+  <p class="muted feed-meta">
+    <span id="feed-sync">sync: <%= st.lastRefreshAt ? ago(st.lastRefreshAt) : (st.fetching ? 'fetching…' : 'pending') %></span>
+    <% if (st.nextRefreshAt) { %> · next auto-refresh: <%= new Date(st.nextRefreshAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) %><% } %>
+    <% if (st.fetching) { %> · <span style="color:var(--cyan,#00e5ff)">FETCHING…</span><% } %>
+    <button type="button" id="feed-reload" class="btn small ghost" style="margin-left:0.6rem">⟳ RELOAD</button>
+  </p>
+
+  <div id="feed-newbar" class="feed-newbar" hidden>
+    ⚡ <strong id="feed-newcount">0</strong> naye intel items aaye hain — <a href="/blog" class="link">REFRESH karo →</a>
+  </div>
+
+  <div id="feed-grid" class="feed-grid">
+    <% items.forEach((i) => { %>
+      <% const fresh = (Date.now() - new Date(i.publishedAt).getTime()) < 24 * 60 * 60 * 1000; %>
+      <article class="card feed-card" data-kind="<%= i.kind %>"
+               data-search="<%= ((i.title + ' ' + i.summary + ' ' + (i.sourceLabel || '') + ' ' + (i.tags || []).join(' ')).toLowerCase()) %>">
+        <div class="card-body">
+          <div class="chips" style="margin:0">
+            <span class="chip kind-<%= i.kind %>"><%= String(i.kind).toUpperCase() %></span>
+            <% if (i.severity) { %><span class="chip sev-<%= i.severity %>"><%= String(i.severity).toUpperCase() %></span><% } %>
+            <% if (fresh) { %><span class="new-badge">NEW</span><% } %>
+          </div>
+          <h3 class="feed-title"><a href="<%= i.link %>" target="_blank" rel="noopener noreferrer"><%= i.title %></a></h3>
+          <% if (i.summary) { %><p class="muted feed-summary"><%= i.summary %></p><% } %>
+          <div class="feed-foot row-between">
+            <span class="chip src"><%= i.sourceLabel || i.source %></span>
+            <span class="muted" style="font-size:0.78rem"><%= ago(i.publishedAt) %></span>
+          </div>
+        </div>
+      </article>
+    <% }) %>
+  </div>
+
+  <div id="feed-noresult" class="panel" hidden>
+    <p class="muted">[!] is filter/search par kuch nahi mila — doosra tab ya search clear karke dekho.</p>
+  </div>
+
+  <div id="feed-empty" class="panel" data-total="<%= counts.all %>" <%- counts.all ? 'hidden' : '' %>>
+    <p class="muted">[!] feed abhi khaali hai — pehla auto-fetch background me chal raha hai. 30–60 sec baad RELOAD karke dekho.</p>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

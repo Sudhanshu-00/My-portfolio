@@ -41,6 +41,7 @@
       <% } %>
       <% if (show('security')) { %>
       <a href="<%= adminBase %>/security" class="<%= String(path).startsWith('/admin/security') ? 'active' : '' %>"><span>🛡</span> Security &amp; Logs</a>
+      <a href="<%= adminBase %>/news" class="<%= String(path).startsWith('/admin/news') ? 'active' : '' %>"><span>📡</span> Threat Feed</a>
       <% } %>
       <% if (show('users')) { %>
       <a href="<%= adminBase %>/users" class="<%= String(path).startsWith('/admin/users') ? 'active' : '' %>"><span>👥</span> Users</a>

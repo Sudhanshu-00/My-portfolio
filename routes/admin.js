@@ -1,9 +1,10 @@
 const router = require('express').Router();
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
-const { AdminUser, Project, Skill, Message, SiteSetting, Tool, PageView, Service, Testimonial, Experience, Lab, Feedback, SecurityEvent, BlockedIp, Page } = require('../models');
+const { AdminUser, Project, Skill, Message, SiteSetting, Tool, PageView, Service, Testimonial, Experience, Lab, Feedback, SecurityEvent, BlockedIp, Page, NewsItem } = require('../models');
 const { sendMail, otpTemplate, mailReady } = require('../services/mailer');
 const security = require('../services/security');
+const news = require('../services/news');
 const captchaSvg = require('../services/captcha');
 
 // Secret admin path — single source of truth in ../adminPath.js (fail-closed:
@@ -537,6 +538,7 @@ router.use(['/settings', '/resume'], requirePerm('settings'));
 router.use(['/messages', '/feedback'], requirePerm('messages'));
 router.use('/users', requirePerm('users'));
 router.use('/security', requirePerm('security'));
+router.use('/news', requirePerm('security')); // threat feed = security intel section
 
 // ---------- dashboard ----------
 router.get('/', async (req, res) => {
@@ -558,6 +560,7 @@ router.get('/', async (req, res) => {
     SecurityEvent.countDocuments({ createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) }, reason: { $ne: 'visit' } }),
     AdminUser.countDocuments(),
     Page.countDocuments(),
+    NewsItem.countDocuments(),
   ]);
 
   // chart: daily bars for 7d/30d, monthly for 1y
@@ -601,7 +604,7 @@ router.get('/', async (req, res) => {
   const maxCount = Math.max(1, ...chart.map((c) => c.count));
 
   res.render('admin/dashboard', {
-    counts: { projects, skills, unread, tools, services, testimonials, labs, blockedNow, threatsToday, userCount, pages: pageCount },
+    counts: { projects, skills, unread, tools, services, testimonials, labs, blockedNow, threatsToday, userCount, pages: pageCount, news: newsCount },
     stats: { totalMsgs, totalViews, viewsToday, rangeViews },
     chart,
     maxCount,
@@ -803,6 +806,43 @@ router.post('/security/unblock', async (req, res) => {
 router.post('/security/clear', async (req, res) => {
   await SecurityEvent.deleteMany({});
   res.redirect(go('/admin/security?cleared=1'));
+});
+
+// ---------- threat feed (live news blog) — admin control ----------
+router.get('/news', async (req, res) => {
+  const st = news.status();
+  const page = Math.min(50, Math.max(1, parseInt(req.query.page, 10) || 1));
+  const perPage = 50;
+  const [items, total, counts] = await Promise.all([
+    NewsItem.find().sort({ publishedAt: -1 }).skip((page - 1) * perPage).limit(perPage).lean(),
+    NewsItem.countDocuments(),
+    Promise.all([
+      NewsItem.countDocuments({ kind: 'news' }),
+      NewsItem.countDocuments({ kind: 'cve' }),
+      NewsItem.countDocuments({ kind: 'exploit' }),
+    ]),
+  ]);
+  res.render('admin/news', {
+    items, total, page, perPage, st,
+    counts: { news: counts[0], cve: counts[1], exploit: counts[2] },
+    msg: req.query.msg || '', err: req.query.err || '',
+  });
+});
+
+router.post('/news/refresh', async (req, res) => {
+  const r = await news.refresh(true);
+  if (!r.ok) return res.redirect(go(`/admin/news?err=${encodeURIComponent(r.reason === 'cooldown' ? 'Cooldown active — 1 min wait karo.' : 'Refresh already running.')}`));
+  res.redirect(go(`/admin/news?msg=${encodeURIComponent('Refresh done — ' + r.added + ' new items added, ' + r.scanned + ' scanned.')}`));
+});
+
+router.post('/news/delete/:id', async (req, res) => {
+  await NewsItem.deleteOne({ _id: req.params.id });
+  res.redirect(go('/admin/news?msg=' + encodeURIComponent('Item deleted.')));
+});
+
+router.post('/news/clear', async (req, res) => {
+  await NewsItem.deleteMany({});
+  res.redirect(go('/admin/news?msg=' + encodeURIComponent('Feed cleared — next auto-refresh will re-populate it.')));
 });
 
 // ---------- settings ----------

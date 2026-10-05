@@ -7,6 +7,7 @@ const session = require('express-session');
 const MongoStore = require('connect-mongo');
 
 const { initDB, getActiveUri } = require('./db');
+const news = require('./services/news'); // live threat feed (blog page)
 const { SiteSetting, PageView, Page } = require('./models');
 const publicRoutes = require('./routes/public');
 const adminRoutes = require('./routes/admin');
@@ -226,9 +227,10 @@ async function main() {
 
   // Page view analytics (public pages only — admin requests were rewritten above;
   // skip our own keep-alive pinger so it never pollutes analytics)
+  // /blog/data JSON poll bhi skip — analytics me junk na bhare
   app.use((req, res, next) => {
     const ownPing = String(req.headers['user-agent'] || '').includes('Portfolio-KeepAlive');
-    if (req.method === 'GET' && !ownPing && !req.path.startsWith('/admin') && !req.path.startsWith('/user') && req.path !== '/healthz') {
+    if (req.method === 'GET' && !ownPing && !req.path.startsWith('/admin') && !req.path.startsWith('/user') && req.path !== '/healthz' && req.path !== '/blog/data') {
       PageView.create({ path: String(req.path).slice(0, 200) }).catch(() => {});
     }
     next();
@@ -292,6 +294,8 @@ async function main() {
       ? `[MAIL] delivery: ${brevoOn ? 'Brevo API ✓ (fast HTTPS, primary)' : 'Brevo ✗ (BREVO_API_KEY not set!)'} | ${smtpOn ? `Gmail SMTP ✓ (slow fallback: ${process.env.SMTP_HOST || 'smtp.gmail.com'})` : 'SMTP ✗'} → OTP emails WILL SEND`
       : '[MAIL] ⚠️ NO mail transport — set BREVO_API_KEY (best) ya SMTP_USER+SMTP_PASS — OTP emails WILL FAIL');
     uptime.start(); // downtime email alerts + Render keep-alive (see services/uptime.js)
+    news.start(); // live threat feed loop — boot +1.5s pehla fetch, phir har 30 min auto-refresh
+    news.start();   // live threat feed fetch loop (RSS/JSON → /blog, see services/news.js)
   });
 }
 

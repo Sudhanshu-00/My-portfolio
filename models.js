@@ -52,8 +52,19 @@ const SiteSettingSchema = new mongoose.Schema({
 
 // Always returns the single settings document (creates it if missing)
 // First boot → seed the default navbar (same links as the old hardcoded one)
-SiteSettingSchema.statics.get = function () {
-  return this.findOne().then((doc) => doc || this.create({ navItems: DEFAULT_NAV }));
+// One-time migration: purane default 6-link nav → usme './blog' add (customized nav untouched)
+SiteSettingSchema.statics.get = async function () {
+  let doc = await this.findOne();
+  if (!doc) doc = await this.create({ navItems: DEFAULT_NAV });
+  const nav = doc.navItems || [];
+  const hasBlog = nav.some((n) => n && n.url === '/blog');
+  const isOldDefault = nav.length === 6 && ['/', '/about', '/tools', '/projects', '/labs', '/contact'].every((u) => nav.some((n) => n && n.url === u));
+  if (!hasBlog && isOldDefault) {
+    doc.navItems.push({ label: './blog', url: '/blog', order: 6, visible: true, newTab: false });
+    doc.navItems.filter((n) => n && n.url === '/contact').forEach((n) => { n.order = 7; });
+    await doc.save();
+  }
+  return doc;
 };
 
 // Default navbar — used when the settings doc has no items yet (back-compat with old DBs)
@@ -63,7 +74,8 @@ const DEFAULT_NAV = [
   { label: './tools', url: '/tools', order: 3, visible: true, newTab: false },
   { label: './projects', url: '/projects', order: 4, visible: true, newTab: false },
   { label: './labs', url: '/labs', order: 5, visible: true, newTab: false },
-  { label: './contact', url: '/contact', order: 6, visible: true, newTab: false },
+  { label: './blog', url: '/blog', order: 6, visible: true, newTab: false },
+  { label: './contact', url: '/contact', order: 7, visible: true, newTab: false },
 ];
 SiteSettingSchema.statics.defaultNav = DEFAULT_NAV;
 
@@ -249,6 +261,29 @@ const FeedbackSchema = new mongoose.Schema(
 );
 FeedbackSchema.index({ ip: 1, createdAt: -1 }); // per-IP rate-limit query fast
 
+// ---------- live threat feed (blog page) ----------
+// services/news.js multiple security sites se fetch karke yahan store karta hai.
+// TTL index → 10 din purane items MongoDB khud delete kar deta hai ("purana wala hate").
+// extId unique → same article kabhi dobara store nahi hota (dedupe).
+const NewsItemSchema = new mongoose.Schema(
+  {
+    extId: { type: String, required: true, unique: true }, // sha1(source|link)
+    source: { type: String, required: true, maxlength: 40 }, // source key
+    sourceLabel: { type: String, default: '', maxlength: 60 }, // display name
+    title: { type: String, required: true, maxlength: 260 },
+    link: { type: String, required: true, maxlength: 800 },
+    summary: { type: String, default: '', maxlength: 500 },
+    kind: { type: String, enum: ['news', 'cve', 'exploit'], default: 'news', index: true },
+    severity: { type: String, enum: ['', 'low', 'medium', 'high', 'critical'], default: '' },
+    tags: { type: [String], default: [] },
+    publishedAt: { type: Date, default: Date.now },
+  },
+  { timestamps: true }
+);
+// 10 din = auto-delete of stale feed items (user requirement: purana hat-ta rahe)
+NewsItemSchema.index({ createdAt: 1 }, { expireAfterSeconds: 10 * 24 * 60 * 60 });
+NewsItemSchema.index({ publishedAt: -1 }); // feed sorted by publish time
+
 // ---------- custom pages (Admin → Pages) ----------
 // Blocks are stored as plain typed content (heading/text/image) — EJS escapes
 // everything, no raw HTML is ever stored, so stored-XSS is impossible by design.
@@ -289,4 +324,5 @@ module.exports = {
   SecurityEvent: mongoose.model('SecurityEvent', SecurityEventSchema),
   BlockedIp: mongoose.model('BlockedIp', BlockedIpSchema),
   Page: mongoose.model('Page', PageSchema),
+  NewsItem: mongoose.model('NewsItem', NewsItemSchema),
 };

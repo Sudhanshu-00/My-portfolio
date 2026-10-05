@@ -1,6 +1,16 @@
 const router = require('express').Router();
-const { Project, Skill, Message, Tool, Service, Testimonial, Experience, Lab, Feedback, SiteSetting, Page } = require('../models');
+const { Project, Skill, Message, Tool, Service, Testimonial, Experience, Lab, Feedback, SiteSetting, Page, NewsItem } = require('../models');
 const { getRepoDetails, getProfile, mdToHtml } = require('../services/github');
+const news = require('../services/news');
+
+// relative time — "3 hours ago" style (English, hacker-console tone)
+const ago = (d) => {
+  const s = Math.max(0, (Date.now() - new Date(d).getTime()) / 1000);
+  if (s < 60) return 'just now';
+  const m = Math.floor(s / 60); if (m < 60) return m + 'm ago';
+  const h = Math.floor(m / 60); if (h < 24) return h + 'h ago';
+  const dd = Math.floor(h / 24); return dd + 'd ago';
+};
 
 router.get('/', async (req, res) => {
   const [projects, skills, tools, services, testimonials] = await Promise.all([
@@ -72,6 +82,46 @@ router.get('/projects/:id', async (req, res) => {
 router.get('/labs', async (req, res) => {
   const labs = await Lab.find().sort({ solvedAt: -1, createdAt: -1 });
   res.render('labs', { labs });
+});
+
+// ---- live threat feed / hacker news blog (auto-updating) ----
+router.get('/blog', async (req, res) => {
+  try {
+    const st = news.status();
+    const items = await NewsItem.find().sort({ publishedAt: -1 }).limit(120).lean();
+    const [newsCount, cveCount, exploitCount] = await Promise.all([
+      NewsItem.countDocuments({ kind: 'news' }),
+      NewsItem.countDocuments({ kind: 'cve' }),
+      NewsItem.countDocuments({ kind: 'exploit' }),
+    ]);
+    const counts = { news: newsCount, cve: cveCount, exploit: exploitCount, all: newsCount + cveCount + exploitCount };
+    res.render('blog', { items, counts, st, ago, loadBlogJs: true });
+  } catch {
+    res.render('blog', { items: [], counts: { news: 0, cve: 0, exploit: 0, all: 0 }, st: news.status(), ago, loadBlogJs: true });
+  }
+});
+
+// JSON endpoint — blog page isko poll karta hai (new items aaye to "REFRESH" bar dikhta hai)
+router.get('/blog/data', async (req, res) => {
+  try {
+    const since = /^\d+$/.test(String(req.query.since || '')) ? new Date(+req.query.since) : null;
+    const newer = since ? await NewsItem.countDocuments({ createdAt: { $gt: since } }) : 0;
+    const st = news.status();
+    res.json({
+      ok: true,
+      newer,
+      lastRefreshAt: st.lastRefreshAt,
+      nextRefreshAt: st.nextRefreshAt,
+      fetching: st.fetching,
+      counts: {
+        news: await NewsItem.countDocuments({ kind: 'news' }),
+        cve: await NewsItem.countDocuments({ kind: 'cve' }),
+        exploit: await NewsItem.countDocuments({ kind: 'exploit' }),
+      },
+    });
+  } catch {
+    res.status(500).json({ ok: false });
+  }
 });
 
 // ---- custom pages (built in Admin → Pages) — same navbar/footer as every page ----

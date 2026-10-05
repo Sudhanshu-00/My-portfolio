@@ -1,0 +1,92 @@
+<%- include('../partials/admin_head', { title: 'Threat Feed' }) %>
+
+<h1>📡 Threat Feed <span class="muted" style="font-size:0.9rem">[ live news blog control ]</span></h1>
+<p class="muted">
+  Public <a class="link" href="/blog" target="_blank">/blog</a> page ke liye auto-fetched security intel —
+  exploits, CVEs, breaches. Auto-refresh every 30 min · purane items 10 din baad auto-delete.
+</p>
+
+<% if (msg) { %><div class="panel" style="border-color:var(--accent)"><span class="ok">✔</span> <%= msg %></div><% } %>
+<% if (err) { %><div class="panel" style="border-color:var(--red)"><span style="color:var(--red)">✖</span> <%= err %></div><% } %>
+
+<div class="stat-grid">
+  <div class="stat-card"><span class="stat-num"><%= total %></span><span class="stat-label">Total Intel</span></div>
+  <div class="stat-card"><span class="stat-num" style="color:#00e5ff"><%= counts.news %></span><span class="stat-label">News</span></div>
+  <div class="stat-card"><span class="stat-num" style="color:#ffd60a"><%= counts.cve %></span><span class="stat-label">New CVEs</span></div>
+  <div class="stat-card"><span class="stat-num" style="color:#ff2d55"><%= counts.exploit %></span><span class="stat-label">Exploits / KEV</span></div>
+</div>
+
+<div class="panel">
+  <div class="row-between">
+    <h2>⚙️ Feed Status</h2>
+    <form method="POST" action="<%= adminBase %>/news/refresh">
+      <input type="hidden" name="_csrf" value="<%= csrf %>">
+      <button type="submit" class="btn small">⟳ Refresh Now</button>
+    </form>
+  </div>
+  <table class="table">
+    <tr><td>Last refresh</td><td class="mono"><%= st.lastRefreshAt ? new Date(st.lastRefreshAt).toLocaleString('en-IN') : '(not yet — boot par 1.5s baad hota hai)' %></td></tr>
+    <tr><td>Next auto-refresh</td><td class="mono"><%= st.nextRefreshAt ? new Date(st.nextRefreshAt).toLocaleString('en-IN') : '—' %></td></tr>
+    <tr><td>Currently fetching</td><td class="mono"><%= st.fetching ? '⏳ yes' : 'idle' %></td></tr>
+    <% if (st.lastError) { %><tr><td>Last errors</td><td class="mono" style="color:var(--yellow)"><%= st.lastError %></td></tr><% } %>
+  </table>
+  <h3 style="margin-top:1rem">📡 Per-Source Health</h3>
+  <table class="table tight">
+    <% st.sources.forEach((s) => { const h = st.perSource[s.key]; %>
+      <tr>
+        <td class="mono"><%= s.label %></td>
+        <td><span class="chip kind-<%= s.kind %>"><%= s.kind %></span></td>
+        <td>
+          <% if (!h) { %><span class="muted">not fetched yet</span>
+          <% } else if (h.ok) { %><span class="ok">● OK</span> <span class="muted">(<%= h.count %> items, <%= new Date(h.at).toLocaleTimeString('en-IN') %>)</span>
+          <% } else { %><span style="color:var(--red)">● FAIL</span> <span class="muted"><%= h.error %></span><% } %>
+        </td>
+      </tr>
+    <% }) %>
+  </table>
+</div>
+
+<div class="panel">
+  <div class="row-between">
+    <h2>📰 Latest Intel <span class="muted" style="font-size:0.85rem">[ <%= total %> total ]</span></h2>
+    <form method="POST" action="<%= adminBase %>/news/clear" data-confirm="Pura feed clear karein? Next auto-refresh me dobara bhar jayega.">
+      <input type="hidden" name="_csrf" value="<%= csrf %>">
+      <button type="submit" class="btn small ghost">🗑 Clear All</button>
+    </form>
+  </div>
+  <% if (!items.length) { %>
+    <p class="muted">Feed empty — Refresh Now dabao ya 30 min ka auto-refresh wait karo.</p>
+  <% } else { %>
+  <table class="table tight">
+    <thead><tr><th>Kind</th><th>Title</th><th>Source</th><th>Published</th><th></th></tr></thead>
+    <tbody>
+      <% items.forEach((n) => { %>
+      <tr>
+        <td><span class="chip kind-<%= n.kind %>"><%= n.kind %></span><% if (n.severity) { %> <span class="chip sev-<%= n.severity %>"><%= n.severity %></span><% } %></td>
+        <td>
+          <a class="link" href="<%= n.link %>" target="_blank" rel="noopener noreferrer"><%= n.title.slice(0, 90) %><%= n.title.length > 90 ? '…' : '' %></a>
+        </td>
+        <td class="muted"><%= n.sourceLabel %></td>
+        <td class="muted mono"><%= new Date(n.publishedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) %></td>
+        <td>
+          <form method="POST" action="<%= adminBase %>/news/delete/<%= n._id %>" data-confirm="Delete this item?">
+            <input type="hidden" name="_csrf" value="<%= csrf %>">
+            <button type="submit" class="btn small ghost">✕</button>
+          </form>
+        </td>
+      </tr>
+      <% }) %>
+    </tbody>
+  </table>
+  <% } %>
+
+  <% if (total > perPage) { %>
+  <div class="range-tabs" style="margin-top:1rem">
+    <% for (let p = 1; p <= Math.ceil(total / perPage); p++) { %>
+      <a class="btn small <%= p === page ? '' : 'ghost' %>" href="<%= adminBase %>/news?page=<%= p %>"><%= p %></a>
+    <% } %>
+  </div>
+  <% } %>
+</div>
+
+<%- include('../partials/admin_foot') %>
