@@ -59,5 +59,20 @@
   function show() { if (!overlay) buildOverlay(); }
   function hide() { if (overlay) { overlay.remove(); overlay = null; } }
 
-  setInterval(function () { isOpen() ? show() : hide(); }, 1200);
+  // ---- touch devices (mobile/tablet) par size-heuristic band ----
+  // Mobile browsers (Brave/Safari/Chrome Android) outer/inner size me bada
+  // difference report karte hain (browser toolbar/UI/shields ki wajah se)
+  // → false "DEVELOPER TOOLS DETECTED" overlay. Real desktop devtools hi
+  // is heuristic ka target hai — touch device par check skip, overlay hamesha hide.
+  var isTouch = false;
+  try {
+    isTouch = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) ||
+              ('ontouchstart' in window) ||
+              (navigator.maxTouchPoints || 0) > 0;
+  } catch (e) {}
+
+  setInterval(function () {
+    if (isTouch) { hide(); return; }
+    isOpen() ? show() : hide();
+  }, 1200);
 })();
