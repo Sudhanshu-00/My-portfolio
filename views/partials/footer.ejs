@@ -21,8 +21,8 @@
     <p style="margin-top:0.3rem"><a href="/login" class="link" style="font-size:0.72rem;opacity:0.45">login</a></p>
   </div>
 </footer>
-<script src="/js/hacker.js"></script>
-<script src="/js/guard.js"></script>
-<% if (typeof loadBlogJs !== 'undefined' && loadBlogJs) { %><script src="/js/blog.js" defer></script><% } %>
+<script src="/js/hacker.js?v=<%= assetV %>"></script>
+<script src="/js/guard.js?v=<%= assetV %>"></script>
+<% if (typeof loadBlogJs !== 'undefined' && loadBlogJs) { %><script src="/js/blog.js?v=<%= assetV %>" defer></script><% } %>
 </body>
 </html>

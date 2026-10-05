@@ -1,6 +1,7 @@
 require('dotenv').config();
 require('./lib/env'); // env fallback chain — sab se PEHLE (db/adminPath env require-time me padhte hain)
 const path = require('path');
+const fs = require('fs');
 const crypto = require('crypto');
 const express = require('express');
 const session = require('express-session');
@@ -30,6 +31,15 @@ async function main() {
   app.set('trust proxy', 1);
   app.set('view engine', 'ejs');
   app.set('views', path.join(__dirname, 'views'));
+
+  // ---------- static asset cache-busting version ----------
+  // CSS/JS URLs me ?v=<mtime> lagta hai (views me assetV). Public files badalne
+  // par mtime → naya version → browsers cached 1-day asset ki jagah fresh
+  // CSS/JS fetch karte hain (mobile par deploy turant dikhta hai).
+  const assetMTime = ['public/css/style.css', 'public/js/hacker.js', 'public/js/guard.js', 'public/js/admin.js', 'public/js/blog.js', 'public/js/showpass.js', 'public/js/signup.js']
+    .map((f) => { try { return fs.statSync(path.join(__dirname, f)).mtimeMs; } catch { return 0; } })
+    .reduce((a, b) => Math.max(a, b), 0);
+  app.locals.assetV = Math.round(assetMTime).toString(36);
 
   // ---------- security headers ----------
   app.use((req, res, next) => {

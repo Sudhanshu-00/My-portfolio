@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Login</title>
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
   <style>
     .captcha-row { display:flex; gap:0.6rem; align-items:center; }
     .captcha-row img { border-radius:8px; border:1px solid rgba(255,255,255,0.15); background:#0d1117; height:46px; cursor:pointer; }
@@ -41,6 +41,6 @@
     </form>
     <a href="/user/<%= username %>" class="link" style="font-size:0.82rem">← Back to dashboard</a>
   </div>
-  <script src="/js/showpass.js"></script>
+  <script src="/js/showpass.js?v=<%= assetV %>"></script>
 </body>
 </html>

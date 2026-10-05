@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sign up — step <%= step %>/3</title>
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
   <style>
     .steps { display:flex; gap:0.4rem; margin:0 0 1.2rem; }
     .step-dot { flex:1; text-align:center; font-size:0.68rem; padding:0.45rem 0.2rem; border-radius:6px; background:rgba(255,255,255,0.05); color:rgba(255,255,255,0.35); border:1px solid rgba(255,255,255,0.08); letter-spacing:0.03em; }
@@ -90,7 +90,7 @@
       <a href="/" class="link" style="font-size:0.82rem">← Website</a>
     </div>
   </div>
-  <script src="/js/showpass.js" defer></script>
-  <script src="/js/signup.js" defer></script>
+  <script src="/js/showpass.js?v=<%= assetV %>" defer></script>
+  <script src="/js/signup.js?v=<%= assetV %>" defer></script>
 </body>
 </html>
