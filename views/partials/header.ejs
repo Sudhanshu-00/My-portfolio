@@ -31,18 +31,34 @@
 <nav class="nav">
   <div class="container nav-inner">
     <a href="/" class="brand">root@<%= String(settings.siteName || 'h4x0r').toLowerCase().replace(/[^a-z0-9]/g, '') %><span class="p">:~$</span><span class="cursor">▊</span></a>
-    <div class="nav-links">
-      <a href="/">./home</a>
-      <a href="/about">./about</a>
-      <a href="/tools">./tools</a>
-      <a href="/projects">./projects</a>
-      <a href="/labs">./labs</a>
-      <a href="/contact">./contact</a>
+    <button class="nav-toggle" id="navToggle" type="button" aria-label="Menu kholo/band karo" aria-expanded="false" aria-controls="navLinks">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="nav-links" id="navLinks">
+      <%
+        // Admin → Appearance se editable navbar — har page par same (global partial).
+        // url khali = plain text (clickable nahi); newTab = naye tab me khulega.
+        const navItems = ((settings.navItems && settings.navItems.length ? settings.navItems : []) || [])
+          .filter((n) => n && n.label && n.visible !== false)
+          .sort((a, b) => (a.order || 0) - (b.order || 0));
+        const navPageList = (typeof navPages !== 'undefined' ? navPages : []) || [];
+      %>
+      <% navItems.forEach((n) => { %>
+        <% if (n.url) { %>
+          <a href="<%= n.url %>"<% if (n.newTab) { %> target="_blank" rel="noopener noreferrer"<% } %>><%= n.label %></a>
+        <% } else { %>
+          <span class="mono" style="opacity:0.45"><%= n.label %></span>
+        <% } %>
+      <% }) %>
+      <% navPageList.forEach((pg) => { %>
+        <a href="/p/<%= pg.slug %>"<% if (pg.navNewTab) { %> target="_blank" rel="noopener noreferrer"<% } %>><%= pg.navLabel || pg.title %></a>
+      <% }) %>
       <% const who = (typeof sessionUser !== 'undefined' && sessionUser) || (typeof sessionAdmin !== 'undefined' && sessionAdmin); %>
       <% if (who) { %>
         <a href="/user/<%= encodeURIComponent(who) %>">./dashboard</a>
         <span class="mono" style="color:var(--green,#00ff41);font-size:0.85rem">[ 👤 <%= who %> ]</span>
         <form method="POST" action="/logout" class="inline" style="display:inline">
+          <input type="hidden" name="_csrf" value="<%= typeof csrf !== 'undefined' ? csrf : '' %>">
           <button type="submit" class="link" style="background:none;border:none;cursor:pointer;font-size:0.85rem;color:var(--text,#e6edf3);opacity:1">[ logout ]</button>
         </form>
       <% } else { %>

@@ -11,7 +11,14 @@
   <aside class="admin-side">
     <a href="<%= adminBase %>" class="side-brand">root@panel<span class="p">:~$</span><span class="cursor">▊</span></a>
     <nav class="side-nav">
+      <%
+        // per-user permissions — sections the account cannot access are hidden
+        // (server-side enforcement is in routes/admin.js requirePerm — this is UI only)
+        const can = (typeof perms !== 'undefined' && perms) ? perms : { all: true };
+        const show = (k) => can.all || can[k];
+      %>
       <a href="<%= adminBase %>" class="<%= path === '/admin' ? 'active' : '' %>"><span>📊</span> Dashboard</a>
+      <% if (show('content')) { %>
       <a href="<%= adminBase %>/tools" class="<%= String(path).startsWith('/admin/tools') ? 'active' : '' %>"><span>🛠️</span> Tools <small class="muted">(sell)</small></a>
       <a href="<%= adminBase %>/projects" class="<%= String(path).startsWith('/admin/projects') ? 'active' : '' %>"><span>📂</span> Projects</a>
       <a href="<%= adminBase %>/skills" class="<%= String(path).startsWith('/admin/skills') ? 'active' : '' %>"><span>⚡</span> Skills</a>
@@ -19,16 +26,29 @@
       <a href="<%= adminBase %>/testimonials" class="<%= String(path).startsWith('/admin/testimonials') ? 'active' : '' %>"><span>🗣</span> Testimonials</a>
       <a href="<%= adminBase %>/experience" class="<%= String(path).startsWith('/admin/experience') ? 'active' : '' %>"><span>🏢</span> Experience</a>
       <a href="<%= adminBase %>/labs" class="<%= String(path).startsWith('/admin/labs') ? 'active' : '' %>"><span>🎯</span> Labs</a>
+      <% } %>
+      <% if (show('pages')) { %>
+      <a href="<%= adminBase %>/pages" class="<%= String(path).startsWith('/admin/pages') ? 'active' : '' %>"><span>📄</span> Pages <small class="muted">(builder)</small></a>
+      <a href="<%= adminBase %>/appearance" class="<%= String(path).startsWith('/admin/appearance') ? 'active' : '' %>"><span>🎨</span> Navbar &amp; Footer</a>
+      <% } %>
+      <% if (show('messages')) { %>
       <a href="<%= adminBase %>/messages" class="<%= String(path).startsWith('/admin/messages') ? 'active' : '' %>"><span>📩</span> Messages
         <% if (typeof unread !== 'undefined' && unread > 0) { %><b class="side-badge"><%= unread %></b><% } %>
       </a>
       <a href="<%= adminBase %>/feedback" class="<%= String(path).startsWith('/admin/feedback') ? 'active' : '' %>"><span>💬</span> Feedback
         <% if (typeof pendingFeedback !== 'undefined' && pendingFeedback > 0) { %><b class="side-badge"><%= pendingFeedback %></b><% } %>
       </a>
+      <% } %>
+      <% if (show('security')) { %>
       <a href="<%= adminBase %>/security" class="<%= String(path).startsWith('/admin/security') ? 'active' : '' %>"><span>🛡</span> Security &amp; Logs</a>
+      <% } %>
+      <% if (show('users')) { %>
       <a href="<%= adminBase %>/users" class="<%= String(path).startsWith('/admin/users') ? 'active' : '' %>"><span>👥</span> Users</a>
+      <% } %>
       <div class="side-sep"></div>
+      <% if (show('settings')) { %>
       <a href="<%= adminBase %>/settings" class="<%= String(path).startsWith('/admin/settings') ? 'active' : '' %>"><span>⚙️</span> Site Settings</a>
+      <% } %>
       <a href="<%= adminBase %>/password" class="<%= String(path).startsWith('/admin/password') ? 'active' : '' %>"><span>🔑</span> Change Password</a>
       <div class="side-sep"></div>
       <a href="/" target="_blank"><span>🌐</span> View Site ↗</a>

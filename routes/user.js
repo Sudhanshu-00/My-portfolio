@@ -11,6 +11,11 @@ const crypto = require('crypto');
 const { AdminUser, Project, Tool, Lab, Experience, Testimonial, Service } = require('../models');
 const ADMIN_PATH = require('../adminPath');
 const security = require('../services/security');
+const captchaSvg = require('../services/captcha');
+
+// password policy — same as admin routes (capital + small + number + symbol, min 8)
+const PASSWORD_MSG = 'Password: minimum 8 characters with at least one UPPERCASE letter, one lowercase letter, one number and one symbol (e.g. Aa1!xyz9).';
+const strongPass = (p) => typeof p === 'string' && p.length >= 8 && /[a-z]/.test(p) && /[A-Z]/.test(p) && /[0-9]/.test(p) && /[^A-Za-z0-9]/.test(p);
 
 // timing-safe compare (same pattern as admin routes)
 const safeEqual = (a, b) => {
@@ -90,6 +95,11 @@ router.post('/:username/profile', requireSelf, async (req, res) => {
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
     return res.redirect(`${back}?pwerr=${encodeURIComponent('That email address does not look valid.')}`);
   }
+  // email unique — doosre account ka email claim nahi kar sakte (/forgot isi par depend karta hai)
+  if (email) {
+    const dup = await AdminUser.findOne({ email, username: { $ne: req.params.username } }).catch(() => null);
+    if (dup) return res.redirect(`${back}?pwerr=${encodeURIComponent('That email is already used by another account.')}`);
+  }
   await AdminUser.updateOne(
     { username: req.params.username },
     {
@@ -114,10 +124,10 @@ router.post('/:username/password', requireSelf, async (req, res) => {
     return res.redirect(`${back}?pwerr=Security+check+failed+—+reload+the+page`);
   }
   if (!current || !next || next !== confirm) {
-    return res.redirect(`${back}?pwerr=New+passwords+do+not+match`);
+    return res.redirect(`${back}?pwerr=${encodeURIComponent(next !== confirm && current ? 'Password+not+match+—+new+passwords+do+not+match' : 'All+password+fields+are+required')}`);
   }
-  if (next.length < 8) {
-    return res.redirect(`${back}?pwerr=Password+must+be+at+least+8+characters`);
+  if (!strongPass(next)) {
+    return res.redirect(`${back}?pwerr=${encodeURIComponent(PASSWORD_MSG)}`);
   }
   const me = await AdminUser.findOne({ username: req.params.username }).catch(() => null);
   if (!me || !(await bcrypt.compare(current, me.passwordHash))) {
@@ -143,6 +153,15 @@ router.get('/:username/admin/login', adminGate, (req, res) => {
   res.render('user/admin_login', { username: req.params.username, csrf, error: null });
 });
 
+// captcha image for the gated admin login (session-stored, single-use)
+router.get('/:username/admin/captcha.svg', adminGate, (req, res) => {
+  const text = captchaSvg.newText();
+  req.session.captcha = { answer: text, exp: Date.now() + 5 * 60 * 1000 };
+  if (process.env.NODE_ENV !== 'production') console.log(`[DEV] gate captcha: ${text}`);
+  res.type('image/svg+xml').set('Cache-Control', 'no-store');
+  res.send(captchaSvg(text));
+});
+
 // simple per-(ip|username) throttle for admin-gate login
 const gateAttempts = new Map();
 setInterval(() => gateAttempts.clear(), 60 * 60 * 1000).unref();
@@ -155,6 +174,14 @@ router.post('/:username/admin/login', adminGate, async (req, res) => {
   const csrf = String(body._csrf || '');
   if (!req.session.csrf || !csrf || !safeEqual(req.session.csrf, csrf)) {
     return res.status(403).render('user/admin_login', { username: req.params.username, csrf: issueCsrf(req), error: 'Security check failed — reload and try again.' });
+  }
+  // ---- captcha check — single-use (blocks automated credential stuffing) ----
+  const cap = req.session.captcha;
+  req.session.captcha = null;
+  const guess = String(body.captcha || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (!cap || Date.now() > cap.exp || !guess || guess !== cap.answer) {
+    security.bump(req, 'loginFail', 401);
+    return res.status(401).render('user/admin_login', { username: req.params.username, csrf: issueCsrf(req), error: 'Wrong or expired captcha — a new captcha has loaded, please try again.' });
   }
   const key = `${req.ip}|gate|${username}`;
   const now = Date.now();

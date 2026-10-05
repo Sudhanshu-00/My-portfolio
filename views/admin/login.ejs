@@ -5,6 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login</title>
   <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .captcha-row { display:flex; gap:0.6rem; align-items:center; }
+    .captcha-row img { border-radius:8px; border:1px solid rgba(255,255,255,0.15); background:#0d1117; height:46px; cursor:pointer; }
+    .captcha-row input { flex:1; min-width:0; }
+    .hint { font-size:0.72rem; color:rgba(255,255,255,0.45); margin-top:0.25rem; }
+    .pw-row { display:flex; gap:0.5rem; align-items:center; }
+    .pw-toggle { background:none; border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:inherit; font-size:0.72rem; padding:0.35rem 0.6rem; cursor:pointer; white-space:nowrap; }
+    .pw-toggle:hover { border-color:rgba(126,231,135,0.5); }
+  </style>
 </head>
 <body class="login-page">
   <div class="login-box">
@@ -16,7 +25,17 @@
         <input type="text" name="username" required autofocus autocomplete="off">
       </label>
       <label>Password
-        <input type="password" name="password" required>
+        <span class="pw-row">
+          <input type="password" name="password" id="loginPass" required>
+          <button type="button" class="pw-toggle" data-reveal="loginPass" aria-pressed="false">👁 show</button>
+        </span>
+      </label>
+      <label>Security captcha
+        <span class="captcha-row">
+          <img src="/login/captcha.svg" id="captchaImg" data-refresh alt="captcha" title="Click for a new captcha">
+          <input type="text" name="captcha" required maxlength="10" placeholder="type the text" autocomplete="off">
+        </span>
+        <span class="hint">Type the 5 characters shown above (click the image for a new captcha)</span>
       </label>
       <button type="submit" class="btn full">Login</button>
     </form>
@@ -30,5 +49,6 @@
     </div>
 
   </div>
+  <script src="/js/showpass.js"></script>
 </body>
 </html>

@@ -36,6 +36,11 @@
     <span class="stat-num"><%= counts.labs %></span>
     <span class="stat-label">Labs Solved</span>
   </a>
+  <a class="stat-card" href="<%= adminBase %>/pages">
+    <span class="stat-num"><%= counts.pages %></span>
+    <span class="stat-label">Custom Pages</span>
+  </a>
+  <% if (perms.all || perms.security) { %>
   <a class="stat-card" href="<%= adminBase %>/security">
     <span class="stat-num"><%= counts.threatsToday %></span>
     <span class="stat-label">Threats Today</span>
@@ -44,14 +49,19 @@
     <span class="stat-num"><%= counts.blockedNow %></span>
     <span class="stat-label">Blocked IPs</span>
   </a>
+  <% } %>
+  <% if (perms.all || perms.users) { %>
   <a class="stat-card" href="<%= adminBase %>/users">
     <span class="stat-num"><%= counts.userCount %></span>
     <span class="stat-label">User Accounts</span>
   </a>
+  <% } %>
+  <% if (perms.all || perms.messages) { %>
   <a class="stat-card" href="<%= adminBase %>/messages">
     <span class="stat-num"><%= counts.unread %></span>
     <span class="stat-label">Unread Messages</span>
   </a>
+  <% } %>
 </div>
 
 <div class="panel">
@@ -89,6 +99,7 @@
     </table>
   </div>
 
+  <% if (perms.all || perms.messages) { %>
   <div class="panel">
     <h2>📩 Recent Messages</h2>
     <% if (!recent.length) { %><p class="muted">No messages yet.</p><% } %>
@@ -100,14 +111,15 @@
     <% }) %>
     <a class="link" href="<%= adminBase %>/messages">all messages →</a>
   </div>
+  <% } %>
 </div>
 
 <div class="section">
   <h2>⚡ Quick Actions — every page is edited from here</h2>
   <div class="qa-grid">
-    <a class="qa-card" href="<%= adminBase %>/settings"><span>🏠</span><strong>Home / Hero</strong><small>title, subtitle, photo</small></a>
+    <% if (perms.all || perms.settings) { %><a class="qa-card" href="<%= adminBase %>/settings"><span>🏠</span><strong>Home / Hero</strong><small>title, subtitle, photo</small></a>
     <a class="qa-card" href="<%= adminBase %>/settings"><span>👤</span><strong>About Page</strong><small>text, contact info</small></a>
-    <a class="qa-card" href="<%= adminBase %>/settings"><span>🔗</span><strong>Social Links</strong><small>github, linkedin, custom</small></a>
+    <a class="qa-card" href="<%= adminBase %>/settings"><span>🔗</span><strong>Social Links</strong><small>github, linkedin, custom</small></a><% } %>
     <a class="qa-card" href="<%= adminBase %>/tools/new"><span>🛠️</span><strong>Add Tool</strong><small>tools for sale</small></a>
     <a class="qa-card" href="<%= adminBase %>/projects/new"><span>📂</span><strong>Add Project</strong><small>case file</small></a>
     <a class="qa-card" href="<%= adminBase %>/skills"><span>⚡</span><strong>Manage Skills</strong><small>add / delete</small></a>
@@ -115,9 +127,9 @@
     <a class="qa-card" href="<%= adminBase %>/testimonials"><span>🗣</span><strong>Testimonials</strong><small>client feedback</small></a>
     <a class="qa-card" href="<%= adminBase %>/experience"><span>🏢</span><strong>Work Experience</strong><small>company / role</small></a>
     <a class="qa-card" href="<%= adminBase %>/labs"><span>🎯</span><strong>Labs</strong><small>THM / PortSwigger</small></a>
-    <a class="qa-card" href="<%= adminBase %>/feedback"><span>💬</span><strong>Feedback</strong><small>moderate + reply</small></a>
-    <a class="qa-card" href="<%= adminBase %>/settings#resume"><span>📄</span><strong>Upload Resume</strong><small>CV / PDF</small></a>
-    <a class="qa-card" href="<%= adminBase %>/messages"><span>📩</span><strong>Messages</strong><small>inbox</small></a>
+    <% if (perms.all || perms.messages) { %><a class="qa-card" href="<%= adminBase %>/feedback"><span>💬</span><strong>Feedback</strong><small>moderate + reply</small></a><% } %>
+    <% if (perms.all || perms.settings) { %><a class="qa-card" href="<%= adminBase %>/settings#resume"><span>📄</span><strong>Upload Resume</strong><small>CV / PDF</small></a><% } %>
+    <% if (perms.all || perms.messages) { %><a class="qa-card" href="<%= adminBase %>/messages"><span>📩</span><strong>Messages</strong><small>inbox</small></a><% } %>
     <a class="qa-card" href="<%= adminBase %>/password"><span>🔑</span><strong>Password</strong><small>security</small></a>
   </div>
 </div>

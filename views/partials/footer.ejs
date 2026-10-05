@@ -7,7 +7,17 @@
         <span class="pulse-dot">●</span> [ VISITORS: <span class="ok"><%= visits.total.toLocaleString('en-IN') %></span> ] · [ TODAY: <span class="ok"><%= visits.today %></span> ]
       </p>
     <% } %>
-    <p class="muted" style="font-size:0.75rem">© <%= new Date().getFullYear() %> — built with ♥ &amp; caffeine</p>
+    <p class="muted" style="font-size:0.75rem">© <%= new Date().getFullYear() %> — <%= settings.footerText %></p>
+    <% if (settings.footerNote) { %><p class="muted" style="font-size:0.72rem"><%= settings.footerNote %></p><% } %>
+    <%
+      // Admin → Appearance se editable footer links (url khali = plain text, clickable nahi)
+      const flinks = (settings.footerLinks || []).filter((l) => l && l.label);
+    %>
+    <% if (flinks.length) { %>
+      <p style="margin-top:0.4rem;font-size:0.8rem">
+        <% flinks.forEach((l, i) => { %><% if (i) { %> · <% } %><% if (l.url) { %><a href="<%= l.url %>" class="link"<% if (l.newTab) { %> target="_blank" rel="noopener noreferrer"<% } %>><%= l.label %></a><% } else { %><span class="muted"><%= l.label %></span><% } %><% }) %>
+      </p>
+    <% } %>
     <p style="margin-top:0.3rem"><a href="/login" class="link" style="font-size:0.72rem;opacity:0.45">login</a></p>
   </div>
 </footer>

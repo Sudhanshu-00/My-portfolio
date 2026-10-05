@@ -110,6 +110,9 @@ async function getRepoDetails(repoUrl) {
 
 /** username → { ok, profile, totalStars, topLanguages } */
 async function getProfile(username) {
+  // URL-path safe username only — api.github.com path ko `?`/`#`/`/` se manipulate nahi kar sakte
+  username = String(username || '').replace(/[^a-zA-Z0-9-]/g, '').slice(0, 60);
+  if (!username) return { ok: false, reason: 'no-username' };
   return cached(`profile:${username}`, async () => {
     const [p, repos] = await Promise.all([
       gh(`/users/${username}`),

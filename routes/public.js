@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { Project, Skill, Message, Tool, Service, Testimonial, Experience, Lab, Feedback, SiteSetting } = require('../models');
+const { Project, Skill, Message, Tool, Service, Testimonial, Experience, Lab, Feedback, SiteSetting, Page } = require('../models');
 const { getRepoDetails, getProfile, mdToHtml } = require('../services/github');
 
 router.get('/', async (req, res) => {
@@ -72,6 +72,16 @@ router.get('/projects/:id', async (req, res) => {
 router.get('/labs', async (req, res) => {
   const labs = await Lab.find().sort({ solvedAt: -1, createdAt: -1 });
   res.render('labs', { labs });
+});
+
+// ---- custom pages (built in Admin → Pages) — same navbar/footer as every page ----
+router.get('/p/:slug', async (req, res) => {
+  // slug strictly normalised — only a-z 0-9 and dashes survive
+  const slug = String(req.params.slug || '').toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 60);
+  if (!slug) return res.status(404).render('404');
+  const page = await Page.findOne({ slug, published: true }).catch(() => null);
+  if (!page) return res.status(404).render('404');
+  res.render('page', { page, title: page.title });
 });
 
 // ---- Feedback (public) ----

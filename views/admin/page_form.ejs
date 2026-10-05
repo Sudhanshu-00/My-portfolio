@@ -1,0 +1,71 @@
+<%- include('../partials/admin_head', { title: page.title }) %>
+
+<h1>📄 Edit: <%= page.title %></h1>
+<p class="muted">
+  <a href="/p/<%= page.slug %>" target="_blank" class="link">/p/<%= page.slug %> ↗</a> ·
+  Blocks upar se neeche render hote hain — order aap control karte ho. Photo block me 3MB tak ki PNG/JPG/GIF/WebP image upload karo ya https link paste karo.
+</p>
+
+<form method="POST" action="<%= adminBase %>/pages/<%= page._id %>/update" enctype="multipart/form-data" class="form">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+
+  <div class="panel" style="margin-bottom:1rem">
+    <h2>⚙️ Page settings</h2>
+    <div class="row-form" style="align-items:end">
+      <label>Title <input name="title" required maxlength="100" value="<%= page.title %>"></label>
+      <label style="opacity:0.75">Slug (fixed) <input value="/p/<%= page.slug %>" disabled></label>
+      <label class="check"><input type="checkbox" name="published" <%= page.published ? 'checked' : '' %>> Published</label>
+      <label class="check"><input type="checkbox" name="showInNav" <%= page.showInNav ? 'checked' : '' %>> Show in navbar</label>
+      <label class="check"><input type="checkbox" name="navNewTab" <%= page.navNewTab ? 'checked' : '' %>> Nav: new tab</label>
+    </div>
+    <div class="row-form" style="margin-top:0.5rem">
+      <label>Navbar label <input name="navLabel" maxlength="30" value="<%= page.navLabel || '' %>" placeholder="navbar link text"></label>
+      <label>Navbar order <input name="navOrder" type="number" min="0" max="999" value="<%= page.navOrder %>" style="max-width:100px"></label>
+    </div>
+  </div>
+
+  <h2>🧱 Content blocks</h2>
+  <div id="blocks">
+    <% (page.blocks && page.blocks.length ? page.blocks : [{ type: 'text', text: '', url: '' }]).forEach((b, i) => { %>
+      <div class="block-row">
+        <div class="row-form" style="align-items:start">
+          <label style="max-width:140px">Type
+            <select name="block_type_<%= i %>">
+              <option value="text" <%= b.type === 'text' ? 'selected' : '' %>>📝 Text</option>
+              <option value="heading" <%= b.type === 'heading' ? 'selected' : '' %>>🔖 Heading</option>
+              <option value="image" <%= b.type === 'image' ? 'selected' : '' %>>🖼️ Photo</option>
+            </select>
+          </label>
+          <label class="block-text-label">Content
+            <% if (b.type === 'image') { %>
+              <input type="file" name="block_image" accept="image/png,image/jpeg,image/gif,image/webp" data-slot="<%= i %>">
+              <input type="hidden" name="block_slot_<%= i %>" value="<%= i %>">
+              <input type="text" name="block_url_<%= i %>" value="<%= b.url ? (String(b.url).startsWith('data:') ? String(b.url).slice(0, 60) + '…(current image)' : b.url) : '' %>" placeholder="ya https:// image URL paste karo" style="margin-top:0.3rem">
+              <% if (b.url && String(b.url).startsWith('data:')) { %>
+                <img src="<%= b.url %>" alt="current" style="max-width:180px;max-height:110px;display:block;margin-top:0.3rem;border-radius:6px;border:1px solid rgba(255,255,255,0.15)">
+              <% } else if (b.url) { %>
+                <img src="<%= b.url %>" alt="current" style="max-width:180px;max-height:110px;display:block;margin-top:0.3rem;border-radius:6px;border:1px solid rgba(255,255,255,0.15)" onerror="this.style.display='none'">
+              <% } %>
+            <% } else { %>
+              <% if (b.type === 'heading') { %>
+                <input type="text" name="block_text_<%= i %>" value="<%= b.text %>" maxlength="200" placeholder="Section heading">
+              <% } else { %>
+                <textarea name="block_text_<%= i %>" rows="3" maxlength="3000" placeholder="Paragraph text — blank lines se naya paragraph"><%= b.text %></textarea>
+              <% } %>
+            <% } %>
+          </label>
+          <label class="check" style="margin-top:1.6rem"><input type="checkbox" name="block_del_<%= i %>"> remove</label>
+        </div>
+      </div>
+    <% }) %>
+  </div>
+
+  <p class="muted" style="font-size:0.78rem">Naya block add karne ke liye page ko save karke wapas edit karo — har save ke baad ek fresh empty block neeche jud jata hai. Zyada se zyada 30 blocks.</p>
+
+  <div class="actions" style="margin-top:1rem">
+    <button type="submit" class="btn">💾 Save page</button>
+    <a href="<%= adminBase %>/pages" class="btn small outline">← Back to pages</a>
+  </div>
+</form>
+
+<%- include('../partials/admin_foot') %>

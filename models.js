@@ -23,14 +23,49 @@ const SiteSettingSchema = new mongoose.Schema({
   whatsapp: { type: String, default: '', maxlength: 20 }, // e.g. 919876543210 (tool sales)
   telegram: { type: String, default: '', maxlength: 60 }, // e.g. username
   customLinks: { type: [{ label: { type: String, maxlength: 40 }, url: { type: String, maxlength: 500 } }], default: [] }, // extra social/public URLs
+  // ---- navbar links (editable from Admin → Appearance) ----
+  // url empty → plain text (not clickable); newTab → opens in a new tab
+  navItems: {
+    type: [{
+      label: { type: String, maxlength: 30 },
+      url: { type: String, maxlength: 500, default: '' },
+      order: { type: Number, default: 0 }, // lower = left-most
+      visible: { type: Boolean, default: true },
+      newTab: { type: Boolean, default: false },
+    }],
+    default: [],
+  },
+  // ---- footer links (clickable rows above the copyright line) ----
+  footerLinks: {
+    type: [{
+      label: { type: String, maxlength: 40 },
+      url: { type: String, maxlength: 500, default: '' },
+      newTab: { type: Boolean, default: false },
+    }],
+    default: [],
+  },
+  footerText: { type: String, default: 'built with ♥ & caffeine', maxlength: 200 },
+  footerNote: { type: String, default: '', maxlength: 200 }, // extra line under the copyright
   resumeFile: { type: String, default: '' }, // base64 PDF (size capped by upload limit)
   resumeName: { type: String, default: 'resume.pdf', maxlength: 200 },
 });
 
 // Always returns the single settings document (creates it if missing)
+// First boot → seed the default navbar (same links as the old hardcoded one)
 SiteSettingSchema.statics.get = function () {
-  return this.findOne().then((doc) => doc || this.create({}));
+  return this.findOne().then((doc) => doc || this.create({ navItems: DEFAULT_NAV }));
 };
+
+// Default navbar — used when the settings doc has no items yet (back-compat with old DBs)
+const DEFAULT_NAV = [
+  { label: './home', url: '/', order: 1, visible: true, newTab: false },
+  { label: './about', url: '/about', order: 2, visible: true, newTab: false },
+  { label: './tools', url: '/tools', order: 3, visible: true, newTab: false },
+  { label: './projects', url: '/projects', order: 4, visible: true, newTab: false },
+  { label: './labs', url: '/labs', order: 5, visible: true, newTab: false },
+  { label: './contact', url: '/contact', order: 6, visible: true, newTab: false },
+];
+SiteSettingSchema.statics.defaultNav = DEFAULT_NAV;
 
 const ProjectSchema = new mongoose.Schema(
   {
@@ -83,6 +118,18 @@ const AdminUserSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true, trim: true, maxlength: 40 },
   passwordHash: { type: String, required: true },
   role: { type: String, enum: ['admin', 'user'], default: 'user' }, // 'admin' → panel access, 'user' → normal login only
+  // ---- per-user panel permissions (Admin → Users → Permissions) ----
+  // Applies to role='admin' accounts only. `all` = full access (owner).
+  // Individual keys grant single sections; dashboard is always visible.
+  panelPerms: {
+    all: { type: Boolean, default: true },
+    content: { type: Boolean, default: true }, // projects/tools/skills/services/testimonials/experience/labs
+    pages: { type: Boolean, default: true }, // page builder + navbar/footer editor
+    settings: { type: Boolean, default: true }, // site settings + resume
+    messages: { type: Boolean, default: true }, // messages + feedback moderation
+    users: { type: Boolean, default: true }, // user management
+    security: { type: Boolean, default: true }, // security logs + IP blocks
+  },
   name: { type: String, default: '', trim: true, maxlength: 60 }, // public profile (self-editable, admin-editable)
   email: { type: String, default: '', trim: true, lowercase: true, maxlength: 100 }, // forgot-password OTP
   phone: { type: String, default: '', trim: true, maxlength: 20 },
@@ -99,6 +146,10 @@ const PageViewSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+// TTL → 180 din purane page-views auto-delete (visitor-counter DB flood-proof:
+// attacker 300 req/min se jitna bhi junk kare, DB bounded rehta hai)
+PageViewSchema.index({ createdAt: 1 }, { expireAfterSeconds: 180 * 24 * 60 * 60 });
+PageViewSchema.index({ path: 1, createdAt: -1 }); // top-pages aggregate fast
 
 const ServiceSchema = new mongoose.Schema(
   {
@@ -198,6 +249,30 @@ const FeedbackSchema = new mongoose.Schema(
 );
 FeedbackSchema.index({ ip: 1, createdAt: -1 }); // per-IP rate-limit query fast
 
+// ---------- custom pages (Admin → Pages) ----------
+// Blocks are stored as plain typed content (heading/text/image) — EJS escapes
+// everything, no raw HTML is ever stored, so stored-XSS is impossible by design.
+const PageSchema = new mongoose.Schema(
+  {
+    slug: { type: String, required: true, unique: true, trim: true, maxlength: 60 }, // /p/<slug>
+    title: { type: String, required: true, trim: true, maxlength: 100 },
+    blocks: {
+      type: [{
+        type: { type: String, enum: ['heading', 'text', 'image'], default: 'text' },
+        text: { type: String, default: '', maxlength: 3000 },
+        url: { type: String, default: '', maxlength: 800000 }, // image: data URL (3MB cap) or https URL
+      }],
+      default: [],
+    },
+    published: { type: Boolean, default: true },
+    showInNav: { type: Boolean, default: false }, // adds a navbar link automatically
+    navLabel: { type: String, default: '', maxlength: 30 },
+    navOrder: { type: Number, default: 50 },
+    navNewTab: { type: Boolean, default: false },
+  },
+  { timestamps: true }
+);
+
 module.exports = {
   SiteSetting: mongoose.model('SiteSetting', SiteSettingSchema),
   Project: mongoose.model('Project', ProjectSchema),
@@ -213,4 +288,5 @@ module.exports = {
   Feedback: mongoose.model('Feedback', FeedbackSchema),
   SecurityEvent: mongoose.model('SecurityEvent', SecurityEventSchema),
   BlockedIp: mongoose.model('BlockedIp', BlockedIpSchema),
+  Page: mongoose.model('Page', PageSchema),
 };

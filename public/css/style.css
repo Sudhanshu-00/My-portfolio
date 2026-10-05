@@ -115,6 +115,26 @@ p { margin-bottom: 0.75rem; }
 .nav-links a { color: var(--muted); font-weight: 600; font-size: 0.95rem; }
 .nav-links a:hover { color: var(--accent); text-shadow: 0 0 10px rgba(0, 255, 65, 0.5); }
 .admin-nav { border-bottom: 2px solid var(--accent-dim); }
+/* Hamburger toggle — desktop par hidden, mobile par JS se toggle hota hai */
+.nav-toggle {
+  display: none;
+  flex-direction: column; justify-content: center; gap: 5px;
+  width: 42px; height: 38px; padding: 8px 9px; flex-shrink: 0;
+  background: rgba(0, 255, 65, 0.04);
+  border: 1px solid var(--border); border-radius: 8px; cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.nav-toggle:hover { border-color: var(--accent); background: rgba(0, 255, 65, 0.08); }
+.nav-toggle span {
+  display: block; width: 100%; height: 2px;
+  background: var(--accent); border-radius: 2px;
+  box-shadow: 0 0 8px rgba(0, 255, 65, 0.5);
+  transition: transform 0.25s ease, opacity 0.2s ease;
+}
+/* open state: 3 lines → X animation */
+.nav.open .nav-toggle span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.nav.open .nav-toggle span:nth-child(2) { opacity: 0; }
+.nav.open .nav-toggle span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
 
 /* ---------- Hero + Terminal ---------- */
 .hero { position: relative; padding: 2.2rem 0; overflow: hidden; }
@@ -360,6 +380,28 @@ body.admin .scanlines { display: none; }
   .avatar-fallback { font-size: 3.4rem; }
   .row-form { flex-direction: column; align-items: stretch; }
   .footer-inner { justify-content: center; text-align: center; }
+  /* --- Mobile navbar: hamburger (3 lines) + click-to-open dropdown --- */
+  .nav-toggle { display: flex; }
+  .nav-inner { padding: 0.65rem 0; }
+  .nav-links {
+    display: none;
+    flex-basis: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding: 0.25rem 0 0.6rem;
+    border-top: 1px dashed var(--border);
+  }
+  .nav.open .nav-links { display: flex; }
+  .nav-links a, .nav-links span.mono, .nav-links form.inline {
+    padding: 0.8rem 0.4rem;
+    border-bottom: 1px solid rgba(0, 255, 65, 0.08);
+  }
+  .nav-links a { font-size: 1.05rem; }
+  .nav-links a:hover { background: rgba(0, 255, 65, 0.05); }
+  .nav-links form.inline { display: block !important; margin: 0; }
+  .nav-links form.inline button.link { width: 100%; text-align: left; padding: 0.2rem 0.4rem; }
+  .nav-links span.mono { display: block; }
 }
 
 /* ============ ADMIN v2 — BLACK DASHBOARD + SIDEBAR ============ */
@@ -667,3 +709,28 @@ body.admin {
 .ud-kv:last-child { border-bottom: none; }
 .ud-kv span:first-child { color: var(--muted); }
 .ud-foot { margin-top: 1.6rem; text-align: center; }
+
+/* ---------- page builder + appearance editor + custom pages ---------- */
+.navrow { display: grid; grid-template-columns: 1.1fr 2fr 90px auto auto auto; gap: 0.5rem; align-items: end; padding: 0.5rem; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 0.5rem; background: rgba(255,255,255,0.02); }
+.navrow label { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.72rem; color: var(--muted); }
+.navrow input[type="text"], .navrow input:not([type]) { width: 100%; }
+.navrow .check, .navrow .danger-check { flex-direction: row; align-items: center; gap: 0.3rem; padding-bottom: 0.45rem; font-size: 0.75rem; color: var(--text); white-space: nowrap; }
+.danger-check input { accent-color: #ff5c5c; }
+.check { display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; cursor: pointer; }
+.check input { width: auto; }
+.block-row { border: 1px solid var(--border); border-radius: 10px; padding: 0.7rem; margin-bottom: 0.7rem; background: rgba(255,255,255,0.02); }
+.block-row .block-text-label { flex: 1; }
+.block-row textarea { width: 100%; }
+.dim-card { opacity: 0.6; }
+.perm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 1rem; border: 1px dashed var(--border); border-radius: 10px; padding: 0.8rem; }
+.perm-grid .check { font-size: 0.8rem; }
+@media (max-width: 760px) { .navrow { grid-template-columns: 1fr 1fr; } .perm-grid { grid-template-columns: 1fr; } }
+
+/* custom public pages (/p/<slug>) */
+.custom-page { max-width: 820px; margin: 1.5rem auto 3rem; }
+.custom-page h1 { font-size: 1.9rem; margin-bottom: 1.4rem; }
+.page-heading { margin: 1.8rem 0 0.6rem; font-size: 1.25rem; color: var(--green, #00ff41); }
+.page-text { margin: 0.5rem 0; line-height: 1.75; opacity: 0.92; }
+.page-img { display: block; max-width: 100%; max-height: 560px; border-radius: 10px; border: 1px solid var(--border); margin: 1.1rem 0; }
+.footer-links a { opacity: 0.8; }
+.footer-links a:hover { opacity: 1; }

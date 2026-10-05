@@ -1,0 +1,53 @@
+<%- include('../partials/admin_head', { title: 'Pages' }) %>
+
+<h1>📄 Pages <span class="badge"><%= pages.length %> pages</span></h1>
+<p class="muted">Custom pages banao — content blocks (heading / text / photo) ke saath. Published pages <strong>/p/&lt;slug&gt;</strong> par live hote hain, aur "Show in navbar" on karne par har page ke navbar me link apne aap jud jata hai. Navbar aur footer alag se <a href="<%= adminBase %>/appearance" class="link">Appearance editor</a> me edit hote hain — wo bhi har page par apply hota hai.</p>
+
+<% if (query.saved) { %><div class="alert success">✅ Page saved.</div><% } %>
+<% if (query.deleted) { %><div class="alert success">🗑 Page deleted.</div><% } %>
+<% if (query.err) { %><div class="alert error"><%= query.err %></div><% } %>
+
+<div class="panel">
+  <h2>➕ Create new page</h2>
+  <form method="POST" action="<%= adminBase %>/pages" class="row-form">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <label>Title <input name="title" required maxlength="100" placeholder="e.g. My Certifications"></label>
+    <label>Slug (URL) <input name="slug" required maxlength="60" pattern="[a-z0-9][a-z0-9-]{0,59}" placeholder="certifications → /p/certifications" style="text-transform:lowercase"></label>
+    <label>Nav label <input name="navLabel" maxlength="30" placeholder="navbar me dikhega (optional)"></label>
+    <label>Nav order <input name="navOrder" type="number" min="0" max="999" value="50" style="max-width:90px"></label>
+    <label class="check" style="align-self:end"><input type="checkbox" name="published" checked> Published</label>
+    <label class="check" style="align-self:end"><input type="checkbox" name="showInNav"> Show in navbar</label>
+    <label class="check" style="align-self:end"><input type="checkbox" name="navNewTab"> New tab</label>
+    <button type="submit" class="btn small">Create</button>
+  </form>
+  <p class="muted" style="font-size:0.75rem;margin:0.4rem 0 0">Slug me sirf a-z, 0-9 aur dash — page <strong>/p/&lt;slug&gt;</strong> par khulega. Content add karne ke liye page banane ke baad <strong>Edit</strong> karo.</p>
+</div>
+
+<% pages.forEach((pg) => { %>
+  <div class="msg-card <%= pg.published ? '' : 'dim-card' %>">
+    <div class="row-between">
+      <div>
+        <strong><%= pg.title %></strong>
+        <a href="/p/<%= pg.slug %>" target="_blank" class="link" style="font-size:0.8rem">/p/<%= pg.slug %> ↗</a>
+        <% if (pg.published) { %><span class="badge">LIVE</span><% } else { %><span class="badge dim">DRAFT</span><% } %>
+        <% if (pg.showInNav) { %><span class="badge warn">IN NAVBAR</span><% } %>
+      </div>
+      <small class="muted"><%= pg.blocks.length %> block(s)</small>
+    </div>
+    <div class="actions" style="margin-top:0.7rem">
+      <a href="<%= adminBase %>/pages/<%= pg._id %>/edit" class="btn small outline">✏️ Edit content</a>
+      <form method="POST" action="<%= adminBase %>/pages/<%= pg._id %>/toggle" class="inline">
+        <input type="hidden" name="_csrf" value="<%= csrf %>">
+        <button type="submit" class="btn small outline"><%= pg.published ? '⏸ Unpublish' : '▶ Publish' %></button>
+      </form>
+      <form method="POST" action="<%= adminBase %>/pages/<%= pg._id %>/delete" class="inline" data-confirm="Delete this page permanently?">
+        <input type="hidden" name="_csrf" value="<%= csrf %>">
+        <button type="submit" class="btn small danger">🗑 Delete</button>
+      </form>
+    </div>
+  </div>
+<% }) %>
+
+<% if (!pages.length) { %><p class="muted">No pages yet — upar se pehli page banao.</p><% } %>
+
+<%- include('../partials/admin_foot') %>

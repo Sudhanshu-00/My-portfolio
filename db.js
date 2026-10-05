@@ -1,3 +1,4 @@
+require('./lib/env'); // .env missing ho to ~/.my-portfolio.env recovery config (standalone scripts ke liye bhi)
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
@@ -37,9 +38,26 @@ async function seed() {
   // Default admin user
   if ((await AdminUser.countDocuments()) === 0) {
     const username = process.env.ADMIN_USER || 'admin';
-    const password = process.env.ADMIN_PASS || 'admin@123';
-    await AdminUser.create({ username, passwordHash: await bcrypt.hash(password, 10) });
-    console.log(`👑 Admin created → login: ${username} / ${password}  (change password after first login!)`);
+    // koi hardcoded password nahi — ADMIN_PASS na ho to random strong password
+    // generate hota hai aur OWNER (ADMIN_EMAIL) ko EMAIL se bheja jata hai
+    const fromEnv = !!process.env.ADMIN_PASS;
+    const password = process.env.ADMIN_PASS || require('crypto').randomBytes(12).toString('base64url');
+    await AdminUser.create({ username, passwordHash: await bcrypt.hash(password, 10), role: 'admin' });
+    if (fromEnv) {
+      console.log(`👑 Admin created → login: ${username} / (password from env — not logged)`);
+    } else {
+      const email = process.env.ADMIN_EMAIL;
+      const { sendCredentials, mailReady } = require('./services/mailer');
+      let sent = false;
+      if (email && mailReady()) {
+        sent = await sendCredentials({ to: email, username, password, context: 'fresh install — admin seed' }).catch(() => false);
+      }
+      if (sent) {
+        console.log(`👑 Admin created → credentials (username + generated password) emailed to ${email}`);
+      } else {
+        console.log(`👑 Admin created → login: ${username} / ${password}  (email nahi bhej paye${email ? ' — mail transport fail' : ' — ADMIN_EMAIL not set'}; change password after first login!)`);
+      }
+    }
   }
 
   // Default settings

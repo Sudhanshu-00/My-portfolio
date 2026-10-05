@@ -1,0 +1,70 @@
+<%- include('../partials/admin_head', { title: 'Appearance' }) %>
+
+<h1>🎨 Navbar &amp; Footer</h1>
+<p class="muted">Ye editor <strong>har page</strong> par apply hota hai (navbar aur footer global hain). Navbar item me <strong>URL khali</strong> chhodo to wo sirf text dikhega — clickable nahi hoga. URL dene par clickable link ban jayega; "New tab" tick karne par click karne par link naye tab me khulega. Pages apne aap navbar me aa sakti hain — <a href="<%= adminBase %>/pages" class="link">Pages</a> me "Show in navbar" on karo.</p>
+
+<% if (query.saved === 'nav') { %><div class="alert success">✅ Navbar updated — sabhi pages par live.</div><% } %>
+<% if (query.saved === 'footer') { %><div class="alert success">✅ Footer updated — sabhi pages par live.</div><% } %>
+
+<div class="panel">
+  <h2>🧭 Navbar links</h2>
+  <form method="POST" action="<%= adminBase %>/appearance/nav">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <div class="navrows">
+      <% (settings.navItems && settings.navItems.length ? settings.navItems : []).forEach((n, i) => { %>
+        <div class="navrow">
+          <label>Label <input name="nav_label_<%= i %>" value="<%= n.label %>" maxlength="30" required></label>
+          <label>URL (khali = clickable nahi) <input name="nav_url_<%= i %>" value="<%= n.url || '' %>" maxlength="500" placeholder="/about ya https://…"></label>
+          <label>Order <input name="nav_order_<%= i %>" type="number" min="0" max="999" value="<%= n.order || 0 %>" style="max-width:80px"></label>
+          <label class="check"><input type="checkbox" name="nav_visible_<%= i %>" <%= n.visible !== false ? 'checked' : '' %>> visible</label>
+          <label class="check"><input type="checkbox" name="nav_newtab_<%= i %>" <%= n.newTab ? 'checked' : '' %>> new tab</label>
+          <label class="check danger-check"><input type="checkbox" name="nav_del_<%= i %>"> 🗑 delete</label>
+        </div>
+      <% }) %>
+      <% for (let j = 0; j < 3; j++) { const i = (settings.navItems ? settings.navItems.length : 0) + j; %>
+        <div class="navrow">
+          <label>Label <input name="nav_label_<%= i %>" maxlength="30" placeholder="naya link"></label>
+          <label>URL (khali = clickable nahi) <input name="nav_url_<%= i %>" maxlength="500" placeholder="/page ya https://…"></label>
+          <label>Order <input name="nav_order_<%= i %>" type="number" min="0" max="999" value="<%= i + 1 %>" style="max-width:80px"></label>
+          <label class="check"><input type="checkbox" name="nav_visible_<%= i %>" checked> visible</label>
+          <label class="check"><input type="checkbox" name="nav_newtab_<%= i %>"> new tab</label>
+          <label class="check danger-check"><input type="checkbox" name="nav_del_<%= i %>"> 🗑 delete</label>
+        </div>
+      <% } %>
+    </div>
+    <p class="muted" style="font-size:0.75rem">Aur rows chahiye? Save karo — har save par 3 khaali rows aur jud jati hain (max 20 total).</p>
+    <button type="submit" class="btn">💾 Save navbar</button>
+  </form>
+</div>
+
+<div class="panel">
+  <h2>🦶 Footer</h2>
+  <form method="POST" action="<%= adminBase %>/appearance/footer">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <div class="row-form" style="margin-bottom:0.8rem">
+      <label>Footer line (© ke saath) <input name="footerText" value="<%= settings.footerText %>" maxlength="200"></label>
+      <label>Extra note <input name="footerNote" value="<%= settings.footerNote || '' %>" maxlength="200" placeholder="optional line"></label>
+    </div>
+    <div class="navrows">
+      <% (settings.footerLinks && settings.footerLinks.length ? settings.footerLinks : []).forEach((l, i) => { %>
+        <div class="navrow">
+          <label>Label <input name="fl_label_<%= i %>" value="<%= l.label %>" maxlength="40" required></label>
+          <label>URL (khali = clickable nahi) <input name="fl_url_<%= i %>" value="<%= l.url || '' %>" maxlength="500" placeholder="/contact ya https://…"></label>
+          <label class="check"><input type="checkbox" name="fl_newtab_<%= i %>" <%= l.newTab ? 'checked' : '' %>> new tab</label>
+          <label class="check danger-check"><input type="checkbox" name="fl_del_<%= i %>"> 🗑 delete</label>
+        </div>
+      <% }) %>
+      <% for (let j = 0; j < 3; j++) { const i = (settings.footerLinks ? settings.footerLinks.length : 0) + j; %>
+        <div class="navrow">
+          <label>Label <input name="fl_label_<%= i %>" maxlength="40" placeholder="naya footer link"></label>
+          <label>URL (khali = clickable nahi) <input name="fl_url_<%= i %>" maxlength="500" placeholder="/page ya https://…"></label>
+          <label class="check"><input type="checkbox" name="fl_newtab_<%= i %>"> new tab</label>
+          <label class="check danger-check"><input type="checkbox" name="fl_del_<%= i %>"> 🗑 delete</label>
+        </div>
+      <% } %>
+    </div>
+    <button type="submit" class="btn">💾 Save footer</button>
+  </form>
+</div>
+
+<%- include('../partials/admin_foot') %>

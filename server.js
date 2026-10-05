@@ -1,11 +1,13 @@
 require('dotenv').config();
+require('./lib/env'); // env fallback chain — sab se PEHLE (db/adminPath env require-time me padhte hain)
 const path = require('path');
+const crypto = require('crypto');
 const express = require('express');
 const session = require('express-session');
 const MongoStore = require('connect-mongo');
 
 const { initDB, getActiveUri } = require('./db');
-const { SiteSetting, PageView } = require('./models');
+const { SiteSetting, PageView, Page } = require('./models');
 const publicRoutes = require('./routes/public');
 const adminRoutes = require('./routes/admin');
 const security = require('./services/security');
@@ -128,7 +130,10 @@ async function main() {
   app.use(
     session({
       name: 'hsid', // hide the default connect.sid fingerprint
-      secret: process.env.SESSION_SECRET || 'dev-secret-change-me',
+      // SESSION_SECRET .env (ya ~/.my-portfolio.env recovery) se aata hai.
+      // Koi hardcoded fallback NAHI — dono missing ho to per-boot random secret:
+      // sessions restart pe drop hongi, par koi known-secret se forged cookie nahi bana sakta.
+      secret: process.env.SESSION_SECRET || crypto.randomBytes(48).toString('hex'),
       resave: false,
       saveUninitialized: false,
       store: MongoStore.create({ mongoUrl: getActiveUri(), collectionName: 'sessions' }),
@@ -150,6 +155,16 @@ async function main() {
     next();
   });
 
+  // CSRF token — har logged-in request ke liye issue/expose (navbar logout form
+  // isi se POST /logout ko token deta hai; admin panel apna requireAuth wala use karta hai)
+  app.use((req, res, next) => {
+    if (req.session && (req.session.user || req.session.admin)) {
+      if (!req.session.csrf) req.session.csrf = crypto.randomBytes(32).toString('hex');
+      res.locals.csrf = req.session.csrf;
+    }
+    next();
+  });
+
   // ---------- security guard (blocked IPs → 403) ----------
   // placed AFTER session so a logged-in admin is exempt — if you block yourself
   // during your own testing, the panel still opens (unblock via Admin → Security).
@@ -165,10 +180,26 @@ async function main() {
   });
   app.use(async (req, res, next) => {
     try {
-      res.locals.settings = await SiteSetting.get();
+      const s = await SiteSetting.get();
+      // old settings docs (pre-navbar) → seed the default nav so links never vanish
+      if (!s.navItems || !s.navItems.length) s.navItems = SiteSetting.defaultNav;
+      res.locals.settings = s;
     } catch (e) {
       res.locals.settings = {};
     }
+    next();
+  });
+
+  // custom pages flagged showInNav → navbar links (30s cache; admin edits appear within 30s)
+  let navPagesCache = { at: 0, list: [] };
+  app.use((req, res, next) => {
+    if (req.method === 'GET' && Date.now() - navPagesCache.at > 30_000) {
+      navPagesCache.at = Date.now();
+      Page.find({ published: true, showInNav: true }).sort({ navOrder: 1 }).select('slug navLabel title navNewTab').lean()
+        .then((list) => { navPagesCache.list = list || []; })
+        .catch(() => {});
+    }
+    res.locals.navPages = navPagesCache.list;
     next();
   });
 
@@ -176,7 +207,7 @@ async function main() {
   // Panel: only the secret path (ADMIN_PATH) — /admin/* is always a public 404.
   // /login, /forgot, /reset are public aliases — so the site can offer login +
   // email-OTP recovery without ever leaking the secret path in public HTML.
-  const AUTH_PATHS = ['/login', '/login/adminlogin', '/signup', '/forgot', '/forgot/verify', '/reset', '/logout'];
+  const AUTH_PATHS = ['/login', '/login/adminlogin', '/login/captcha.svg', '/signup', '/forgot', '/forgot/verify', '/reset', '/logout'];
   app.use((req, res, next) => {
     res.locals.adminBase = SECRET_MOUNT; // all admin links in views are built from this
     if (req.url === SECRET_MOUNT || req.url.startsWith(SECRET_MOUNT + '/')) {
@@ -236,6 +267,13 @@ async function main() {
 
   // Error handler — never leak stack traces
   app.use((err, req, res, next) => {
+    // multer upload errors → proper 413/400 instead of generic 500
+    if (err && (err.code === 'LIMIT_FILE_SIZE' || err.code === 'LIMIT_UNEXPECTED_FILE')) {
+      const msg = err.code === 'LIMIT_FILE_SIZE'
+        ? 'File too large — please upload a smaller file.'
+        : 'Unexpected file field in the upload.';
+      return res.status(413).send(msg);
+    }
     console.error('[ERROR]', err.message);
     res.status(500).send('Something went wrong. Please try again.');
   });
@@ -244,6 +282,9 @@ async function main() {
   app.listen(port, () => {
     console.log(`[OK] Portfolio running → http://localhost:${port}`);
     console.log(`[RUN] NODE_ENV=${process.env.NODE_ENV || '(unset — set to production on hosting!)'}`);
+    if (!process.env.SESSION_SECRET) {
+      console.warn('⚠️  SESSION_SECRET not set — random per-boot secret in use (logins reset on every restart). Set SESSION_SECRET in .env ya hosting dashboard!');
+    }
     const { mailReady } = require('./services/mailer');
     const brevoOn = !!process.env.BREVO_API_KEY;
     const smtpOn = !!(process.env.SMTP_USER && process.env.SMTP_PASS);

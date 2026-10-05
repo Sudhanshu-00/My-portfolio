@@ -15,6 +15,8 @@
     .captcha-row input { flex:1; min-width:0; }
     .hint { font-size:0.72rem; color:rgba(255,255,255,0.45); margin-top:0.25rem; }
     .otp-input { font-size:1.6rem; letter-spacing:0.6em; text-align:center; font-family:monospace; }
+    .pw-toggle { background:transparent; border:1px solid rgba(255,255,255,0.2); border-radius:6px; color:inherit; font-size:0.72rem; padding:0.4rem 0.6rem; cursor:pointer; white-space:nowrap; }
+    .pw-toggle:hover { border-color:rgba(126,231,135,0.5); }
   </style>
 </head>
 <body class="login-page">
@@ -58,12 +60,19 @@
       </form>
     <% } else { %>
       <p class="muted" style="margin:0.3rem 0 0.8rem;font-size:0.85rem">Step 3/3 — <b><%= values.username || '' %></b>, email verified ✓. Now set a strong password.</p>
+      <p class="muted" style="margin:0 0 0.8rem;font-size:0.78rem">Password policy: <strong>min 8 characters</strong> — at least one <strong>UPPERCASE</strong>, one <strong>lowercase</strong>, one <strong>number</strong> and one <strong>symbol</strong> (e.g. Aa1!xyz9). Dono password same na hue to "password not match" error dikhega.</p>
       <form method="POST" action="/signup/complete" class="form" autocomplete="off">
-        <label>Password (min 8 chars — letter + number)
-          <input type="password" name="password" required autofocus minlength="8" autocomplete="new-password">
+        <label>Password (min 8 — A-Z, a-z, 0-9, symbol)
+          <span class="captcha-row">
+            <input type="password" name="password" id="suPass" required minlength="8" autocomplete="new-password">
+            <button type="button" class="pw-toggle" data-reveal="suPass">👁 show</button>
+          </span>
         </label>
         <label>Confirm password
-          <input type="password" name="confirm" required minlength="8" autocomplete="new-password">
+          <span class="captcha-row">
+            <input type="password" name="confirm" id="suConfirm" required minlength="8" autocomplete="new-password">
+            <button type="button" class="pw-toggle" data-reveal="suConfirm">👁 show</button>
+          </span>
         </label>
         <label>Security captcha
           <span class="captcha-row">
@@ -81,6 +90,7 @@
       <a href="/" class="link" style="font-size:0.82rem">← Website</a>
     </div>
   </div>
+  <script src="/js/showpass.js" defer></script>
   <script src="/js/signup.js" defer></script>
 </body>
 </html>

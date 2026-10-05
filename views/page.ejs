@@ -1,0 +1,19 @@
+<%- include('partials/header', { title: page.title }) %>
+
+<article class="custom-page">
+  <h1>&gt;_ <%= page.title %></h1>
+  <% if (!page.blocks || !page.blocks.length) { %>
+    <p class="muted">This page has no content yet — check back soon.</p>
+  <% } %>
+  <% (page.blocks || []).forEach((b) => { %>
+    <% if (b.type === 'heading') { %>
+      <h2 class="page-heading"><%= b.text %></h2>
+    <% } else if (b.type === 'image') { %>
+      <% if (b.url) { %><img src="<%= b.url %>" alt="<%= page.title %>" class="page-img" loading="lazy"><% } %>
+    <% } else { %>
+      <% b.text.split('\n').map((l) => l.trim()).filter(Boolean).forEach((line) => { %><p class="page-text"><%= line %></p><% }) %>
+    <% } %>
+  <% }) %>
+</article>
+
+<%- include('partials/footer') %>

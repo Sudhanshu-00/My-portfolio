@@ -82,18 +82,24 @@
     <!-- change own password -->
     <div class="ud-panel">
       <h2>🔑 CHANGE MY PASSWORD</h2>
+      <p class="muted" style="font-size:0.78rem">Policy: min 8 chars — UPPERCASE + lowercase + number + symbol (e.g. Aa1!xyz9). Match na ho to "password not match" error dikhega.</p>
       <form method="POST" action="/user/<%= username %>/password" class="form">
         <input type="hidden" name="_csrf" value="<%= csrf %>">
         <label>Current password
-          <input type="password" name="current" required autocomplete="current-password">
+          <input type="password" name="current" id="ucPass" required autocomplete="current-password">
         </label>
-        <label>New password (min 8 chars)
-          <input type="password" name="next" required minlength="8" autocomplete="new-password">
+        <label>New password (min 8 — A-Z, a-z, 0-9, symbol)
+          <input type="password" name="next" id="unPass" required minlength="8" autocomplete="new-password">
         </label>
         <label>Confirm new password
-          <input type="password" name="confirm" required minlength="8" autocomplete="new-password">
+          <input type="password" name="confirm" id="ucPass2" required minlength="8" autocomplete="new-password">
         </label>
-        <button type="submit" class="btn full">Update password</button>
+        <div class="actions" style="gap:0.5rem">
+          <button type="button" class="btn small outline" data-reveal="ucPass">👁 show current</button>
+          <button type="button" class="btn small outline" data-reveal="unPass">👁 show new</button>
+          <button type="button" class="btn small outline" data-reveal="ucPass2">👁 show confirm</button>
+          <button type="submit" class="btn full">Update password</button>
+        </div>
       </form>
     </div>
 
@@ -124,4 +130,5 @@
   <% } %>
 </div>
 
+<script src="/js/showpass.js" defer></script>
 <%- include('../partials/footer') %>

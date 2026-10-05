@@ -11,7 +11,8 @@
     <input type="hidden" name="_csrf" value="<%= csrf %>">
     <label>Name <input name="name" maxlength="60" placeholder="optional"></label>
     <label>Username <input name="username" required maxlength="20" pattern="[a-z0-9_]{3,20}" placeholder="a-z 0-9 _"></label>
-    <label>Password <input name="password" required minlength="8" placeholder="min 8, letter+number" autocomplete="new-password"></label>
+    <label>Password <input type="password" name="password" id="newUserPass" required minlength="8" placeholder="min 8: A-Z a-z 0-9 symbol" autocomplete="new-password"></label>
+    <label>Confirm password <input type="password" name="confirm" required minlength="8" placeholder="retype password" autocomplete="new-password"></label>
     <label>Role
       <select name="role">
         <option value="user" selected>user</option>
@@ -20,6 +21,7 @@
     </label>
     <button type="submit" class="btn small">Create</button>
   </form>
+  <p class="muted" style="font-size:0.75rem;margin:0.4rem 0 0">Password policy: min 8 chars — UPPERCASE + lowercase + number + symbol. Confirm match na ho to error milega.</p>
 </div>
 
 <% users.forEach((u) => { const isMe = u.username === me; %>
@@ -88,11 +90,36 @@
       <form method="POST" action="<%= adminBase %>/users/<%= u._id %>/password" class="form" style="gap:0.4rem">
         <input type="hidden" name="_csrf" value="<%= csrf %>">
         <small class="muted">SET NEW PASSWORD</small>
-        <input type="password" name="password" required minlength="8" placeholder="min 8, letter+number" autocomplete="new-password">
-        <button type="submit" class="btn small outline">Reset password</button>
+        <input type="password" name="password" id="pw-<%= u._id %>" required minlength="8" placeholder="min 8: A-Z a-z 0-9 symbol" autocomplete="new-password">
+        <div class="actions" style="gap:0.4rem">
+          <button type="button" class="btn small outline" data-reveal="pw-<%= u._id %>">👁 show</button>
+          <button type="submit" class="btn small outline">Reset password</button>
+        </div>
       </form>
     </div>
+
+    <% // ---- per-user panel permissions (admin-role accounts only) ---- %>
+    <% if (u.role === 'admin' && !isMe && u.username !== 'sudhanshu') { %>
+    <form method="POST" action="<%= adminBase %>/users/<%= u._id %>/perms" class="perm-grid" style="margin-top:0.8rem">
+      <input type="hidden" name="_csrf" value="<%= csrf %>">
+      <small class="muted" style="grid-column:1/-1">PANEL PERMISSIONS — kaunsa section is admin ko dikhe/access ho
+        <% if (u.panelPerms && u.panelPerms.all) { %><span class="badge warn">FULL ACCESS</span><% } %>
+      </small>
+      <label class="check"><input type="checkbox" name="perm_all" <%= u.panelPerms && u.panelPerms.all ? 'checked' : '' %>> 🌐 Full access (everything)</label>
+      <label class="check"><input type="checkbox" name="perm_content" <%= u.panelPerms && (u.panelPerms.all || u.panelPerms.content) ? 'checked' : '' %>> 📂 Content (projects/tools/skills/services/testimonials/experience/labs)</label>
+      <label class="check"><input type="checkbox" name="perm_pages" <%= u.panelPerms && (u.panelPerms.all || u.panelPerms.pages) ? 'checked' : '' %>> 📄 Pages + Navbar/Footer editor</label>
+      <label class="check"><input type="checkbox" name="perm_settings" <%= u.panelPerms && (u.panelPerms.all || u.panelPerms.settings) ? 'checked' : '' %>> ⚙️ Site Settings + resume</label>
+      <label class="check"><input type="checkbox" name="perm_messages" <%= u.panelPerms && (u.panelPerms.all || u.panelPerms.messages) ? 'checked' : '' %>> 📩 Messages + Feedback</label>
+      <label class="check"><input type="checkbox" name="perm_users" <%= u.panelPerms && (u.panelPerms.all || u.panelPerms.users) ? 'checked' : '' %>> 👥 Users (danger)</label>
+      <label class="check"><input type="checkbox" name="perm_security" <%= u.panelPerms && (u.panelPerms.all || u.panelPerms.security) ? 'checked' : '' %>> 🛡 Security &amp; Logs</label>
+      <div style="grid-column:1/-1"><button type="submit" class="btn small">Save permissions</button></div>
+    </form>
+    <% } else if (u.role === 'admin' && u.username === 'sudhanshu') { %>
+      <p class="muted" style="margin:0.5rem 0 0;font-size:0.78rem">🔑 Owner account — always full access (locked).</p>
+    <% } %>
   </div>
 <% }) %>
+
+<script src="/js/showpass.js"></script>
 
 <%- include('../partials/admin_foot') %>

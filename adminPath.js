@@ -3,6 +3,7 @@
 // set to 'admin'), a random path is generated once per boot and logged, so the
 // panel is never exposed at a predictable URL. server.js and routes/admin.js
 // both require this module, so they always agree on the same path.
+require('./lib/env'); // .env missing ho to ~/.my-portfolio.env recovery config
 const crypto = require('crypto');
 
 let ADMIN_PATH = String(process.env.ADMIN_PATH || '').replace(/^\/+|\/+$/g, '');

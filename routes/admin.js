@@ -1,9 +1,10 @@
 const router = require('express').Router();
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
-const { AdminUser, Project, Skill, Message, SiteSetting, Tool, PageView, Service, Testimonial, Experience, Lab, Feedback, SecurityEvent, BlockedIp } = require('../models');
+const { AdminUser, Project, Skill, Message, SiteSetting, Tool, PageView, Service, Testimonial, Experience, Lab, Feedback, SecurityEvent, BlockedIp, Page } = require('../models');
 const { sendMail, otpTemplate, mailReady } = require('../services/mailer');
 const security = require('../services/security');
+const captchaSvg = require('../services/captcha');
 
 // Secret admin path — single source of truth in ../adminPath.js (fail-closed:
 // guessable 'admin' fallback is impossible).
@@ -17,8 +18,33 @@ const safeUrl = (u) => {
   return /^https?:\/\//i.test(s) ? s : 'https://' + s;
 };
 
+// nav/footer link URLs — internal paths (/, /about, /p/slug) as-is allowed,
+// external http(s) via safeUrl; kuch bhi aur → empty (non-clickable text)
+const linkUrl = (u) => {
+  const s = String(u || '').trim().slice(0, 500).replace(/["'<>\\]/g, '');
+  if (!s) return '';
+  if (s.startsWith('//')) return ''; // protocol-relative (//evil.com) → external hijack blocked
+  if (s.startsWith('/')) return s;
+  if (/^https?:\/\//i.test(s)) return s;
+  return safeUrl(s);
+};
+
 // Mongo ObjectId format check — invalid ids never reach the query layer.
 const isId = (v) => /^[a-f\d]{24}$/i.test(String(v || ''));
+
+// ---------- password policy ----------
+// Min 8 chars with UPPERCASE + lowercase + number + symbol (user requirement).
+const PASSWORD_MSG = 'Password: minimum 8 characters with at least one UPPERCASE letter, one lowercase letter, one number and one symbol (e.g. Aa1!xyz9).';
+const strongPass = (p) => typeof p === 'string' && p.length >= 8 && /[a-z]/.test(p) && /[A-Z]/.test(p) && /[0-9]/.test(p) && /[^A-Za-z0-9]/.test(p);
+
+// ---------- per-user panel permissions ----------
+const PERM_KEYS = ['content', 'pages', 'settings', 'messages', 'users', 'security'];
+// every admin gets the dashboard; sections open per panelPerms (default = all)
+const requirePerm = (key) => (req, res, next) => {
+  const p = req.adminPerms || { all: true };
+  if (p.all || p[key]) return next();
+  return res.status(403).send('<!DOCTYPE html><html><head><title>403</title><link rel="stylesheet" href="/css/style.css"></head><body class="login-page"><div class="login-box"><h1>403 — ACCESS DENIED</h1><p>Your account does not have access to this panel section.</p><p><a href="/' + ADMIN_PATH + '">← Back to dashboard</a></p></div></body></html>');
+};
 
 // ---------- photo upload helper ----------
 const IMG_MIME = /^image\/(png|jpe?g|gif|webp|avif)$/i; // strict whitelist (no svg/html)
@@ -49,16 +75,28 @@ const requireAuth = async (req, res, next) => {
     // ---- CSRF guard: verify token on every admin POST (blocks state-changing attacks) ----
     if (req.method === 'POST') {
       const token = req.body && req.body._csrf; // req.body may be undefined (empty POST)
-      if (!req.session.csrf || !token || !safeEqual(req.session.csrf, token)) {
+      // multipart (file-upload) POST: multer abhi body parse nahi kiya → check defer,
+      // csrfCheck middleware upload middleware ke BAAD chalta hai (req.body ready tab)
+      if (/^multipart\//i.test(req.headers['content-type'] || '')) {
+        req.csrfDeferred = true;
+      } else if (!req.session.csrf || !token || !safeEqual(req.session.csrf, token)) {
         return res.status(403).send('Security check failed — reload the page and try again.');
       }
-    } else {
+    } else if (!req.session.csrf) {
       // issue token on GET (passed to views via a hidden input)
-      if (!req.session.csrf) req.session.csrf = crypto.randomBytes(32).toString('hex');
-      res.locals.csrf = req.session.csrf;
+      req.session.csrf = crypto.randomBytes(32).toString('hex');
     }
+    // dono cases me views ko csrf chahiye — POST /password re-render (error paths) bhi
+    res.locals.csrf = req.session.csrf;
     res.locals.admin = req.session.admin; // username for views
     res.locals.path = '/admin' + req.path; // sidebar active-state (router gives prefix-stripped path)
+    // ---- per-user permissions (Admin → Users → Permissions) ----
+    const me = await AdminUser.findOne({ username: req.session.admin }).catch(() => null);
+    const raw = (me && me.panelPerms) || {};
+    const all = raw.all !== false; // missing field → full access (back-compat)
+    req.adminPerms = { all };
+    PERM_KEYS.forEach((k) => { req.adminPerms[k] = all || !!raw[k]; });
+    res.locals.perms = req.adminPerms;
     res.locals.unread = await Message.countDocuments({ read: false });
     res.locals.mailReady = mailReady(); // sidebar 📧 badge — instantly shows if SMTP env is missing
     res.locals.pendingFeedback = await Feedback.countDocuments({ status: 'pending' });
@@ -108,22 +146,7 @@ async function sendSignupOtp(email, username, otp) {
   return sent;
 }
 
-// captcha SVG — per-char rotation + noise lines/dots, confusing chars removed
-function captchaSvg(text) {
-  const W = 190, H = 62;
-  const palette = ['#7ee787', '#79c0ff', '#ffa657', '#d2a8ff', '#ff7b72'];
-  const glyphs = [...text].map((ch, i) => {
-    const x = 25 + i * 31 + (Math.random() * 8 - 4);
-    const y = 40 + (Math.random() * 10 - 5);
-    const rot = Math.random() * 50 - 25;
-    const fill = palette[Math.floor(Math.random() * palette.length)];
-    const fs = 27 + Math.random() * 8;
-    return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" transform="rotate(${rot.toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)})" fill="${fill}" font-size="${fs.toFixed(1)}" font-family="monospace" font-weight="bold">${ch}</text>`;
-  }).join('');
-  const lines = Array.from({ length: 4 }, () => `<line x1="${(Math.random() * W).toFixed(0)}" y1="${(Math.random() * H).toFixed(0)}" x2="${(Math.random() * W).toFixed(0)}" y2="${(Math.random() * H).toFixed(0)}" stroke="${palette[Math.floor(Math.random() * palette.length)]}" stroke-width="1" opacity="0.5"/>`).join('');
-  const dots = Array.from({ length: 40 }, () => `<circle cx="${(Math.random() * W).toFixed(0)}" cy="${(Math.random() * H).toFixed(0)}" r="1" fill="${palette[Math.floor(Math.random() * palette.length)]}" opacity="0.6"/>`).join('');
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><rect width="${W}" height="${H}" fill="#0d1117" rx="8"/>${lines}${dots}${glyphs}</svg>`;
-}
+// captcha SVG image — shared with user.js via services/captcha.js
 
 // ---------- 3-step signup wizard: (1) details → (2) email OTP → (3) password+captcha ----------
 router.get('/signup', (req, res) => {
@@ -232,10 +255,18 @@ router.post('/signup/resend', async (req, res) => {
 router.get('/signup/captcha.svg', (req, res) => {
   const s = req.session.signup;
   if (!s || !s.verified) return res.status(404).type('text/plain').send('not found');
-  const chars = 'abcdefghjkmnpqrstuvwxyz23456789'; // 0/o, 1/i/l confusion hataya
-  const text = Array.from({ length: 5 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  const text = captchaSvg.newText(); // 0/o, 1/i/l confusion hataya
   req.session.captcha = { answer: text, exp: Date.now() + 5 * 60 * 1000 };
   if (process.env.NODE_ENV !== 'production') console.log(`[DEV] captcha: ${text}`); // for automated tests (dev only)
+  res.type('image/svg+xml').set('Cache-Control', 'no-store');
+  res.send(captchaSvg(text));
+});
+
+// ---- captcha image for LOGIN (any visitor) ----
+router.get('/login/captcha.svg', (req, res) => {
+  const text = captchaSvg.newText(); // confusion-safe alphabet (no 0/o, 1/i/l)
+  req.session.captcha = { answer: text, exp: Date.now() + 5 * 60 * 1000 }; // single-use, 5 min
+  if (process.env.NODE_ENV !== 'production') console.log(`[DEV] login captcha: ${text}`); // dev testing only
   res.type('image/svg+xml').set('Cache-Control', 'no-store');
   res.send(captchaSvg(text));
 });
@@ -248,8 +279,8 @@ router.post('/signup/complete', async (req, res) => {
   const back = (error, code = 400) => res.status(code).render('signup', { step: 3, error, info: null, values });
 
   const pass = String(req.body.password || '');
-  if (pass.length < 8 || !/[a-zA-Z]/.test(pass) || !/[0-9]/.test(pass)) return back('Password: minimum 8 characters with at least one letter and one number.');
-  if (pass !== String(req.body.confirm || '')) return back('Passwords do not match.');
+  if (!strongPass(pass)) return back(PASSWORD_MSG);
+  if (pass !== String(req.body.confirm || '')) return back('Password not match — passwords do not match, please retype both.');
 
   // captcha — single-use, 5 min expiry, case-insensitive
   const cap = req.session.captcha;
@@ -305,6 +336,16 @@ router.post('/login', async (req, res) => {
   const body = req.body || {}; // never throw on empty/absent body
   const username = String(body.username || '').toLowerCase().slice(0, 40);
   const password = String(body.password || '');
+  // ---- captcha first — single-use, 5 min expiry, case-insensitive (user requirement) ----
+  const cap = req.session.captcha;
+  req.session.captcha = null; // consume immediately (replay-proof)
+  const guess = String(body.captcha || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (!cap || Date.now() > cap.exp || !guess || guess !== cap.answer) {
+    security.bump(req, 'loginFail', 401);
+    security.logEvent(req, { reason: 'login-captcha-fail', severity: 'low', status: 401, path: '/login' });
+    await new Promise((r) => setTimeout(r, 300));
+    return res.status(401).render('admin/login', { error: 'Wrong or expired captcha — a new captcha has loaded, please try again.' });
+  }
   if (!username || !password) {
     security.bump(req, 'loginFail', 401);
     return res.status(401).render('admin/login', { error: 'Invalid username or password' });
@@ -359,7 +400,16 @@ router.post('/login', async (req, res) => {
 
 router.post('/logout', (req, res) => {
   const wasAdmin = !!(req.session && req.session.admin);
+  const loggedIn = !!(req.session && (req.session.admin || req.session.user));
   const fromPanel = String(req.originalUrl || '').startsWith('/' + ADMIN_PATH);
+  // CSRF: logged-in logout ab token maangta hai (attacker kisi ko force-logout nahi kar sakta).
+  // Anonymous session (koi identity nahi) → token ki zaroorat nahi.
+  if (loggedIn) {
+    const token = (req.body && req.body._csrf) || '';
+    if (!req.session.csrf || !token || !safeEqual(req.session.csrf, token)) {
+      return res.status(403).send('Security check failed — reload the page and try again.');
+    }
+  }
   req.session.destroy(() => res.redirect(wasAdmin && fromPanel ? go('/login') : '/'));
 });
 
@@ -448,12 +498,11 @@ router.post('/reset', async (req, res) => {
   if (!req.session.resetAuth || req.session.resetAuth.exp < Date.now()) return res.redirect('/forgot');
   const u = req.session.resetAuth.user;
   const p = String(req.body.password || '');
-  const strong = p.length >= 10 && /[a-zA-Z]/.test(p) && /[0-9]/.test(p);
-  if (!strong) {
-    return res.render('admin/forgot', { step: 'reset', error: 'Password too weak — minimum 10 characters with at least one letter and one number.', info: null, username: u });
+  if (!strongPass(p)) {
+    return res.render('admin/forgot', { step: 'reset', error: PASSWORD_MSG, info: null, username: u });
   }
   if (p !== String(req.body.confirm || '')) {
-    return res.render('admin/forgot', { step: 'reset', error: 'Passwords do not match.', info: null, username: u });
+    return res.render('admin/forgot', { step: 'reset', error: 'Password not match — passwords do not match, please retype both.', info: null, username: u });
   }
   const user = await AdminUser.findOne({ username: u });
   if (!user) return res.redirect('/forgot');
@@ -469,12 +518,32 @@ router.post('/reset', async (req, res) => {
 // everything below requires login
 router.use(requireAuth);
 
+// deferred CSRF for multipart uploads — upload.* middleware ke BAAD lagana
+const csrfCheck = (req, res, next) => {
+  if (!req.csrfDeferred) return next(); // non-multipart: requireAuth ne pehle hi check kar liya
+  const token = req.body && req.body._csrf;
+  if (!req.session.csrf || !token || !safeEqual(req.session.csrf, token)) {
+    return res.status(403).send('Security check failed — reload the page and try again.');
+  }
+  next();
+};
+
+// ---------- per-section permission gates ----------
+// har section server-side enforce hota hai — sidebar chhupana sirf UI hai,
+// yahan bina permission ke route hi open nahi hota.
+router.use(['/tools', '/projects', '/skills', '/services', '/testimonials', '/experience', '/labs'], requirePerm('content'));
+router.use(['/pages', '/appearance'], requirePerm('pages'));
+router.use(['/settings', '/resume'], requirePerm('settings'));
+router.use(['/messages', '/feedback'], requirePerm('messages'));
+router.use('/users', requirePerm('users'));
+router.use('/security', requirePerm('security'));
+
 // ---------- dashboard ----------
 router.get('/', async (req, res) => {
   const range = ['7d', '30d', '1y'].includes(req.query.range) ? req.query.range : '7d';
   const days = range === '7d' ? 7 : range === '30d' ? 30 : 365;
 
-  const [projects, skills, unread, tools, services, testimonials, totalMsgs, totalViews, viewsToday, labs, blockedNow, threatsToday, userCount] = await Promise.all([
+  const [projects, skills, unread, tools, services, testimonials, totalMsgs, totalViews, viewsToday, labs, blockedNow, threatsToday, userCount, pageCount] = await Promise.all([
     Project.countDocuments(),
     Skill.countDocuments(),
     Message.countDocuments({ read: false }),
@@ -488,6 +557,7 @@ router.get('/', async (req, res) => {
     BlockedIp.countDocuments({ $or: [{ until: null }, { until: { $gt: new Date() } }] }),
     SecurityEvent.countDocuments({ createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) }, reason: { $ne: 'visit' } }),
     AdminUser.countDocuments(),
+    Page.countDocuments(),
   ]);
 
   // chart: daily bars for 7d/30d, monthly for 1y
@@ -531,7 +601,7 @@ router.get('/', async (req, res) => {
   const maxCount = Math.max(1, ...chart.map((c) => c.count));
 
   res.render('admin/dashboard', {
-    counts: { projects, skills, unread, tools, services, testimonials, labs, blockedNow, threatsToday, userCount },
+    counts: { projects, skills, unread, tools, services, testimonials, labs, blockedNow, threatsToday, userCount, pages: pageCount },
     stats: { totalMsgs, totalViews, viewsToday, rangeViews },
     chart,
     maxCount,
@@ -545,7 +615,8 @@ router.get('/', async (req, res) => {
 // Every user's details are managed here; admin can change username/password/details
 // and create/delete accounts. Guards: self-protect.
 const userPageData = async () => {
-  const users = await AdminUser.find().sort({ createdAt: -1 }).lean();
+  // hashes kabhi view tak nahi jaate (passwordHash/otpHash exclude — defense in depth)
+  const users = await AdminUser.find().sort({ createdAt: -1 }).select('-passwordHash -otpHash').lean();
   return users;
 };
 
@@ -569,17 +640,27 @@ router.post('/users/create', async (req, res) => {
   const b = req.body || {};
   const username = String(b.username || '').trim().toLowerCase().slice(0, 20);
   const pass = String(b.password || '');
+  const confirm = String(b.confirm || '');
   const role = b.role === 'admin' ? 'admin' : 'user';
   const fail = (m) => res.redirect(go(`/admin/users?msg=${encodeURIComponent(m)}`));
   if (!USERNAME_RE.test(username)) return fail('Invalid username (3-20 chars: a-z, 0-9, _)');
   if (RESERVED.has(username)) return fail('That username is reserved');
-  if (pass.length < 8 || !/[a-zA-Z]/.test(pass) || !/[0-9]/.test(pass)) return fail('Password: min 8 chars with a letter + number');
+  if (!strongPass(pass)) return fail(PASSWORD_MSG);
+  if (pass !== confirm) return fail('Password not match — password and confirm password do not match');
   if (await AdminUser.findOne({ username }).catch(() => null)) return fail('Username already taken');
   await AdminUser.create({ username, passwordHash: await bcrypt.hash(pass, 12), role, name: String(b.name || '').trim().slice(0, 60) });
   res.redirect(go(`/admin/users?msg=${encodeURIComponent(`Account '${username}' created (${role})`)}`));
 });
 
 router.post('/users/:id/details', async (req, res) => {
+  const b = req.body || {};
+  const email = String(b.email || '').trim().toLowerCase().slice(0, 100);
+  // email unique rehna chahiye — doosre account ka email overlap nahi ho sakta
+  // (/forgot flow isi email par depend karta hai)
+  if (email) {
+    const dup = await AdminUser.findOne({ email, username: { $ne: (await AdminUser.findById(req.params.id).catch(() => null))?.username } }).catch(() => null);
+    if (dup) return res.redirect(go('/admin/users?msg=' + encodeURIComponent('That email is already used by another account')));
+  }
   await AdminUser.findByIdAndUpdate(req.params.id, cleanProfile(req.body || {})).catch(() => {});
   res.redirect(go('/admin/users?msg=Details+updated'));
 });
@@ -601,7 +682,8 @@ router.post('/users/:id/username', async (req, res) => {
 router.post('/users/:id/password', async (req, res) => {
   const pass = String((req.body || {}).password || '');
   const fail = (m) => res.redirect(go(`/admin/users?msg=${encodeURIComponent(m)}`));
-  if (pass.length < 8 || !/[a-zA-Z]/.test(pass) || !/[0-9]/.test(pass)) return fail('Password: min 8 chars with a letter + number');
+  // same strong policy as everywhere else (uppercase+lowercase+number+symbol, min 8)
+  if (!strongPass(pass)) return fail(PASSWORD_MSG);
   const target = await AdminUser.findById(req.params.id).catch(() => null);
   if (!target) return fail('User not found');
   target.passwordHash = await bcrypt.hash(pass, 12);
@@ -611,6 +693,29 @@ router.post('/users/:id/password', async (req, res) => {
   await target.save();
   security.logEvent(req, { reason: 'admin-reset-password', severity: 'medium', status: 200, path: '/admin/users' });
   res.redirect(go(`/admin/users?msg=${encodeURIComponent('Password changed for ' + target.username)}`));
+});
+
+// grant/revoke panel-section permissions (Admin → Users → Permissions card)
+// self + owner locked; last-admin demote/delete rules untouched.
+router.post('/users/:id/perms', async (req, res) => {
+  const target = await AdminUser.findById(req.params.id).catch(() => null);
+  const fail = (m) => res.redirect(go(`/admin/users?msg=${encodeURIComponent(m)}`));
+  if (!target) return fail('User not found');
+  if (target.username === req.session.admin) return fail('You cannot change your own permissions');
+  if (target.username === 'sudhanshu') return fail('The owner (sudhanshu) always has full access');
+  const b = req.body || {};
+  const all = b.perm_all === 'on';
+  const perms = { all };
+  perms.content = all || b.perm_content === 'on';
+  perms.pages = all || b.perm_pages === 'on';
+  perms.settings = all || b.perm_settings === 'on';
+  perms.messages = all || b.perm_messages === 'on';
+  perms.users = all || b.perm_users === 'on';
+  perms.security = all || b.perm_security === 'on';
+  target.panelPerms = perms;
+  await target.save();
+  security.logEvent(req, { reason: 'perms-change', severity: 'medium', status: 200, path: '/admin/users' });
+  res.redirect(go(`/admin/users?msg=${encodeURIComponent('Permissions updated for ' + target.username)}`));
 });
 
 router.post('/users/:id/role', async (req, res) => {
@@ -703,7 +808,7 @@ router.post('/security/clear', async (req, res) => {
 // ---------- settings ----------
 router.get('/settings', (req, res) => res.render('admin/settings'));
 
-router.post('/settings', upload.single('photo'), async (req, res) => {
+router.post('/settings', upload.single('photo'), csrfCheck, async (req, res) => {
   const s = await SiteSetting.get();
   // per-field length caps (match the schema limits)
   const caps = { siteName: 100, heroTitle: 150, heroSubtitle: 300, aboutText: 5000, email: 100, phone: 20, location: 120, githubUsername: 60, thmUsername: 60 };
@@ -730,7 +835,7 @@ router.post('/settings', upload.single('photo'), async (req, res) => {
 });
 
 // ---------- resume / CV upload ----------
-router.post('/resume', resumeUpload.single('resume'), async (req, res) => {
+router.post('/resume', resumeUpload.single('resume'), csrfCheck, async (req, res) => {
   if (!req.file) return res.redirect(go('/admin/settings?resume_error=1'));
   const s = await SiteSetting.get();
   s.resumeFile = `data:application/pdf;base64,${req.file.buffer.toString('base64')}`;
@@ -746,6 +851,171 @@ router.post('/resume/delete', async (req, res) => {
   s.resumeName = 'resume.pdf';
   await s.save();
   res.redirect(go('/admin/settings?resume_deleted=1'));
+});
+
+// ---------- page builder (Admin → Pages) ----------
+// Custom pages with typed content blocks (heading / text / image) — rendered
+// publicly at /p/<slug> with the same navbar+footer as every other page.
+// No raw HTML is stored (EJS escapes everything) → stored-XSS impossible.
+const SLUG_RE = /^[a-z0-9][a-z0-9-]{0,59}$/;
+const RESERVED_SLUGS = new Set(['about', 'tools', 'projects', 'labs', 'contact', 'feedback', 'login', 'logout', 'signup', 'forgot', 'reset', 'user', 'users', 'admin', 'page', 'p', 'api', 'resume', 'healthz', 'css', 'js', 'images', 'favicon.ico', 'new', 'edit']);
+const pageUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 3 * 1024 * 1024 }, // 3 MB per image
+  fileFilter: (req, file, cb) => cb(null, IMG_MIME.test(file.mimetype)),
+});
+
+// `name="field_3"` style indexed form fields → ordered array (bracket-style
+// `field[3]` use NAHI kiya kyunki global sanitizer `[`-keys strip karta hai —
+// underscore naming sanitizer-safe hai aur NoSQLi-safe bhi)
+const parseIndexed = (body, base) => {
+  const out = [];
+  const re = new RegExp('^' + base + '_(\\d+)$');
+  for (const k of Object.keys(body || {})) {
+    const m = re.exec(k);
+    if (m) out[parseInt(m[1], 10)] = body[k];
+  }
+  return out;
+};
+
+// build the blocks array from the form + any uploaded images
+const parseBlocks = (req) => {
+  const types = parseIndexed(req.body, 'block_type');
+  const texts = parseIndexed(req.body, 'block_text');
+  const urls = parseIndexed(req.body, 'block_url');
+  const dels = parseIndexed(req.body, 'block_del');
+  const slots = parseIndexed(req.body, 'block_slot');
+  const bySlot = {};
+  (req.files || []).forEach((f, j) => { bySlot[String(slots[j] ?? j)] = f; });
+  const blocks = [];
+  types.slice(0, 30).forEach((t, i) => {
+    if (dels[i] !== undefined) return; // remove-checkbox ticked → drop block
+    const type = ['heading', 'text', 'image'].includes(String(t)) ? String(t) : 'text';
+    const b = { type, text: String(texts[i] || '').slice(0, type === 'heading' ? 200 : 3000), url: '' };
+    if (type === 'image') {
+      const f = bySlot[String(i)];
+      if (f) b.url = toDataUrl(f); // fresh upload (MIME whitelisted, ≤3MB)
+      else {
+        const u = String(urls[i] || '').trim();
+        // keep only existing data-URLs we issued ourselves, or plain https(s) URLs
+        if (/^data:image\/(png|jpe?g|gif|webp|avif);base64,/i.test(u) || /^https?:\/\//i.test(u)) b.url = u.slice(0, 5000000);
+      }
+    }
+    if (type === 'heading' && !b.text) return;
+    if (type === 'text' && !b.text.trim()) return;
+    if (type === 'image' && !b.url) return; // image without a file/URL is dropped
+    blocks.push(b);
+  });
+  return blocks;
+};
+
+router.get('/pages', async (req, res) => {
+  res.render('admin/pages', { pages: await Page.find().sort({ createdAt: -1 }) });
+});
+
+router.post('/pages', async (req, res) => {
+  const b = req.body || {};
+  const slug = String(b.slug || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').slice(0, 60);
+  const title = String(b.title || '').trim().slice(0, 100);
+  const fail = (m) => res.redirect(go(`/admin/pages?err=${encodeURIComponent(m)}`));
+  if (!SLUG_RE.test(slug)) return fail('Invalid slug — use a-z, 0-9 and dashes only');
+  if (RESERVED_SLUGS.has(slug)) return fail('That slug is reserved — please choose another');
+  if (!title) return fail('Page title is required');
+  if (await Page.findOne({ slug }).catch(() => null)) return fail('A page with that slug already exists');
+  await Page.create({
+    slug,
+    title,
+    published: b.published === 'on',
+    showInNav: b.showInNav === 'on',
+    navLabel: String(b.navLabel || '').trim().slice(0, 30) || title.slice(0, 30),
+    navOrder: Math.max(0, Math.min(999, parseInt(b.navOrder, 10) || 50)),
+    navNewTab: b.navNewTab === 'on',
+  });
+  security.logEvent(req, { reason: 'page-create', severity: 'info', status: 302, path: '/admin/pages' });
+  res.redirect(go('/admin/pages?saved=1'));
+});
+
+router.get('/pages/:id/edit', async (req, res) => {
+  const page = await Page.findById(req.params.id).catch(() => null);
+  if (!page) return res.redirect(go('/admin/pages'));
+  res.render('admin/page_form', { page });
+});
+
+router.post('/pages/:id/update', pageUpload.array('block_image', 12), async (req, res) => {
+  const p = await Page.findById(req.params.id).catch(() => null);
+  if (!p) return res.redirect(go('/admin/pages'));
+  const b = req.body || {};
+  p.title = String(b.title || p.title).trim().slice(0, 100);
+  p.published = b.published === 'on';
+  p.showInNav = b.showInNav === 'on';
+  p.navLabel = String(b.navLabel || '').trim().slice(0, 30);
+  p.navOrder = Math.max(0, Math.min(999, parseInt(b.navOrder, 10) || 50));
+  p.navNewTab = b.navNewTab === 'on';
+  p.blocks = parseBlocks(req);
+  await p.save();
+  res.redirect(go('/admin/pages?saved=1'));
+});
+
+router.post('/pages/:id/toggle', async (req, res) => {
+  const p = await Page.findById(req.params.id).catch(() => null);
+  if (p) { p.published = !p.published; await p.save(); }
+  res.redirect(go('/admin/pages'));
+});
+
+router.post('/pages/:id/delete', async (req, res) => {
+  await Page.findByIdAndDelete(req.params.id).catch(() => {});
+  res.redirect(go('/admin/pages?deleted=1'));
+});
+
+// ---------- appearance editor (navbar + footer — applies to EVERY page) ----------
+router.get('/appearance', (req, res) => res.render('admin/appearance'));
+
+router.post('/appearance/nav', async (req, res) => {
+  const s = await SiteSetting.get();
+  const labels = parseIndexed(req.body, 'nav_label');
+  const urls = parseIndexed(req.body, 'nav_url');
+  const orders = parseIndexed(req.body, 'nav_order');
+  const vis = parseIndexed(req.body, 'nav_visible');
+  const tabs = parseIndexed(req.body, 'nav_newtab');
+  const dels = parseIndexed(req.body, 'nav_del');
+  const items = [];
+  labels.slice(0, 20).forEach((label, i) => {
+    if (dels[i] !== undefined) return; // row deleted
+    const text = String(label || '').trim().slice(0, 30);
+    if (!text) return; // empty rows are dropped
+    items.push({
+      label: text,
+      url: linkUrl(urls[i]), // empty → plain text (not clickable); /path internal, https external
+      order: Math.max(0, Math.min(999, parseInt(orders[i], 10) || i + 1)),
+      visible: vis[i] !== undefined,
+      newTab: tabs[i] !== undefined,
+    });
+  });
+  s.navItems = items;
+  await s.save();
+  security.logEvent(req, { reason: 'nav-change', severity: 'medium', status: 200, path: '/admin/appearance' });
+  res.redirect(go('/admin/appearance?saved=nav'));
+});
+
+router.post('/appearance/footer', async (req, res) => {
+  const s = await SiteSetting.get();
+  const b = req.body || {};
+  s.footerText = String(b.footerText || '').trim().slice(0, 200) || 'built with ♥ & caffeine';
+  s.footerNote = String(b.footerNote || '').trim().slice(0, 200);
+  const labels = parseIndexed(b, 'fl_label');
+  const urls = parseIndexed(b, 'fl_url');
+  const tabs = parseIndexed(b, 'fl_newtab');
+  const dels = parseIndexed(b, 'fl_del');
+  const links = [];
+  labels.slice(0, 20).forEach((label, i) => {
+    if (dels[i] !== undefined) return;
+    const text = String(label || '').trim().slice(0, 40);
+    if (!text) return;
+    links.push({ label: text, url: linkUrl(urls[i]), newTab: tabs[i] !== undefined });
+  });
+  s.footerLinks = links;
+  await s.save();
+  res.redirect(go('/admin/appearance?saved=footer'));
 });
 
 // ---------- services (hire me) ----------
@@ -986,7 +1256,7 @@ router.get('/projects', async (req, res) => {
 
 router.get('/projects/new', (req, res) => res.render('admin/project_form', { project: null }));
 
-router.post('/projects', upload.single('image'), async (req, res) => {
+router.post('/projects', upload.single('image'), csrfCheck, async (req, res) => {
   const { title, description, techStack, liveUrl, githubUrl } = req.body;
   if (title && String(title).trim()) {
     await Project.create({
@@ -1008,7 +1278,7 @@ router.get('/projects/:id/edit', async (req, res) => {
   res.render('admin/project_form', { project });
 });
 
-router.post('/projects/:id', upload.single('image'), async (req, res) => {
+router.post('/projects/:id', upload.single('image'), csrfCheck, async (req, res) => {
   const p = await Project.findById(req.params.id).catch(() => null);
   if (!p) return res.redirect(go('/admin/projects'));
   Object.assign(p, {
@@ -1036,7 +1306,7 @@ router.get('/tools', async (req, res) => {
 
 router.get('/tools/new', (req, res) => res.render('admin/tool_form', { tool: null }));
 
-router.post('/tools', upload.single('image'), async (req, res) => {
+router.post('/tools', upload.single('image'), csrfCheck, async (req, res) => {
   const { name, description, category, price, demoUrl, buyUrl } = req.body;
   if (name && String(name).trim()) {
     await Tool.create({
@@ -1059,7 +1329,7 @@ router.get('/tools/:id/edit', async (req, res) => {
   res.render('admin/tool_form', { tool });
 });
 
-router.post('/tools/:id', upload.single('image'), async (req, res) => {
+router.post('/tools/:id', upload.single('image'), csrfCheck, async (req, res) => {
   const t = await Tool.findById(req.params.id).catch(() => null);
   if (!t) return res.redirect(go('/admin/tools'));
   Object.assign(t, {
@@ -1105,13 +1375,13 @@ router.post('/password', async (req, res) => {
   if (!user || !(await bcrypt.compare(current_pass || '', user.passwordHash))) {
     return res.render('admin/password', { error: 'Current password is wrong', success: false });
   }
-  if (!new_pass || new_pass.length < 6) {
-    return res.render('admin/password', { error: 'New password must be at least 6 characters', success: false });
+  if (!strongPass(new_pass)) {
+    return res.render('admin/password', { error: PASSWORD_MSG, success: false });
   }
   if (new_pass !== confirm_pass) {
-    return res.render('admin/password', { error: 'New passwords do not match', success: false });
+    return res.render('admin/password', { error: 'Password not match — new passwords do not match, please retype both.', success: false });
   }
-  user.passwordHash = await bcrypt.hash(new_pass, 10);
+  user.passwordHash = await bcrypt.hash(new_pass, 12); // was 10 — align with the rest
   await user.save();
   res.render('admin/password', { error: null, success: true });
 });

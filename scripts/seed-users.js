@@ -6,22 +6,26 @@
  * Also removes obsolete 'visitor' account.
  * Run:  node scripts/seed-users.js   (idempotent)
  */
-require('dotenv').config();
+require('../lib/env'); // .env + ~/.my-portfolio.env fallback chain
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { initDB } = require('../db');
 const { AdminUser } = require('../models');
 
-// ⚠️  If these ever change, update them in the DB too (admin panel → Users → 🔑).
-//     If the old password stays here, re-running the seed will overwrite the new password!
+// ⚠️  Koi password yahan hardcoded NAHI — env se aata hai (OWNER_PASS / ADMIN_PASS),
+//     warna random generate hota hai aur sirf EK BAAR print hota hai.
+//     Re-run seed → DB passwords in env values se overwrite honge (idempotent reset).
+const randPass = () => crypto.randomBytes(12).toString('base64url');
+
 const USERS = [
   {
     username: 'sudhanshu',
-    password: 'Gate@King7959',
+    password: process.env.OWNER_PASS || randPass(),
     role: 'user',
   },
   {
     username: 'admin',
-    password: 'Panel@Root7959',
+    password: process.env.ADMIN_PASS || randPass(),
     role: 'admin',
     email: process.env.ADMIN_EMAIL || '',
   },
@@ -30,6 +34,18 @@ const REMOVE = ['visitor']; // obsolete accounts
 
 (async () => {
   await initDB();
+  // random-generated passwords → OWNER (ADMIN_EMAIL) ko email, console pe sirf fallback
+  const { sendCredentials, mailReady } = require('../services/mailer');
+  for (const u of USERS) {
+    const fromEnv = u.username === 'admin' ? process.env.ADMIN_PASS : process.env.OWNER_PASS;
+    if (!fromEnv && process.env.ADMIN_EMAIL && mailReady()) {
+      const ok = await sendCredentials({ to: process.env.ADMIN_EMAIL, username: u.username, password: u.password, context: `seed script — ${u.username} (${u.role})` }).catch(() => false);
+      if (ok) console.log(`📧 ${u.username} → generated credentials emailed to ${process.env.ADMIN_EMAIL}`);
+      else console.log(`🔑 ${u.username} → generated password (email fail — save it now!): ${u.password}`);
+    } else if (!fromEnv) {
+      console.log(`🔑 ${u.username} → generated password (email nahi bhej sakte${process.env.ADMIN_EMAIL ? ' — mail transport off' : ' — ADMIN_EMAIL not set'} — save it now!): ${u.password}`);
+    }
+  }
   for (const u of USERS) {
     const hash = await bcrypt.hash(u.password, 12);
     const existing = await AdminUser.findOne({ username: u.username });

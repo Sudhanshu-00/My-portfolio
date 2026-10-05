@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Account Recovery</title>
   <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .pw-toggle { background:transparent; border:1px solid rgba(255,255,255,0.2); border-radius:6px; color:inherit; font-size:0.72rem; padding:0.4rem 0.6rem; cursor:pointer; white-space:nowrap; }
+    .pw-toggle:hover { border-color:rgba(126,231,135,0.5); }
+  </style>
 </head>
 <body class="login-page">
   <div class="login-box">
@@ -35,20 +39,25 @@
       </form>
 
     <% } else if (step === 'reset') { %>
-      <p class="muted">Set a new password — minimum 10 characters with a letter and a number.</p>
+      <p class="muted">Set a new password — <strong>min 8 characters</strong> with UPPERCASE + lowercase + number + symbol. Dono match na hue to error dikhega.</p>
       <% if (error) { %><div class="alert error"><%= error %></div><% } %>
       <form method="POST" action="/reset" class="form">
         <label>New Password
-          <input type="password" name="password" required autofocus minlength="10">
+          <input type="password" name="password" id="rsPass" required autofocus minlength="8">
         </label>
         <label>Confirm Password
-          <input type="password" name="confirm" required minlength="10">
+          <input type="password" name="confirm" id="rsConfirm" required minlength="8">
         </label>
-        <button type="submit" class="btn full">Reset Password</button>
+        <div class="actions" style="gap:0.5rem">
+          <button type="button" class="btn small outline" data-reveal="rsPass">👁 show</button>
+          <button type="button" class="btn small outline" data-reveal="rsConfirm">👁 show confirm</button>
+          <button type="submit" class="btn full">Reset Password</button>
+        </div>
       </form>
     <% } %>
 
     <a href="/login" class="link">← Back to login</a>
   </div>
+  <script src="/js/showpass.js" defer></script>
 </body>
 </html>

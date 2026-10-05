@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Login</title>
   <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .captcha-row { display:flex; gap:0.6rem; align-items:center; }
+    .captcha-row img { border-radius:8px; border:1px solid rgba(255,255,255,0.15); background:#0d1117; height:46px; cursor:pointer; }
+    .captcha-row input { flex:1; min-width:0; }
+    .hint { font-size:0.72rem; color:rgba(255,255,255,0.45); margin-top:0.25rem; }
+    .pw-toggle { background:transparent; border:1px solid rgba(255,255,255,0.2); border-radius:6px; color:inherit; font-size:0.72rem; padding:0.4rem 0.6rem; cursor:pointer; white-space:nowrap; }
+    .pw-toggle:hover { border-color:rgba(126,231,135,0.5); }
+  </style>
 </head>
 <body class="login-page">
   <div class="login-box">
@@ -17,11 +25,22 @@
         <input type="text" name="username" required autofocus autocomplete="off">
       </label>
       <label>Admin password
-        <input type="password" name="password" required autocomplete="current-password">
+        <input type="password" name="password" id="gatePass" required autocomplete="current-password">
       </label>
+      <label>Security captcha
+        <span class="captcha-row">
+          <img src="/user/<%= username %>/admin/captcha.svg" data-refresh alt="captcha" title="Click for a new captcha">
+          <input type="text" name="captcha" required maxlength="10" placeholder="type the text" autocomplete="off">
+        </span>
+        <span class="hint">Type the 5 characters shown above (click the image for a new captcha)</span>
+      </label>
+      <div class="actions" style="gap:0.5rem;margin-bottom:0.6rem">
+        <button type="button" class="pw-toggle" data-reveal="gatePass">👁 show password</button>
+      </div>
       <button type="submit" class="btn full">Login as Admin</button>
     </form>
     <a href="/user/<%= username %>" class="link" style="font-size:0.82rem">← Back to dashboard</a>
   </div>
+  <script src="/js/showpass.js"></script>
 </body>
 </html>

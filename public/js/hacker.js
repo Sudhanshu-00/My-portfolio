@@ -1,4 +1,33 @@
 // ============ Hacker Portfolio JS ============
+// ---- Mobile navbar (hamburger): click se 3-line menu khulta/band hota hai ----
+document.addEventListener('DOMContentLoaded', () => {
+  const nav = document.querySelector('.nav');
+  const toggle = document.getElementById('navToggle');
+  if (!nav || !toggle) return;
+  toggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = nav.classList.toggle('open');
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  // koi link/button click → menu band (navigate ke baad khula na rahe)
+  nav.querySelectorAll('.nav-links a, .nav-links button').forEach((el) =>
+    el.addEventListener('click', () => nav.classList.remove('open'))
+  );
+  // navbar ke bahar click → band
+  document.addEventListener('click', (e) => {
+    if (nav.classList.contains('open') && !nav.contains(e.target)) {
+      nav.classList.remove('open');
+      toggle.setAttribute('aria-expanded', 'false');
+    }
+  });
+  // Escape key → band
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && nav.classList.contains('open')) {
+      nav.classList.remove('open');
+      toggle.setAttribute('aria-expanded', 'false');
+    }
+  });
+});
 document.addEventListener('DOMContentLoaded', () => {
   // ---- Boot loader (only first visit per session) ----
   const boot = document.getElementById('boot');
