@@ -14,6 +14,7 @@ const adminRoutes = require('./routes/admin');
 const security = require('./services/security');
 const uptime = require('./services/uptime');
 const thm = require('./services/thm'); // TryHackMe stats auto-sync + dynamic SVG card
+const ghs = require('./services/ghsync'); // GitHub repos → Projects auto-sync
 
 // Secret admin entrance — the real panel only opens on ADMIN_PATH.
 // Path resolution (with fail-closed random fallback) lives in ./adminPath.js —
@@ -297,6 +298,7 @@ async function main() {
     uptime.start(); // downtime email alerts + Render keep-alive (see services/uptime.js)
     news.start();   // live threat feed fetch loop (RSS/JSON → /blog, see services/news.js)
     thm.start();    // THM stats auto-sync loop — boot +5s, phir har 6h (see services/thm.js)
+    ghs.start();    // GitHub repos → Projects auto-sync — boot +8s, phir har 6h (see services/ghsync.js)
   });
 }
 

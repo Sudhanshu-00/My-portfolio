@@ -22,6 +22,8 @@ async function gh(path, opts = {}) {
     headers: {
       Accept: 'application/vnd.github+json',
       'User-Agent': 'portfolio-app',
+      // optional — GITHUB_TOKEN set ho to 5000 req/hr (warna 60/hr anonymous)
+      ...(process.env.GITHUB_TOKEN ? { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` } : {}),
       ...(opts.headers || {}),
     },
   });
@@ -204,4 +206,4 @@ function mdToHtml(md) {
   return html;
 }
 
-module.exports = { getRepoDetails, getProfile, mdToHtml, langColor };
+module.exports = { getRepoDetails, getProfile, mdToHtml, langColor, gh };

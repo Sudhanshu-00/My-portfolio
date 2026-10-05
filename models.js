@@ -38,6 +38,9 @@ const SiteSettingSchema = new mongoose.Schema({
   instagram: { type: String, default: '', maxlength: 500 },
   whatsapp: { type: String, default: '', maxlength: 20 }, // e.g. 919876543210 (tool sales)
   telegram: { type: String, default: '', maxlength: 60 }, // e.g. username
+  // ghsync tombstone — admin ne jo auto-synced projects delete kiye unke URLs
+  // (warna 6h me sync wapas add kar deta)
+  ghSyncSkip: { type: [String], default: [] },
   customLinks: { type: [{ label: { type: String, maxlength: 40 }, url: { type: String, maxlength: 500 } }], default: [] }, // extra social/public URLs
   // ---- navbar links (editable from Admin → Appearance) ----
   // url empty → plain text (not clickable); newTab → opens in a new tab
@@ -104,6 +107,10 @@ const ProjectSchema = new mongoose.Schema(
     liveUrl: { type: String, default: '', maxlength: 500 },
     githubUrl: { type: String, default: '', maxlength: 500 },
     featured: { type: Boolean, default: false },
+    // services/ghsync.js — GitHub se auto-synced projects ('github' = auto, 'manual' = admin)
+    // ghSyncedAt ke baad admin edit kare to sync us repo ko kabhi overwrite nahi karta
+    source: { type: String, default: 'manual', maxlength: 20 },
+    ghSyncedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

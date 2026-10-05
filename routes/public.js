@@ -3,6 +3,7 @@ const { Project, Skill, Message, Tool, Service, Testimonial, Experience, Lab, Fe
 const { getRepoDetails, getProfile, mdToHtml } = require('../services/github');
 const news = require('../services/news');
 const thm = require('../services/thm');
+const ghs = require('../services/ghsync');
 
 // relative time — "3 hours ago" style (English, hacker-console tone)
 const ago = (d) => {
@@ -64,7 +65,8 @@ router.get('/tools/:id', async (req, res) => {
 });
 
 router.get('/projects', async (req, res) => {
-  const projects = await Project.find().sort({ createdAt: -1 });
+  ghs.refreshIfStale(); // 1h+ purana sync → background refresh (response cached/fresh DB se turant)
+  const projects = await Project.find().sort({ featured: -1, createdAt: -1 });
   res.render('projects', { projects });
 });
 

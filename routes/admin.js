@@ -1335,6 +1335,11 @@ router.post('/projects/:id', upload.single('image'), csrfCheck, async (req, res)
 });
 
 router.post('/projects/:id/delete', async (req, res) => {
+  const p = await Project.findById(req.params.id).catch(() => null);
+  // auto-synced project delete kiya → tombstone, warna ghsync 6h me wapas add kar dega
+  if (p && p.source === 'github' && p.githubUrl) {
+    await SiteSetting.updateOne({}, { $addToSet: { ghSyncSkip: p.githubUrl } }).catch(() => {});
+  }
   await Project.findByIdAndDelete(req.params.id).catch(() => {});
   res.redirect(go('/admin/projects'));
 });
