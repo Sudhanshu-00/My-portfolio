@@ -156,6 +156,13 @@ router.post('/signup/start', async (req, res) => {
   if (await AdminUser.findOne({ username: values.username }).catch(() => null)) return back('That username is already taken — please choose another.', 409);
   if (await AdminUser.findOne({ email: values.email }).catch(() => null)) return back('That email is already registered — try logging in or use another email.', 409);
 
+  // OTP storm guard — same username+email ko 45s mein sirf 1 OTP. Slow SMTP pe
+  // users tap-tap-tap karte hain → 5 OTPs issue ho jate the → stale-OTP trap.
+  // Per username+email (not per IP) — Render proxy req.ip rotate karta hai.
+  if (!otpRate(`su|${values.username}|${values.email}`, 1, OTP_RESEND_MIN_MS)) {
+    return back('An OTP was just sent for these details — wait 45s, then use the NEWEST email you received (older codes are dead).', 429);
+  }
+
   const otp = genOtp();
   req.session.signup = {
     name: values.name, username: values.username, email: values.email,

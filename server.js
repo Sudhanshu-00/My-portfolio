@@ -245,9 +245,11 @@ async function main() {
     console.log(`[OK] Portfolio running → http://localhost:${port}`);
     console.log(`[RUN] NODE_ENV=${process.env.NODE_ENV || '(unset — set to production on hosting!)'}`);
     const { mailReady } = require('./services/mailer');
+    const brevoOn = !!process.env.BREVO_API_KEY;
+    const smtpOn = !!(process.env.SMTP_USER && process.env.SMTP_PASS);
     console.log(mailReady()
-      ? `[MAIL] SMTP configured (${process.env.SMTP_HOST || 'smtp.gmail.com'}) → OTP / alert emails will send`
-      : '[MAIL] ⚠️ SMTP NOT configured — set SMTP_USER + SMTP_PASS (Gmail app password) in hosting env, OTP emails will FAIL');
+      ? `[MAIL] delivery: ${brevoOn ? 'Brevo API ✓ (fast HTTPS, primary)' : 'Brevo ✗ (BREVO_API_KEY not set!)'} | ${smtpOn ? `Gmail SMTP ✓ (slow fallback: ${process.env.SMTP_HOST || 'smtp.gmail.com'})` : 'SMTP ✗'} → OTP emails WILL SEND`
+      : '[MAIL] ⚠️ NO mail transport — set BREVO_API_KEY (best) ya SMTP_USER+SMTP_PASS — OTP emails WILL FAIL');
     uptime.start(); // downtime email alerts + Render keep-alive (see services/uptime.js)
   });
 }

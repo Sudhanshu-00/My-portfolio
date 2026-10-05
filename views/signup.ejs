@@ -46,6 +46,7 @@
       </form>
     <% } else if (step === 2) { %>
       <p class="muted" style="margin:0.3rem 0 0.8rem;font-size:0.85rem">Step 2/3 — enter the 6-digit OTP sent to <b><%= values.email || '' %></b>.</p>
+      <p class="muted" style="margin:0 0 0.8rem;font-size:0.78rem">⚠️ More than one OTP email? Only the <b>newest</b> one works — all older codes are already dead.</p>
       <form method="POST" action="/signup/verify" class="form">
         <label>6-digit OTP
           <input type="text" name="otp" required autofocus inputmode="numeric" pattern="[0-9]{6}" maxlength="6" class="otp-input" placeholder="••••••">

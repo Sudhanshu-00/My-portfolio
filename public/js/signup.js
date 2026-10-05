@@ -6,6 +6,16 @@
 (function () {
   'use strict';
 
+  // ---- double-submit guard (har form.form pe) ----
+  // Slow SMTP pe page hang lagta hai → user tap-tap karta hai → 5 OTPs issue ho
+  // jate the. Ek click = ek request. Page reload (error/success) pe auto-reset.
+  document.querySelectorAll('form.form').forEach(function (f) {
+    f.addEventListener('submit', function () {
+      var b = f.querySelector('button[type="submit"]');
+      if (b) { b.disabled = true; b.textContent = 'Please wait…'; }
+    });
+  });
+
   // ---- resend countdown ----
   var btn = document.getElementById('resendBtn');
   if (btn) {
