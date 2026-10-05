@@ -21,6 +21,7 @@
     <% if (query.reset) { %><div class="alert success">✅ Password has been reset — log in with your new password.</div><% } %>
     <% if (error) { %><div class="alert error"><%= error %></div><% } %>
     <form method="POST" action="/login" class="form">
+      <input type="hidden" name="_csrf" value="<%= csrf || '' %>">
       <label>Username
         <input type="text" name="username" required autofocus autocomplete="off">
       </label>

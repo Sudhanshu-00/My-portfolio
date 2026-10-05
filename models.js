@@ -318,7 +318,7 @@ const PageSchema = new mongoose.Schema(
       type: [{
         type: { type: String, enum: ['heading', 'text', 'image'], default: 'text' },
         text: { type: String, default: '', maxlength: 3000 },
-        url: { type: String, default: '', maxlength: 800000 }, // image: data URL (3MB cap) or https URL
+        url: { type: String, default: '', maxlength: 5000000 }, // image: data URL (3MB upload ≈ 4.2M base64 chars — purana 800k cap 500+KB images par save hi crash karta tha) or https URL
       }],
       default: [],
     },

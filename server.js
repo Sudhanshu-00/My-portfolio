@@ -72,7 +72,8 @@ async function main() {
       ].join('; ')
     );
     // Never cache authenticated / auth pages — proxies (Burp etc.) must not store them
-    if (req.path.startsWith(SECRET_MOUNT) || req.path.startsWith('/login') ||
+    // /user/* bhi — dashboard par email/phone personal data dikhta hai
+    if (req.path.startsWith(SECRET_MOUNT) || req.path.startsWith('/login') || req.path.startsWith('/user/') ||
         req.path.startsWith('/forgot') || req.path.startsWith('/reset') || req.path.startsWith('/signup')) {
       res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
       res.set('Pragma', 'no-cache');
@@ -107,7 +108,8 @@ async function main() {
       r.blockedUntil = now + RL_BLOCK;
       // persistent block → shows up in Admin → Security (unblockable), survives restarts
       security.blockIp(req.ip, 'Rate limit exceeded (300 req/min)', RL_BLOCK, true);
-      security.logEvent(req, { reason: 'rate-limit', severity: 'medium', status: 429, path: req.path });
+      // maskPath — rate-limit log me secret admin path kabhi plain-text na jaye
+      security.logEvent(req, { reason: 'rate-limit', severity: 'medium', status: 429, path: security.maskPath(req.path) });
       console.warn(`[BLOCK] IP blocked (rate limit exceeded): ${req.ip}`);
       return res.status(429).send('Too many requests — IP temporarily blocked.');
     }
@@ -194,6 +196,9 @@ async function main() {
   app.use(async (req, res, next) => {
     try {
       const s = await SiteSetting.get();
+      // resumeFile (5MB base64) har request ke view-locals me carry karna memory waste —
+      // sirf /resume route use padhta hai aur wo apna fresh doc fetch karta hai
+      if (s && s.resumeFile) s.resumeFile = '';
       // old settings docs (pre-navbar) → seed the default nav so links never vanish
       if (!s.navItems || !s.navItems.length) s.navItems = SiteSetting.defaultNav;
       res.locals.settings = s;

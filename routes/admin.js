@@ -71,6 +71,9 @@ const safeEqual = (a, b) => {
   const B = Buffer.from(String(b || ''));
   return A.length === B.length && crypto.timingSafeEqual(A, B);
 };
+// dummy bcrypt hash — unknown username par bhi same compare-cost burn hota hai
+// (warna response-time delta se username enumeration possible ho jata)
+const DUMMY_HASH = bcrypt.hashSync('timing-equalizer::' + crypto.randomBytes(16).toString('hex'), 12);
 const requireAuth = async (req, res, next) => {
   if (req.session.admin) {
     // ---- CSRF guard: verify token on every admin POST (blocks state-changing attacks) ----
@@ -112,7 +115,14 @@ router.param('id', (req, res, next, id) => {
   next();
 });
 
-router.get('/login', (req, res) => (req.session.admin ? res.redirect(go('/')) : res.render('admin/login', { error: null })));
+// login form ka CSRF token — anonymous session me issue (login-CSRF block:
+// attacker victim ko apne account me force-login nahi kar sakta)
+const loginCsrf = (req) => {
+  if (!req.session.csrf) req.session.csrf = crypto.randomBytes(32).toString('hex');
+  return req.session.csrf;
+};
+
+router.get('/login', (req, res) => (req.session.admin ? res.redirect(go('/')) : res.render('admin/login', { error: null, csrf: loginCsrf(req) })));
 
 // ---------- public signup (visitors can create their own account) ----------
 // Reserved names — nobody can register 'sudhanshu'/'admin'-style usernames
@@ -337,6 +347,11 @@ router.post('/login', async (req, res) => {
   const body = req.body || {}; // never throw on empty/absent body
   const username = String(body.username || '').toLowerCase().slice(0, 40);
   const password = String(body.password || '');
+  // ---- login CSRF — pehle token verify (captcha waste na ho) ----
+  const csrfToken = String(body._csrf || '');
+  if (!req.session.csrf || !csrfToken || !safeEqual(req.session.csrf, csrfToken)) {
+    return res.status(403).render('admin/login', { error: 'Security check failed — reload the page and try again.', csrf: loginCsrf(req) });
+  }
   // ---- captcha first — single-use, 5 min expiry, case-insensitive (user requirement) ----
   const cap = req.session.captcha;
   req.session.captcha = null; // consume immediately (replay-proof)
@@ -345,11 +360,11 @@ router.post('/login', async (req, res) => {
     security.bump(req, 'loginFail', 401);
     security.logEvent(req, { reason: 'login-captcha-fail', severity: 'low', status: 401, path: '/login' });
     await new Promise((r) => setTimeout(r, 300));
-    return res.status(401).render('admin/login', { error: 'Wrong or expired captcha — a new captcha has loaded, please try again.' });
+    return res.status(401).render('admin/login', { error: 'Wrong or expired captcha — a new captcha has loaded, please try again.', csrf: req.session.csrf });
   }
   if (!username || !password) {
     security.bump(req, 'loginFail', 401);
-    return res.status(401).render('admin/login', { error: 'Invalid username or password' });
+    return res.status(401).render('admin/login', { error: 'Invalid username or password', csrf: req.session.csrf });
   }
   const key = `${req.ip}|${username}`;
   const now = Date.now();
@@ -357,10 +372,13 @@ router.post('/login', async (req, res) => {
   const ipRec = ipFails.get(req.ip) || { fails: 0, lockUntil: 0 };
   if (rec.lockUntil > now || ipRec.lockUntil > now) {
     const mins = Math.ceil((Math.max(rec.lockUntil, ipRec.lockUntil) - now) / 60000);
-    return res.status(429).render('admin/login', { error: `Too many failed attempts — try again in ${mins} minute(s).` });
+    return res.status(429).render('admin/login', { error: `Too many failed attempts — try again in ${mins} minute(s).`, csrf: req.session.csrf });
   }
   const user = await AdminUser.findOne({ username }).catch(() => null);
-  if (user && (await bcrypt.compare(password, user.passwordHash))) {
+  // timing-equalizer: valid username par bcrypt chalega hi — unknown par bhi same cost
+  // (DUMMY_HASH compare), warna response-time delta se username enumerate hota hai
+  const passOk = await bcrypt.compare(password, user ? user.passwordHash : DUMMY_HASH);
+  if (user && passOk) {
     // ---- two-tier login ----
     // Admin credentials are NEVER accepted here — they only work at the gated
     // /user/sudhanshu/admin/login page. Probing counts as a failed attempt.
@@ -396,7 +414,7 @@ router.post('/login', async (req, res) => {
   ipFails.set(req.ip, ipRec);
   security.bump(req, 'loginFail', 401); // feeds auto-block + security log
   await new Promise((r) => setTimeout(r, 400)); // slow down online brute force
-  res.status(401).render('admin/login', { error: 'Invalid username or password' });
+  res.status(401).render('admin/login', { error: 'Invalid username or password', csrf: req.session.csrf });
 });
 
 router.post('/logout', (req, res) => {
@@ -981,7 +999,9 @@ router.get('/pages/:id/edit', async (req, res) => {
   res.render('admin/page_form', { page });
 });
 
-router.post('/pages/:id/update', pageUpload.array('block_image', 12), async (req, res) => {
+// SECURITY FIX: multipart POST par requireAuth CSRF defer karta hai — bina csrfCheck ke
+// page-edit CSRF-open tha (baaki saare upload routes jaise /settings, /projects me lagta hai).
+router.post('/pages/:id/update', pageUpload.array('block_image', 12), csrfCheck, async (req, res) => {
   const p = await Page.findById(req.params.id).catch(() => null);
   if (!p) return res.redirect(go('/admin/pages'));
   const b = req.body || {};
@@ -992,7 +1012,12 @@ router.post('/pages/:id/update', pageUpload.array('block_image', 12), async (req
   p.navOrder = Math.max(0, Math.min(999, parseInt(b.navOrder, 10) || 50));
   p.navNewTab = b.navNewTab === 'on';
   p.blocks = parseBlocks(req);
-  await p.save();
+  // save fail (validation/schema) → 500 ki jagah friendly redirect with reason
+  try {
+    await p.save();
+  } catch (e) {
+    return res.redirect(go('/admin/pages?err=' + encodeURIComponent('Page save failed — ' + String(e.message || 'validation error').slice(0, 100))));
+  }
   res.redirect(go('/admin/pages?saved=1'));
 });
 

@@ -23,6 +23,9 @@ const safeEqual = (a, b) => {
   const B = Buffer.from(String(b || ''));
   return A.length === B.length && crypto.timingSafeEqual(A, B);
 };
+// dummy bcrypt hash — unknown username par bhi same compare-cost (timing-equalizer,
+// response-time delta se admin-username enumeration block)
+const DUMMY_HASH = bcrypt.hashSync('timing-equalizer::' + crypto.randomBytes(16).toString('hex'), 12);
 
 // issue CSRF token for user-tier forms
 const issueCsrf = (req) => {
@@ -192,7 +195,9 @@ router.post('/:username/admin/login', adminGate, async (req, res) => {
   }
   // ONLY role='admin' accounts authenticate here — normal users always bounce
   const admin = await AdminUser.findOne({ username, role: 'admin' }).catch(() => null);
-  if (admin && (await bcrypt.compare(password, admin.passwordHash))) {
+  // timing-equalizer — unknown username par bhi bcrypt cost same rakho
+  const passOk = await bcrypt.compare(password, admin ? admin.passwordHash : DUMMY_HASH);
+  if (admin && passOk) {
     gateAttempts.delete(key);
     AdminUser.updateOne({ username: admin.username }, { lastLoginAt: new Date() }).catch(() => {});
     security.logEvent(req, { reason: 'admin-login', severity: 'info', status: 302, path: '/user/[user]/admin/login' });

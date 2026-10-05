@@ -83,7 +83,7 @@
       <tr><td>Last check</td><td><%= uptime.lastCheckedAt ? new Date(uptime.lastCheckedAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : '—' %> <%= uptime.lastLatencyMs !== null ? '(' + uptime.lastLatencyMs + 'ms)' : '' %></td></tr>
       <% if (uptime.lastError) { %><tr><td>Last error</td><td class="mono"><%= uptime.lastError %></td></tr><% } %>
       <tr><td>Keep-alive (anti-sleep)</td><td><%- uptime.keepAlive ? '<span class="badge">ON — 10 min ping, prevents Render free plan sleep</span>' : '<span class="badge warn">OFF — the site will spin down after 15 min idle</span>' %></td></tr>
-      <tr><td>Downtime email →</td><td><%= uptime.alertsTo || '<span class="muted">not set (ADMIN_EMAIL/ALERT_EMAIL env)</span>' %> <%= uptime.mailReady ? '' : '<span class="badge warn">SMTP off</span>' %></td></tr>
+      <tr><td>Downtime email →</td><td><%- uptime.alertsTo || '<span class="muted">not set (ADMIN_EMAIL/ALERT_EMAIL env)</span>' %> <%- uptime.mailReady ? '' : '<span class="badge warn">SMTP off</span>' %></td></tr>
     </table>
     <p class="muted" style="margin-bottom:0">
       Site DOWN alert email is sent immediately (after 2 failed checks), plus a recovery email when it is back UP.
