@@ -17,6 +17,22 @@ const SiteSettingSchema = new mongoose.Schema({
   github: { type: String, default: '', maxlength: 500 },
   githubUsername: { type: String, default: 'Sudhanshu-00', maxlength: 60 }, // for live GitHub intel
   thmUsername: { type: String, default: '', maxlength: 60 }, // TryHackMe username → badge on /labs
+  // live THM stats — services/thm.js auto-sync karta hai (jina reader → parse → yahan save)
+  // /img/thm-card.svg isi se dynamic SVG render karta hai
+  thmStats: {
+    type: {
+      username: { type: String, default: '' },
+      points: { type: Number, default: 0 },
+      level: { type: String, default: '', maxlength: 40 },
+      rankPct: { type: String, default: '' },
+      rankNum: { type: Number, default: 0 },
+      badges: { type: Number, default: 0 },
+      streak: { type: Number, default: 0 },
+      rooms: { type: Number, default: 0 },
+      syncedAt: { type: Date, default: null },
+    },
+    default: {},
+  },
   linkedin: { type: String, default: '', maxlength: 500 },
   twitter: { type: String, default: '', maxlength: 500 },
   instagram: { type: String, default: '', maxlength: 500 },

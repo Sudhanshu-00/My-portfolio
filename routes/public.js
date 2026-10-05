@@ -2,6 +2,7 @@ const router = require('express').Router();
 const { Project, Skill, Message, Tool, Service, Testimonial, Experience, Lab, Feedback, SiteSetting, Page, NewsItem } = require('../models');
 const { getRepoDetails, getProfile, mdToHtml } = require('../services/github');
 const news = require('../services/news');
+const thm = require('../services/thm');
 
 // relative time — "3 hours ago" style (English, hacker-console tone)
 const ago = (d) => {
@@ -82,6 +83,22 @@ router.get('/projects/:id', async (req, res) => {
 router.get('/labs', async (req, res) => {
   const labs = await Lab.find().sort({ solvedAt: -1, createdAt: -1 });
   res.render('labs', { labs });
+});
+
+// ---- dynamic THM stats card (SVG) ----
+// public/img/thm-card.svg static file hata diya — ab yehi route serve karta hai
+// live DB values se (services/thm.js auto-sync: jina reader → parse → SiteSetting.thmStats)
+// Lab solve → 6h me (ya kisi bhi page-load par 1h+ purana ho to) card khud update
+router.get('/img/thm-card.svg', async (req, res) => {
+  try {
+    const s = await thm.get();
+    res.setHeader('Content-Type', 'image/svg+xml; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=600'); // 10 min — CDN/browser caching
+    res.send(thm.renderCard(s));
+  } catch (e) {
+    console.error('[THM] card render fail:', e.message);
+    res.status(500).send('error');
+  }
 });
 
 // ---- live threat feed / hacker news blog (auto-updating) ----

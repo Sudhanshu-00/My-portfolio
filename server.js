@@ -13,6 +13,7 @@ const publicRoutes = require('./routes/public');
 const adminRoutes = require('./routes/admin');
 const security = require('./services/security');
 const uptime = require('./services/uptime');
+const thm = require('./services/thm'); // TryHackMe stats auto-sync + dynamic SVG card
 
 // Secret admin entrance — the real panel only opens on ADMIN_PATH.
 // Path resolution (with fail-closed random fallback) lives in ./adminPath.js —
@@ -294,8 +295,8 @@ async function main() {
       ? `[MAIL] delivery: ${brevoOn ? 'Brevo API ✓ (fast HTTPS, primary)' : 'Brevo ✗ (BREVO_API_KEY not set!)'} | ${smtpOn ? `Gmail SMTP ✓ (slow fallback: ${process.env.SMTP_HOST || 'smtp.gmail.com'})` : 'SMTP ✗'} → OTP emails WILL SEND`
       : '[MAIL] ⚠️ NO mail transport — set BREVO_API_KEY (best) ya SMTP_USER+SMTP_PASS — OTP emails WILL FAIL');
     uptime.start(); // downtime email alerts + Render keep-alive (see services/uptime.js)
-    news.start(); // live threat feed loop — boot +1.5s pehla fetch, phir har 30 min auto-refresh
     news.start();   // live threat feed fetch loop (RSS/JSON → /blog, see services/news.js)
+    thm.start();    // THM stats auto-sync loop — boot +5s, phir har 6h (see services/thm.js)
   });
 }
 
