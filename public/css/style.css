@@ -785,3 +785,92 @@ body.admin {
   letter-spacing: 1px; padding: 2px 7px; border-radius: 4px;
   animation: pulse-dot 1.4s ease-in-out infinite; align-self: center;
 }
+
+/* ================================================================
+   MOBILE / TABLET RESPONSIVE PASS — additive only
+   (kuch delete nahi kiya, koi function change nahi kiya —
+    sirf media-screen fixes taaki mobile + tablet par sab sahi chale)
+   ================================================================ */
+
+/* --- overflow guards: images/text kabhi container se bahar na niklen --- */
+img { max-width: 100%; }
+h1, h2, h3, .brand, .term-body, .readme, .file-row, .msg-card, .fb-card, .ud-proj { overflow-wrap: break-word; }
+pre, .readme .md-code { overflow-x: auto; max-width: 100%; }
+body { overflow-x: clip; }
+
+/* --- terminal title lamba ho to truncate ho (overflow na kare) --- */
+.term-title { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* --- NAVBAR: ≤900px (mobile + tablet) par 3-line hamburger,
+       menu uske andar dropdown panel ki tarah khulta hai --- */
+@media (max-width: 900px) {
+  .nav-toggle { display: flex; }
+  .nav-inner { padding: 0.65rem 0; }
+  .nav-links {
+    display: none;
+    flex-basis: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    margin-top: 0.55rem;
+    padding: 0.3rem 0.55rem 0.55rem;
+    background: rgba(5, 12, 7, 0.97);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 255, 65, 0.07);
+    max-height: calc(100vh - 120px);
+    max-height: calc(100dvh - 120px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    animation: navDrop 0.22s ease both;
+  }
+  .nav.open .nav-links { display: flex; }
+  .nav-links a, .nav-links span.mono, .nav-links form.inline {
+    padding: 0.8rem 0.5rem;
+    border-bottom: 1px solid rgba(0, 255, 65, 0.08);
+  }
+  .nav-links > *:last-child { border-bottom: none; }
+  .nav-links a { font-size: 1.02rem; }
+  .nav-links a:hover { background: rgba(0, 255, 65, 0.05); }
+  .nav-links form.inline { display: block !important; margin: 0; }
+  .nav-links form.inline button.link { width: 100%; text-align: left; padding: 0.2rem 0.5rem; }
+  .nav-links span.mono { display: block; }
+}
+@keyframes navDrop {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* --- admin tables: mobile par side-scroll, layout na toote --- */
+@media (max-width: 760px) {
+  .table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+}
+
+/* --- iOS Safari: input focus par auto-zoom band (16px threshold) --- */
+@media (max-width: 760px) {
+  .form input, .form select, .form textarea,
+  .cl-row input, .navrow input, .feed-search { font-size: 16px; }
+}
+
+/* --- chhoti phones (≤480px) --- */
+@media (max-width: 480px) {
+  h1 { font-size: 1.8rem; }
+  .detail-img { max-height: 280px; }
+  .visitor-counter { white-space: normal; }
+  .feed-grid { grid-template-columns: 1fr; }
+  .login-box { padding: 1.6rem 1.2rem; }
+  .chart { padding: 0.8rem 0.6rem 0.5rem; gap: 5px; overflow-x: auto; }
+  .chart-col { min-width: 16px; }
+  .boot pre { white-space: pre-wrap; padding: 0 1rem; max-width: 100%; }
+}
+
+/* --- bahut chhoti screens (≤360px) --- */
+@media (max-width: 360px) {
+  .card-grid { grid-template-columns: 1fr; }
+  .term-body h1 { font-size: 1.5rem; }
+}
+
+/* --- touch devices: tap ke baad hover-effect chipka na rahe --- */
+@media (hover: none) {
+  .card:hover, .qa-card:hover, .gh-stat:hover { transform: none; }
+}

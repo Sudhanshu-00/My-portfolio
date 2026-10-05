@@ -27,6 +27,18 @@ document.addEventListener('DOMContentLoaded', () => {
       toggle.setAttribute('aria-expanded', 'false');
     }
   });
+  // desktop size par resize → khula hamburger menu band kar do
+  window.addEventListener('resize', () => {
+    if (window.innerWidth > 900 && nav.classList.contains('open')) {
+      nav.classList.remove('open');
+      toggle.setAttribute('aria-expanded', 'false');
+    }
+  });
+  // back/forward navigation se wapas aane par menu closed state me rahe
+  window.addEventListener('pageshow', () => {
+    nav.classList.remove('open');
+    toggle.setAttribute('aria-expanded', 'false');
+  });
 });
 document.addEventListener('DOMContentLoaded', () => {
   // ---- Boot loader (only first visit per session) ----
