@@ -13,6 +13,16 @@ try { require('dns').setDefaultResultOrder('ipv4first'); } catch (_) { /* older 
 const SMTP_USER = process.env.SMTP_USER;
 const SMTP_PASS = process.env.SMTP_PASS;
 
+// From identity — MAIL_FROM env (e.g. `Portfolio <noreply.portfolio@gmail.com>`).
+// Personal Gmail + Google avatar dono chhupe rehte hain — OTP mails brand ke naam se jaate hain.
+// Format: `Name <email>` ya sirf `<email>`. Unset → old behaviour (SMTP_USER se).
+const _fm = (process.env.MAIL_FROM || '').match(/^\s*(.*?)\s*<\s*([^>\s]+)\s*>\s*$/);
+const FROM_NAME = _fm ? _fm[1] || 'Portfolio' : 'Portfolio Admin';
+const FROM_EMAIL = _fm ? _fm[2] : SMTP_USER;
+// Brevo API primary. Gmail SMTP fallback sirf tab jab From == SMTP auth user —
+// warna Gmail reject/rewrite karta hai aur purana personal email leak ho jata.
+const BREVO_ONLY = !!(FROM_EMAIL && SMTP_USER && FROM_EMAIL !== SMTP_USER);
+
 function makeTransport(port, secure) {
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -50,7 +60,7 @@ const BREVO_API_KEY = process.env.BREVO_API_KEY || '';
 
 async function sendViaBrevo({ to, subject, text, html }) {
   const body = JSON.stringify({
-    sender: { name: 'Portfolio Admin', email: SMTP_USER },
+    sender: { name: FROM_NAME, email: FROM_EMAIL },
     to: [{ email: to }],
     subject,
     textContent: text,
@@ -120,6 +130,12 @@ function otpTemplate({ heading, intro, otp, validityMins, name }) {
 
 async function sendMail({ to, subject, text, html }) {
   if (BREVO_API_KEY && (await sendViaBrevo({ to, subject, text, html }))) return true;
+  if (BREVO_ONLY) {
+    // From identity SMTP auth se alag hai — Gmail fallback bhejega to personal
+    // address hi dikhega/reject hoga. Brevo hi single source of truth.
+    console.error('Brevo API failed and SMTP fallback disabled (MAIL_FROM ≠ SMTP_USER) — mail not sent');
+    return false;
+  }
   if (!transports.length) {
     if (!BREVO_API_KEY) {
       console.warn('⚠️  SMTP not configured (set SMTP_PASS in .env) — DEV fallback, email was NOT sent:');
@@ -127,7 +143,7 @@ async function sendMail({ to, subject, text, html }) {
     }
     return false;
   }
-  const mail = { from: `"Portfolio Admin" <${SMTP_USER}>`, to, subject, text, html };
+  const mail = { from: `"${FROM_NAME}" <${FROM_EMAIL}>`, to, subject, text, html };
   for (const { tr, label } of transports) {
     try {
       await tr.sendMail(mail);
